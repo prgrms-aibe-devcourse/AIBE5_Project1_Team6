@@ -6,6 +6,8 @@ export const trafficDestinations = [
     subtitle: "역사/유적 · 황리단길",
     ratingText: "★ 5.0 (13)",
     priceText: "주말 추천 코스",
+    lat: 35.8562,
+    lon: 129.2247,
 
     stays: [
       {
@@ -40,6 +42,8 @@ export const trafficDestinations = [
     subtitle: "도심/야경 · 핫플",
     ratingText: "★ 4.8 (120)",
     priceText: "1~2일 도시 여행",
+    lat: 37.5665,
+    lon: 126.9780,
     stays: [],
     foods: [],
   },

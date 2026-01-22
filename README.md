@@ -25,10 +25,11 @@
 - **State**: React Hooks
 - **Routing**: React Router
 - **Style**: CSS Modules / Custom CSS
-- **Data**: LocalStorage
+- **Auth & DB**: Supabase (Authentication, Database)
 - **API**
   - Open-Meteo (날씨)
-  - (예정)
+  - Kakao Maps API (지도)
+  - Kakao Local API (장소 검색)
 - **AI Logic**
   - 여행 플랜 자동 보완 (AI 확장 예정)
 

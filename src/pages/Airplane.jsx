@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import DestinationCard from "../components/DestinationCard";
 import TripDetailDrawer from "../components/TripDetailDrawer";
 import { airplaneDestinations } from "../data/airplaneDestinations";
@@ -166,9 +167,9 @@ export default function Airplane() {
         extraTop={weatherBlock}     // ✅ 날씨가 실제로 보이게 연결
         onImprove={handleImprove}   // ✅ AI 버튼 동작
         diffResult={diffResult}     // ✅ diff 표시
-        onSave={(payload) => {
-          addPlan(payload);
-          alert("플랜이 저장됐어요! (My Plans에서 확인 가능)");
+        onSave={async (payload) => {
+          await addPlan(payload);
+          toast.success("플랜이 저장됐어요! (My Plans에서 확인 가능)");
         }}
       />
     </div>

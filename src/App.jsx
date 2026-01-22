@@ -5,8 +5,31 @@ import Walk from "./pages/Walk";
 import Traffic from "./pages/Traffic";
 import Airplane from "./pages/Airplane";
 import Plans from "./pages/Plans";
+import { useEffect } from "react";
+import { supabase } from "./services/supabase";
+import { useAuthStore } from "./stores/authStore";
 
 export default function App() {
+  const { setSession, setUser } = useAuthStore();
+
+  useEffect(() => {
+    // 초기 세션 확인
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    // 변경 감지
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [setSession, setUser]);
+
   return (
     <Routes>
       <Route element={<Layout />}>

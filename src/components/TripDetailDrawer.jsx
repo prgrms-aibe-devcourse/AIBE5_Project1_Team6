@@ -1,3 +1,4 @@
+import TripMap from "./TripMap";
 import "../styles/drawer.css";
 
 function Stepper({ label, value, setValue, min = 0, max = 30 }) {
@@ -31,7 +32,7 @@ function MiniCard({ image, title, sub }) {
  * extraTop: 드로어 상단(숙소 추천 위)에 끼워 넣는 영역 (Airplane 날씨)
  */
 export default function TripDetailDrawer({
-   open,
+  open,
   onClose,
   item,
   nights,
@@ -90,6 +91,11 @@ export default function TripDetailDrawer({
         <div className="drawerHero">
           <img src={item.image} alt={item.title} />
         </div>
+
+        {/* ✅ Google Map 연동 */}
+        {item.lat && item.lon && (
+          <TripMap lat={item.lat} lon={item.lon} title={item.title} />
+        )}
 
         {/* ✅ Airplane에서만 위에 날씨/가이드 섹션 주입 */}
         {extraTop}

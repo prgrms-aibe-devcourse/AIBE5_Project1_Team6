@@ -4,6 +4,8 @@ import { clearPlans, loadPlans, removePlan, updatePlan } from "../services/plans
 import { improvePlanText } from "../services/aiPlanner";
 import "../styles/plans.css";
 import { simpleDiff } from "../services/diff";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 
 function formatDate(iso) {
   try {
@@ -15,16 +17,22 @@ function formatDate(iso) {
 }
 
 export default function Plans() {
-  // ✅ useEffect 없이 초기 로드
-  const [plans, setPlans] = useState(() => loadPlans());
+  const queryClient = useQueryClient();
+
+  // ✅ React Query로 플랜 데이터 가져오기
+  const { data: plans = [], isLoading } = useQuery({
+    queryKey: ["plans"],
+    queryFn: loadPlans,
+  });
 
   // ✅ 편집용 상태
   const [selected, setSelected] = useState(null);
   const [nights, setNights] = useState(1);
   const [people, setPeople] = useState(2);
   const [planText, setPlanText] = useState("");
-const [diffResult, setDiffResult] = useState(null);
-  const total = useMemo(() => plans.length, [plans]);
+  const [diffResult, setDiffResult] = useState(null);
+  
+  const total = plans.length;
 
   const openEdit = (plan) => {
     setSelected(plan);
@@ -35,7 +43,32 @@ const [diffResult, setDiffResult] = useState(null);
 
   const closeEdit = () => setSelected(null);
 
-  const handleUpdateSave = () => {
+  // Mutation for Update
+  const updateMutation = useMutation({
+    mutationFn: updatePlan,
+    onSuccess: () => {
+      queryClient.invalidateQueries(["plans"]);
+      toast.success("플랜이 수정 저장됐어요!");
+      closeEdit();
+    },
+    onError: (err) => {
+      toast.error("저장 실패: " + err.message);
+    }
+  });
+
+  // Mutation for Delete
+  const deleteMutation = useMutation({
+    mutationFn: removePlan,
+    onSuccess: () => {
+      queryClient.invalidateQueries(["plans"]);
+      toast.success("삭제되었습니다.");
+    },
+    onError: (err) => {
+      toast.error("삭제 실패: " + err.message);
+    }
+  });
+
+  const handleUpdateSave = async () => {
     if (!selected) return;
 
     const updated = {
@@ -46,10 +79,7 @@ const [diffResult, setDiffResult] = useState(null);
       updatedAt: new Date().toISOString(),
     };
 
-    const next = updatePlan(updated);
-    setPlans(next);
-    alert("플랜이 수정 저장됐어요!");
-    closeEdit();
+    updateMutation.mutate(updated);
   };
 
   const handleImprove = () => {
@@ -62,17 +92,9 @@ const [diffResult, setDiffResult] = useState(null);
       stays: selected.stays ?? [],
       foods: selected.foods ?? [],
     });
-  setDiffResult(simpleDiff(planText, improved));
-  setPlanText(improved);
+    setDiffResult(simpleDiff(planText, improved));
+    setPlanText(improved);
   };
-
-  const openDetail = (item) => {
-  setSelected(item);
-  setNights(1);
-  setPeople(2);
-  setPlanText("");
-  setDiffResult(null); // ✅ 추가(중요)
-};
 
   return (
     <div className="pageWrap">
@@ -82,21 +104,23 @@ const [diffResult, setDiffResult] = useState(null);
       <div className="plansActions">
         <button
           className="dangerBtn"
-          onClick={() => {
-            if (!confirm("정말 전체 삭제할까요?")) return;
-            clearPlans();
-            setPlans([]);
+          onClick={async () => {
+            if (!confirm("정말 전체 삭제할까요? (로컬만 지원)")) return;
+            await clearPlans();
+            queryClient.invalidateQueries(["plans"]);
           }}
         >
-          전체 삭제
+          전체 삭제 (Local Only)
         </button>
 
-        <button className="ghostBtn2" onClick={() => setPlans(loadPlans())}>
+        <button className="ghostBtn2" onClick={() => queryClient.invalidateQueries(["plans"])}>
           새로고침
         </button>
       </div>
 
-      {plans.length === 0 ? (
+      {isLoading ? (
+        <div className="emptyBox">로딩 중...</div>
+      ) : plans.length === 0 ? (
         <div className="emptyBox">아직 저장된 플랜이 없어요. 여행지를 선택해서 저장해보세요!</div>
       ) : (
         <div className="plansGrid">
@@ -105,10 +129,10 @@ const [diffResult, setDiffResult] = useState(null);
               key={p.id}
               className="planCard"
               style={{ cursor: "pointer" }}
-              onClick={() => openEdit(p)}   // ✅ 클릭하면 편집 드로어 오픈
+              onClick={() => openEdit(p)}
             >
               <div className="planThumb">
-                <img src={p.heroImage} alt={p.title} />
+                {p.heroImage && <img src={p.heroImage} alt={p.title} />}
               </div>
 
               <div className="planBody" onClick={(e) => e.stopPropagation()}>
@@ -126,7 +150,9 @@ const [diffResult, setDiffResult] = useState(null);
                 {p.rateText && <div className="planSmall">환율: {p.rateText}</div>}
                 {p.safety && <div className="planSmall">안전: {String(p.safety).toUpperCase()}</div>}
 
-                <div className="planSmall">저장일: {formatDate(p.createdAt)}</div>
+                <div className="planSmall">
+                  {p.createdAt ? `저장일: ${formatDate(p.createdAt)}` : ""}
+                </div>
 
                 {p.planText?.trim() && <pre className="planText">{p.planText}</pre>}
 
@@ -135,7 +161,7 @@ const [diffResult, setDiffResult] = useState(null);
                     className="dangerBtn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setPlans(removePlan(p.id));
+                      if(confirm("삭제할까요?")) deleteMutation.mutate(p.id);
                     }}
                   >
                     삭제
@@ -159,11 +185,10 @@ const [diffResult, setDiffResult] = useState(null);
         planText={planText}
         setPlanText={setPlanText}
         extraTop={null}
-
-diffResult={diffResult}
+        diffResult={diffResult}
         onImprove={handleImprove}
         improveLabel="AI 자동 보완(템플릿+팁)"
-        onSave={handleUpdateSave}   // ✅ update로 저장
+        onSave={handleUpdateSave}
       />
     </div>
   );
