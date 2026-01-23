@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import ChatbotWidget from "./ChatbotWidget";
 import { useAuthStore } from "../stores/authStore";
 import { useState } from "react";
@@ -8,7 +8,6 @@ import { Toaster } from 'react-hot-toast';
 
 export default function Layout() {
   const nav = useNavigate();
-  const { pathname } = useLocation();
   const { user } = useAuthStore();
   const [showAuth, setShowAuth] = useState(false);
 
@@ -22,10 +21,7 @@ export default function Layout() {
       <header className="topbar">
         <div className="brand" onClick={() => nav("/")}>trip_plan</div>
         <nav className="nav">
-          <button className={pathname === "/walk" ? "navBtn active" : "navBtn"} onClick={() => nav("/walk")}>Walk</button>
-          <button className={pathname === "/traffic" ? "navBtn active" : "navBtn"} onClick={() => nav("/traffic")}>Traffic</button>
-          <button className={pathname === "/airplane" ? "navBtn active" : "navBtn"} onClick={() => nav("/airplane")}>Airplane</button>
-          <button className={pathname === "/plans" ? "navBtn active" : "navBtn"} onClick={() => nav("/plans")}>My Plans</button>
+          <button className="navBtn" onClick={() => nav("/plans")}>My Plans</button>
         </nav>
         
         <div style={{ marginLeft: "auto", paddingRight: 20 }}>

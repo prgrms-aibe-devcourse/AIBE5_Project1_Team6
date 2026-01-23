@@ -15,14 +15,9 @@ export const useTripStore = create((set) => ({
   setTransport: (transport) => set({ transport }),
   setBudget: (budget) => set({ budget }),
   setDuration: (duration) => set({ duration }),
-  setThemes: (theme) => set((state) => {
-    const isSelected = state.themes.includes(theme);
-    if (isSelected) {
-      return { themes: state.themes.filter(t => t !== theme) };
-    } else {
-      return { themes: [...state.themes, theme] };
-    }
-  }),
+  // 단일 선택(토스형 스무고개 UX): 하나를 고르면 바로 그 값으로 교체
+  // 기존 코드(다중 선택)와의 호환을 위해 배열 형태는 유지합니다.
+  setThemes: (theme) => set({ themes: [theme] }),
   setPriority: (priority) => set({ priority }),
   
   reset: () => set({ 
