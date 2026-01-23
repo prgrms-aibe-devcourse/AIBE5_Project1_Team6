@@ -66,6 +66,71 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
   cursor: pointer;
 }
 
+.heroBtn:disabled{
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.heroBtn.active{
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.28);
+}
+
+/* Funnel (Toss-style Q&A) */
+.funnelTop{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.funnelBackBtn{
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  cursor: pointer;
+}
+
+.funnelProgress{
+  opacity: 0.75;
+  font-weight: 700;
+}
+
+.funnelTitle{
+  margin-bottom: 10px;
+}
+
+.funnelSubtitle{
+  text-align: center;
+  opacity: 0.8;
+  margin: -6px 0 16px;
+}
+
+.funnelCtaRow{
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.heroBtn.funnelCta{
+  min-width: min(560px, 100%);
+}
+
+.funnelHint{
+  margin-top: 14px;
+  text-align: center;
+  opacity: 0.75;
+}
+
+.funnelSummary{
+  text-align: center;
+  opacity: 0.9;
+  margin: 10px 0 6px;
+  line-height: 1.6;
+}
+
 .pageWrap{ width: min(1200px, 100%); margin: 0 auto; }
 .pageTitle{ font-size: 26px; font-weight: 900; margin: 10px 0 6px; }
 .pageDesc{ opacity: 0.8; margin-bottom: 16px; }

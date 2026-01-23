@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useWeather } from "../hooks/useWeather";
 import toast from "react-hot-toast";
 import DestinationCard from "../components/DestinationCard";
 import TripDetailDrawer from "../components/TripDetailDrawer";
@@ -38,39 +39,10 @@ export default function Airplane() {
     setWeather({ loading: false, temp: null, wind: null, error: null });
   };
 
-  // ✅ 선택한 지역 바뀌면 날씨 가져오기
-  useEffect(() => {
-    let alive = true;
-    async function run() {
-      if (!selected?.lat || !selected?.lon) return;
+  // ✅ TanStack Query로 날씨 데이터 관리 (Server State)
+  const { data: weatherData, isLoading: weatherLoading, error: weatherError } = useWeather(selected?.lat, selected?.lon);
 
-      setWeather({ loading: true, temp: null, wind: null, error: null });
-      try {
-        const w = await fetchCurrentWeatherByLatLon(selected.lat, selected.lon);
-        if (!alive) return;
-        setWeather({
-          loading: false,
-          temp: w.temp ?? null,
-          wind: w.wind ?? null,
-          error: null,
-        });
-      } catch {
-        if (!alive) return;
-        setWeather({
-          loading: false,
-          temp: null,
-          wind: null,
-          error: "날씨 정보를 불러오지 못했어요.",
-        });
-      }
-    }
-    run();
-    return () => {
-      alive = false;
-    };
-  }, [selected?.id]);
-
-  // ✅ AI 자동 보완(텍스트 + diff)
+  // ✅ AI 자동 보완
   const handleImprove = () => {
     if (!selected) return;
 
@@ -87,51 +59,52 @@ export default function Airplane() {
     setPlanText(improved);
   };
 
-  // ✅ 드로어 상단에 꽂을 날씨 블록
-  const weatherBlock = useMemo(() => {
+  // ✅ Weather Display Component (Clean Logic)
+  const WeatherSection = useMemo(() => {
     if (!selected) return null;
 
-    const tempLine = weather.loading
-      ? "날씨 불러오는 중..."
-      : weather.error
-      ? weather.error
-      : weather.temp != null
-      ? `현재 기온: ${Math.round(weather.temp)}°C${
-          weather.wind != null ? ` (바람 ${Math.round(weather.wind)} m/s)` : ""
-        }`
-      : "날씨 정보 없음";
+    const temp = weatherData?.temp;
+    const wind = weatherData?.wind;
 
-    const tipLine =
-      weather.loading
-        ? "옷 추천을 준비 중이에요."
-        : weather.temp != null
-        ? clothingTip(weather.temp)
-        : "여행 날짜를 알려주면 더 정확히 추천할게요.";
+    let titleText = "날씨 정보 없음";
+    let descText = "여행 날짜를 알려주면 더 정확히 추천할게요.";
+
+    if (weatherLoading) {
+        titleText = "현지 날씨 불러오는 중...";
+        descText = "잠시만 기다려주세요.";
+    } else if (weatherError) {
+        titleText = "날씨 정보를 가져올 수 없습니다.";
+        descText = "네트워크 상태를 확인해주세요.";
+    } else if (temp != null) {
+        titleText = `현재 기온: ${Math.round(temp)}°C ${wind ? `(바람 ${Math.round(wind)} m/s)` : ""}`;
+        descText = clothingTip(temp);
+    }
 
     return (
       <section className="drawerSection" style={{ marginTop: 8 }}>
-        <h3>현지 날씨 & 옷 추천</h3>
-
-        <div
-          style={{
-            padding: 12,
-            borderRadius: 14,
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.10)",
-          }}
-        >
-          <div style={{ fontWeight: 1000, marginBottom: 6 }}>{tempLine}</div>
-          <div style={{ opacity: 0.9, lineHeight: 1.35 }}>{tipLine}</div>
-
+        <h3>✈️ 현지 날씨 & 옷차림 Tip</h3>
+        <div style={{
+            padding: "16px",
+            borderRadius: "16px",
+            background: "linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))",
+            border: "1px solid rgba(255,255,255,0.1)",
+            backdropFilter: "blur(5px)"
+        }}>
+          <div style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: "8px", color: "#fff" }}>
+            {titleText}
+          </div>
+          <div style={{ fontSize: "0.95rem", opacity: 0.9, lineHeight: 1.5, color: "#e0e0e0" }}>
+            {descText}
+          </div>
           {selected.rateText && (
-            <div style={{ marginTop: 10, opacity: 0.85, fontWeight: 900 }}>
-              환율: {selected.rateText}
-            </div>
+             <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.1)", fontSize: "0.9rem", color: "#88ccff" }}>
+               💱 환율 정보: {selected.rateText}
+             </div>
           )}
         </div>
       </section>
     );
-  }, [selected, weather]);
+  }, [selected, weatherData, weatherLoading, weatherError]);
 
   return (
     <div className="pageWrap">
@@ -164,7 +137,7 @@ export default function Airplane() {
         setPeople={setPeople}
         planText={planText}
         setPlanText={setPlanText}
-        extraTop={weatherBlock}     // ✅ 날씨가 실제로 보이게 연결
+        extraTop={WeatherSection}     // ✅ 날씨가 실제로 보이게 연결
         onImprove={handleImprove}   // ✅ AI 버튼 동작
         diffResult={diffResult}     // ✅ diff 표시
         onSave={async (payload) => {
