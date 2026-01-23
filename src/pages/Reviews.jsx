@@ -15,8 +15,9 @@ export default function Reviews() {
 
     // 검색 및 정렬 상태
     const [searchType, setSearchType] = useState('destination');
-    const [searchKeyword, setSearchKeyword] = useState('');
-    const [sortBy, setSortBy] = useState('latest'); // 'latest' or 'likes'
+    const [keywordInput, setKeywordInput] = useState('');
+    const [activeSearchKeyword, setActiveSearchKeyword] = useState('');
+    const [sortBy, setSortBy] = useState('latest'); // 'latest' 또는 'likes'
 
     // 모달 상태
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,7 +28,7 @@ export default function Reviews() {
     // 데이터 불러오기
     const loadReviews = async () => {
         setLoading(true);
-        const { data, error } = await reviewService.getReviews(sortBy, { type: searchType, keyword: searchKeyword });
+        const { data, error } = await reviewService.getReviews(sortBy, { type: searchType, keyword: activeSearchKeyword });
         if (error) {
             toast.error('후기를 불러오는데 실패했습니다.');
         } else {
@@ -39,7 +40,11 @@ export default function Reviews() {
     // 초기 로드 및 필터 변경 시 재로드
     useEffect(() => {
         loadReviews();
-    }, [sortBy, searchKeyword]);
+    }, [sortBy, activeSearchKeyword]);
+
+    const handleSearchTrigger = () => {
+        setActiveSearchKeyword(keywordInput);
+    };
 
     // 후기 작성/수정 핸들러
     const handleSaveReview = async (formData) => {
@@ -108,7 +113,16 @@ export default function Reviews() {
     return (
         <div className="reviews-container">
             <div className="reviews-header">
-                <h1 className="reviews-title">여행 후기</h1>
+                <h1
+                    className="reviews-title"
+                    onClick={() => {
+                        setKeywordInput('');
+                        setActiveSearchKeyword('');
+                    }}
+                    style={{ cursor: 'pointer' }}
+                >
+                    여행 후기
+                </h1>
                 <p className="reviews-subtitle">다른 여행자들의 생생한 후기를 확인해보세요.</p>
 
                 <div className="reviews-controls-container">
@@ -156,10 +170,17 @@ export default function Reviews() {
                                 type="text"
                                 className="search-input"
                                 placeholder="검색어를 입력하세요..."
-                                value={searchKeyword}
-                                onChange={(e) => setSearchKeyword(e.target.value)}
+                                value={keywordInput}
+                                onChange={(e) => setKeywordInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSearchTrigger();
+                                }}
                             />
-                            <FaSearch className="search-icon" />
+                            <FaSearch
+                                className="search-icon"
+                                onClick={handleSearchTrigger}
+                                style={{ cursor: 'pointer' }}
+                            />
                         </div>
                     </div>
                 </div>
