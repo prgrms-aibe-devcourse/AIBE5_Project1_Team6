@@ -26,8 +26,9 @@ export default function Layout() {
           <button className={pathname === "/traffic" ? "navBtn active" : "navBtn"} onClick={() => nav("/traffic")}>Traffic</button>
           <button className={pathname === "/airplane" ? "navBtn active" : "navBtn"} onClick={() => nav("/airplane")}>Airplane</button>
           <button className={pathname === "/plans" ? "navBtn active" : "navBtn"} onClick={() => nav("/plans")}>My Plans</button>
+          <button className={pathname === "/planlab" ? "navBtn active" : "navBtn"} onClick={() => nav("/planlab")}>PlanLab</button>
         </nav>
-        
+
         <div style={{ marginLeft: "auto", paddingRight: 20 }}>
           {user ? (
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
