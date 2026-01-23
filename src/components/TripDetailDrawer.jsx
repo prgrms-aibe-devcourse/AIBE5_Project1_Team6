@@ -1,4 +1,5 @@
 import TripMap from "./TripMap";
+import { useTourDetail } from "../hooks/queries/useTourQueries";
 import "../styles/drawer.css";
 
 function Stepper({ label, value, setValue, min = 0, max = 30 }) {
@@ -47,6 +48,14 @@ export default function TripDetailDrawer({
   improveLabel = "AI 자동 보완",
   diffResult,
 }) {
+  // ✅ Detail API Fetching (only if contentid exists)
+  const contentId = item?.contentid;
+  const { data: detailData, isLoading: isDetailLoading } = useTourDetail(contentId);
+
+  // Merge basic item with detail data if available
+  // detailData has overview, homepage, tel, etc.
+  const displayItem = { ...item, ...detailData };
+
   if (!open || !item) return null;
 
     const handleSave = () => {
@@ -99,6 +108,30 @@ export default function TripDetailDrawer({
 
         {/* ✅ Airplane에서만 위에 날씨/가이드 섹션 주입 */}
         {extraTop}
+
+        {/* ✅ 상세 개요 (API Data) */}
+        {contentId && (
+            <section className="drawerSection">
+                <h3>📖 상세 정보</h3>
+                {isDetailLoading ? (
+                    <div className="skeleton-text">상세 정보를 불러오는 중...</div>
+                ) : (
+                    <div style={{ lineHeight: 1.6, color: "#e0e0e0", fontSize: "0.95rem" }}>
+                        {displayItem.overview ? (
+                             // HTML entities removing could be needed but TourAPI usually gives clean text or basic HTML
+                             displayItem.overview.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, '')
+                        ) : (
+                            "상세 정보가 없습니다."
+                        )}
+                        {displayItem.homepage && (
+                            <div style={{ marginTop: 8, fontSize: "0.9rem" }}>
+                                🌐 <span dangerouslySetInnerHTML={{ __html: displayItem.homepage }} />
+                            </div>
+                        )}
+                    </div>
+                )}
+            </section>
+        )}
 
         <section className="drawerSection">
           <h3>이런 숙소를 추천해요!</h3>
