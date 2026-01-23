@@ -29,6 +29,7 @@ export default function Reviews() {
     const loadReviews = async () => {
         setLoading(true);
         const { data, error } = await reviewService.getReviews(sortBy, { type: searchType, keyword: activeSearchKeyword });
+
         if (error) {
             toast.error('후기를 불러오는데 실패했습니다.');
         } else {
