@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { FaStar, FaPlus, FaTrash } from 'react-icons/fa';
+import { useState, useEffect, useRef } from 'react';
+import { FaStar, FaPlus, FaTrash, FaFolderOpen } from 'react-icons/fa';
 
 export default function ReviewForm({ initialData, onSubmit, onClose }) {
     const [formData, setFormData] = useState({
@@ -11,7 +11,6 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
 
     // 새 미디어 입력 상태
     const [newMediaUrl, setNewMediaUrl] = useState('');
-    const [newMediaType, setNewMediaType] = useState('image');
 
     useEffect(() => {
         if (initialData) {
@@ -29,13 +28,44 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    // 파일 입력 참조
+    const fileInputRef = useRef(null);
+
+    // 파일 선택 핸들러
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const result = reader.result;
+            const type = file.type.startsWith('image/') ? 'image' : 'video';
+
+            setFormData(prev => ({
+                ...prev,
+                media: [...prev.media, { url: result, type }]
+            }));
+        };
+        reader.readAsDataURL(file);
+
+        // 입력 초기화 (같은 파일 다시 선택 가능하도록)
+        e.target.value = '';
+    };
+
     const handleAddMedia = () => {
-        if (!newMediaUrl.trim()) return;
-        setFormData(prev => ({
-            ...prev,
-            media: [...prev.media, { url: newMediaUrl, type: newMediaType }]
-        }));
-        setNewMediaUrl('');
+        if (newMediaUrl.trim()) {
+            // URL 확장자로 타입 추론 (기본값: image)
+            const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(newMediaUrl);
+            const type = isVideo ? 'video' : 'image';
+
+            setFormData(prev => ({
+                ...prev,
+                media: [...prev.media, { url: newMediaUrl, type }]
+            }));
+            setNewMediaUrl('');
+        } else {
+            fileInputRef.current.click();
+        }
     };
 
     const handleRemoveMedia = (index) => {
@@ -103,23 +133,30 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
 
                     <div className="form-group">
                         <label>이미지/동영상 추가</label>
+
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            accept="image/*,video/*"
+                            style={{ display: 'none' }}
+                        />
+
+                        {/* URL 입력 및 파일 추가 */}
                         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                             <input
                                 type="text"
                                 className="form-input"
                                 value={newMediaUrl}
                                 onChange={(e) => setNewMediaUrl(e.target.value)}
-                                placeholder="URL 입력 (이미지/동영상)"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault(); // 폼 제출 방지
+                                        handleAddMedia();
+                                    }
+                                }}
+                                placeholder="URL을 입력하거나 + 버튼을 눌러 파일 업로드"
                             />
-                            <select
-                                className="form-select"
-                                style={{ width: '100px' }}
-                                value={newMediaType}
-                                onChange={(e) => setNewMediaType(e.target.value)}
-                            >
-                                <option value="image">이미지</option>
-                                <option value="video">동영상</option>
-                            </select>
                             <button
                                 type="button"
                                 onClick={handleAddMedia}
@@ -133,9 +170,13 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
                         {/* 추가된 미디어 목록 */}
                         <div className="media-preview-list" style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0.5rem 0' }}>
                             {formData.media.map((item, idx) => (
-                                <div key={idx} style={{ position: 'relative', minWidth: '80px', height: '80px' }}>
+                                <div key={idx} style={{ position: 'relative', minWidth: '80px', height: '80px', flexShrink: 0 }}>
                                     {item.type === 'video' ? (
-                                        <div style={{ width: '100%', height: '100%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, fontSize: '0.8rem' }}>Video</div>
+                                        <video
+                                            src={item.url}
+                                            muted
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }}
+                                        />
                                     ) : (
                                         <img src={item.url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
                                     )}
