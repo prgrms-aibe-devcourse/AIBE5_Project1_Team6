@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useKakaoMap } from "../hooks/useKakaoMap";
 import toast from "react-hot-toast";
 import DestinationCard from "../components/DestinationCard";
 import TripDetailDrawer from "../components/TripDetailDrawer";
@@ -16,8 +17,9 @@ const mapContainerStyle = {
 };
 
 export default function Traffic() {
-  const mapRef = useRef(null);
-  const [map, setMap] = useState(null);
+  // ✅ Use Custom Hook for Map (SRP)
+  const { mapRef, map, isLoaded, kakao } = useKakaoMap();
+
   const [selected, setSelected] = useState(null);
   const [keyword, setKeyword] = useState("");
 
@@ -26,65 +28,40 @@ export default function Traffic() {
   const [planText, setPlanText] = useState("");
   const [diffResult, setDiffResult] = useState(null);
 
+  // ✅ Initialize Map View & Markers
   useEffect(() => {
-    const initMap = () => {
-        const { kakao } = window;
-        if (!kakao || !kakao.maps) {
-            return false;
-        }
+    if (!map || !kakao) return;
 
-        kakao.maps.load(() => {
-            const container = mapRef.current;
-            if (container.hasChildNodes()) return;
+    // Set Initial View for Traffic (Korea Center)
+    map.setCenter(new kakao.maps.LatLng(36.5, 127.5));
+    map.setLevel(13);
 
-            const options = {
-                center: new kakao.maps.LatLng(36.5, 127.5), // 한국 중심 대략
-                level: 13
-            };
-            const mapInstance = new kakao.maps.Map(container, options);
-            setMap(mapInstance);
+    trafficDestinations.forEach((item) => {
+        if (item.lat && item.lon) {
+            const markerPosition = new kakao.maps.LatLng(item.lat, item.lon);
+            const marker = new kakao.maps.Marker({ position: markerPosition });
+            marker.setMap(map);
 
-            // Destinations markers
-            trafficDestinations.forEach((item) => {
-                if (item.lat && item.lon) {
-                    const markerPosition = new kakao.maps.LatLng(item.lat, item.lon);
-                    const marker = new kakao.maps.Marker({
-                        position: markerPosition
-                    });
-                    marker.setMap(mapInstance);
-
-                    kakao.maps.event.addListener(marker, 'click', () => {
-                        openDetail(item);
-                    });
-                }
+            kakao.maps.event.addListener(marker, 'click', () => {
+                openDetail(item);
             });
-        });
-        return true;
-    };
-
-    if (!initMap()) {
-        const intervalId = setInterval(() => {
-            if (initMap()) {
-                clearInterval(intervalId);
-            }
-        }, 500);
-        return () => clearInterval(intervalId);
-    }
-  }, []);
+        }
+    });
+  }, [map, kakao]);
 
   const handleSearch = () => {
-    if (!map || !keyword) return;
+    if (!map || !keyword || !kakao) return;
     
-    if(!window.kakao.maps.services || !window.kakao.maps.services.Places){
+    if(!kakao.maps.services || !kakao.maps.services.Places){
         toast.error("지도 검색 서비스를 사용할 수 없습니다.");
         return;
     }
 
-    const ps = new window.kakao.maps.services.Places();
+    const ps = new kakao.maps.services.Places();
     ps.keywordSearch(keyword, (data, status) => {
-        if (status === window.kakao.maps.services.Status.OK) {
+        if (status === kakao.maps.services.Status.OK) {
             const place = data[0];
-            const moveLatLon = new window.kakao.maps.LatLng(place.y, place.x);
+            const moveLatLon = new kakao.maps.LatLng(place.y, place.x);
             map.setCenter(moveLatLon);
             map.setLevel(9);
         } else {
@@ -104,8 +81,9 @@ export default function Traffic() {
     setPlanText("");
     setDiffResult(null);
 
-    if (map && item.lat && item.lon) {
-        const moveLatLon = new window.kakao.maps.LatLng(item.lat, item.lon);
+    // Zoom to location
+    if (map && kakao && item.lat && item.lon) {
+        const moveLatLon = new kakao.maps.LatLng(item.lat, item.lon);
         map.panTo(moveLatLon);
         map.setLevel(7);
     }
