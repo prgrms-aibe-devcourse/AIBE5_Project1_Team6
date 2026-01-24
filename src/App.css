@@ -2,8 +2,27 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px;
-  background: #0b1020;
+  padding: 0;
+  /* Remove padding to let bg fill */
+  /* Fallback dark background matching the reference mood */
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+    radial-gradient(circle at center bottom, #2a2a2a 0%, #0b0b0b 100%);
+  background-size: cover;
+  background-position: center;
+}
+
+/* If user adds an image later, they can set it here */
+.bg-image {
+  background-image: url('/path/to/image.jpg');
+}
+
+.centerPage {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .card {
@@ -14,16 +33,223 @@
   border: 1px solid rgba(255, 255, 255, 0.10);
   backdrop-filter: blur(10px);
   text-align: center;
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
 }
 
-.title {
-  margin: 0 0 28px;
-  font-size: clamp(28px, 4vw, 46px);
+.heroCard {
+  width: 100%;
+  height: 100%;
+  padding: 0 5%;
+  border: none;
+  background: transparent;
+  /* Transparent to show background */
+  backdrop-filter: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.mainLogo {
+  display: none;
+}
+
+/* Funnel Styles */
+.funnelContainer {
+  width: 100%;
+  max-width: 1400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.funnelStep {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stepTitle {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  margin-bottom: 4rem;
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.selectionGrid {
+  display: grid;
+  width: 100%;
+  justify-content: center;
+  gap: 24px;
+}
+
+.selectionGrid.col-3-hero {
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
+  /* Min width ensures sizeable buttons */
+  max-width: 1200px;
+}
+
+/* The Reference Style Buttons: White/Bright, Rounded, Black Text */
+.selectionCard.hero {
+  aspect-ratio: 4/3;
+  /* Slightly rectangular/square */
+  width: 100%;
+  padding: 32px;
+  background: rgba(240, 240, 240, 0.95);
+  /* Bright almost white */
+  color: #333;
+  /* Dark text */
+  border: none;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.selectionCard.hero .icon {
+  font-size: 5rem;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
+.selectionCard.hero .label {
+  font-size: 2rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  color: #ffffff;
+  margin-bottom: 8px;
+  color: #111;
 }
 
+.selectionCard.hero .subLabel {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.selectionCard.hero:hover {
+  transform: translateY(-10px) scale(1.05);
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.selectionCard.active {
+  background: #fff;
+  border: 4px solid #646cff;
+}
+
+/* Other Steps styling (Darker cards maybe?) */
+/* We'll keep same style for consistency, or transparent for others?
+   Let's keep the hero style consistent for now for broad impact */
+
+/* Action Area */
+.actionArea {
+  margin-top: 50px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.nextBtn {
+  padding: 18px 48px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  background: #646cff;
+  color: white;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(100, 108, 255, 0.4);
+  transition: all 0.2s;
+}
+
+.nextBtn:disabled {
+  background: #444;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.nextBtn:not(:disabled):hover {
+  background: #535bf2;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(83, 91, 242, 0.4);
+}
+
+.saveCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  padding: 48px;
+  border-radius: 20px;
+  margin-top: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.saveText {
+  font-size: 1.3rem;
+  line-height: 1.6;
+  margin-bottom: 32px;
+  color: #eeeeee;
+}
+
+.ctaBtn {
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  background: linear-gradient(to right, #646cff, #9effff);
+  color: #0b1020;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.ctaBtn:hover {
+  transform: scale(1.03);
+}
+
+.stepDescription {
+  font-size: 1.5rem;
+  color: #aaccff;
+  margin-bottom: 2rem;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .selectionGrid.col-3-hero {
+    grid-template-columns: 1fr;
+    max-width: 500px;
+  }
+}
+
+.backBtn {
+  position: absolute;
+  top: -80px;
+  /* higher up */
+  left: 20px;
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px 20px;
+  border-radius: 30px;
+}
+
+/* Existing Button Styles (Preserved) */
 .buttons {
   display: flex;
   gap: 14px;
@@ -50,6 +276,63 @@
   border-color: rgba(255, 255, 255, 0.30);
 }
 
+
 .btn:active {
   transform: translateY(0px);
+}
+
+/* StepSave Auth Tabs */
+.stepSaveContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.authTabContainer {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.authTabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.authTab {
+  flex: 1;
+  padding: 1rem;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.authTab.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-weight: 700;
+  border-bottom: 2px solid #646cff;
+}
+
+.authTabContent {
+  padding: 2rem;
+  text-align: center;
+}
+
+.guestContent p, .loginContent p {
+  color: #fff;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.guestContent .subText, .loginContent .subText {
+  color: #ccc;
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
 }

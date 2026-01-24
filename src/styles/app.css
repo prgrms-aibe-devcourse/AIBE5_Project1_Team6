@@ -1,79 +1,214 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body, #root { width: 100%; height: 100%; }
-body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-.appShell { min-height: 100vh; background: #0b1020; color: #fff; }
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
 
-.topbar{
-  position: sticky; top: 0;
-  display: flex; align-items: center; justify-content: space-between;
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.appShell {
+  min-height: 100vh;
+  background: #0b1020;
+  color: #fff;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 14px 18px;
-  background: rgba(0,0,0,0.35);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
   z-index: 5;
 }
 
-.brand{ font-weight: 900; letter-spacing: -0.02em; cursor: pointer; }
-.nav{ display: flex; gap: 8px; }
-.navBtn{
-  padding: 8px 12px; border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.08);
-  color: #fff; cursor: pointer;
+.brand {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  cursor: pointer;
 }
-.navBtn.active{ background: rgba(255,255,255,0.16); }
 
-.content{ padding: 26px 18px 80px; }
+.nav {
+  display: flex;
+  gap: 8px;
+}
 
-.centerPage{
+.navBtn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+}
+
+.navBtn.active {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.content {
+  padding: 26px 18px 80px;
+}
+
+.centerPage {
   min-height: calc(100vh - 60px);
   display: grid;
   place-items: center;
 }
 
-.heroCard{
+.heroCard {
   width: min(920px, 100%);
   padding: 56px 28px;
   border-radius: 20px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
 }
 
-.heroTitle{
+.heroTitle {
   text-align: center;
   font-size: clamp(28px, 4vw, 46px);
   font-weight: 900;
   margin-bottom: 22px;
 }
 
-.heroButtons{
+.heroButtons {
   display: flex;
   gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
 }
 
-.heroBtn{
+.heroBtn {
   min-width: 180px;
   padding: 14px 18px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
   font-size: 18px;
   font-weight: 800;
   cursor: pointer;
 }
 
-.pageWrap{ width: min(1200px, 100%); margin: 0 auto; }
-.pageTitle{ font-size: 26px; font-weight: 900; margin: 10px 0 6px; }
-.pageDesc{ opacity: 0.8; margin-bottom: 16px; }
-.filters{ display: flex; gap: 10px; margin: 14px 0 18px; }
-select{
+.heroBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.heroBtn.active {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* Funnel (Toss-style Q&A) */
+.funnelTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.funnelBackBtn {
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  cursor: pointer;
+}
+
+.funnelProgress {
+  opacity: 0.75;
+  font-weight: 700;
+}
+
+.funnelTitle {
+  margin-bottom: 10px;
+}
+
+.funnelSubtitle {
+  text-align: center;
+  opacity: 0.8;
+  margin: -6px 0 16px;
+}
+
+.funnelCtaRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.heroBtn.funnelCta {
+  min-width: min(560px, 100%);
+}
+
+.funnelHint {
+  margin-top: 14px;
+  text-align: center;
+  opacity: 0.75;
+}
+
+.funnelSummary {
+  text-align: center;
+  opacity: 0.9;
+  margin: 10px 0 6px;
+  line-height: 1.6;
+}
+
+.pageWrap {
+  width: min(1200px, 100%);
+  margin: 0 auto;
+}
+
+.pageTitle {
+  font-size: 26px;
+  font-weight: 900;
+  margin: 10px 0 6px;
+}
+
+.pageDesc {
+  opacity: 0.8;
+  margin-bottom: 16px;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  margin: 14px 0 18px;
+}
+
+select {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
   color: #fff;
+}
+
+.saveActionButtons {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.saveActionButtons .stepSaveBtn {
+  /* funnelCta의 min-width(560px) 같은 강제 폭을 무력화 */
+  min-width: 0;
+  flex: 1 1 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
