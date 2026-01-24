@@ -67,7 +67,7 @@ export default function TripDetailDrawer({
       destinationId: item.id,
       title: item.title,
       subtitle: item.subtitle,
-      heroImage: item.image,
+      heroImage: item.firstimage || item.image,
 
       nights,
       people,
@@ -79,8 +79,8 @@ export default function TripDetailDrawer({
       // Airplane일 때만 있을 수도 있음
       rateText: item.rateText,
       safety: item.safety,
-      lat: item.lat,
-      lon: item.lon,
+      lat: parseFloat(item.mapy || item.lat),
+      lon: parseFloat(item.mapx || item.lon),
     };
 
     onSave?.(payload);
@@ -98,12 +98,16 @@ export default function TripDetailDrawer({
         </div>
 
         <div className="drawerHero">
-          <img src={item.image} alt={item.title} />
+          <img src={item.firstimage || item.image || "https://images.unsplash.com/photo-1533658280665-224492bf552f?auto=format&fit=crop&w=800&q=80"} alt={item.title} />
         </div>
 
         {/* ✅ Google Map 연동 */}
-        {item.lat && item.lon && (
-          <TripMap lat={item.lat} lon={item.lon} title={item.title} />
+        {(item.mapy || item.lat) && (item.mapx || item.lon) && (
+          <TripMap 
+            lat={parseFloat(item.mapy || item.lat)} 
+            lon={parseFloat(item.mapx || item.lon)} 
+            title={item.title} 
+          />
         )}
 
         {/* ✅ Airplane에서만 위에 날씨/가이드 섹션 주입 */}

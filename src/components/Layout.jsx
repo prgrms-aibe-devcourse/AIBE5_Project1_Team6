@@ -21,7 +21,6 @@ export default function Layout() {
       <header className="topbar">
         <div className="brand" onClick={() => nav("/")}>trip_plan</div>
         <nav className="nav">
-          <button className="navBtn" onClick={() => nav("/plans")}>My Plans</button>
         </nav>
 
         <div style={{ marginLeft: "auto", paddingRight: 20, display: 'flex', gap: 10, alignItems: 'center' }}>

@@ -12,6 +12,8 @@ import "../styles/cards.css";
 import { simpleDiff } from "../services/diff";
 import { geocodeCity, haversineKm, KOREA_CITY_COORDS } from "../utils/geo";
 import { rankTourItems } from "../services/recommend/rankTourItems";
+import { useAuthStore } from "../stores/authStore";
+import { GUEST_KEY } from "../utils/guestUtils";
 
 const mapContainerStyle = {
   width: "100%",
@@ -23,6 +25,14 @@ const mapContainerStyle = {
 export default function Traffic() {
   // ✅ Use Custom Hook for Map (SRP)
   const { mapRef, map, isLoaded, kakao } = useKakaoMap();
+  const { user } = useAuthStore();
+  const guestId = localStorage.getItem(GUEST_KEY);
+
+  const greeting = useMemo(() => {
+    if (user) return `${user.email.split('@')[0]}님, 내 주변 20km 반경의 추천 드라이브/여행 코스입니다.`;
+    if (guestId) return `비회원${guestId.slice(0, 4)}님, 내 주변 20km 반경의 추천 드라이브/여행 코스입니다.`;
+    return "내 주변 20km 반경의 추천 드라이브/여행 코스입니다.";
+  }, [user, guestId]);
 
   // ✅ Smart Recommendation Logic
   const { themes, priority, budget, duration } = useTripStore();
@@ -222,7 +232,7 @@ export default function Traffic() {
                 </button>
             </>
           ) : 
-          "내 주변 20km 반경의 추천 드라이브/여행 코스입니다."}
+          greeting}
       </div>
 
       {budget === "good" && (

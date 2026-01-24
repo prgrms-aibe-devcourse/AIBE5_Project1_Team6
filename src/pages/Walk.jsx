@@ -13,13 +13,27 @@ import { improvePlanText } from "../services/aiPlanner";
 import { simpleDiff } from "../services/diff";
 import { rankTourItems } from "../services/recommend/rankTourItems";
 
+import { useAuthStore } from "../stores/authStore";
+import { GUEST_KEY } from "../utils/guestUtils";
+
 export default function Walk() {
   // ✅ Map (SRP)
   const { mapRef, map, kakao } = useKakaoMap();
+  const { user } = useAuthStore();
+  const guestId = localStorage.getItem(GUEST_KEY);
 
   // ✅ Smart Recommendation Engine Logic
   const { themes = [], priority = '', budget = null, duration = null } = useTripStore();
   const { location, error: geoError, isLoading: geoLoading, requestLocation } = useGeolocation();
+
+
+
+  // Calculate greeting
+  const greeting = useMemo(() => {
+    if (user) return `${user.email.split('@')[0]}님, 내 주변 맞춤 산책 코스를 추천해드립니다.`;
+    if (guestId) return `비회원${guestId.slice(0, 4)}님, 내 주변 맞춤 산책 코스를 추천해드립니다.`;
+    return "내 주변 맞춤 산책 코스를 추천해드립니다.";
+  }, [user, guestId]);
 
   // Map Themes to ContentType
   const contentTypeId = useMemo(() => {
@@ -260,7 +274,7 @@ export default function Walk() {
                </button>
             </>
           ) : 
-          "내 주변 맞춤 산책 코스를 추천해드립니다."}
+          greeting}
       </div>
 
       {budget === "good" && (

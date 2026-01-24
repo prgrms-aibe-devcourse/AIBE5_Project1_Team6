@@ -276,6 +276,63 @@
   border-color: rgba(255, 255, 255, 0.30);
 }
 
+
 .btn:active {
   transform: translateY(0px);
+}
+
+/* StepSave Auth Tabs */
+.stepSaveContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.authTabContainer {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.authTabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.authTab {
+  flex: 1;
+  padding: 1rem;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.authTab.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-weight: 700;
+  border-bottom: 2px solid #646cff;
+}
+
+.authTabContent {
+  padding: 2rem;
+  text-align: center;
+}
+
+.guestContent p, .loginContent p {
+  color: #fff;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.guestContent .subText, .loginContent .subText {
+  color: #ccc;
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
 }
