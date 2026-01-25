@@ -48,11 +48,50 @@ export function useTourSearch(keyword) {
  * Hook to fetch detail info (overview, images, etc.)
  * @param {string|number} contentId 
  */
-export function useTourDetail(contentId) {
+// Helper to normalize TourAPI's inconsistent field names
+function normalizeIntro(item, contentTypeId) {
+    if (!item) return {};
+    const type = Number(contentTypeId);
+    let norm = { ...item }; // Keep original fields too
+
+    // Helper getters
+    const get = (...keys) => {
+        for (const k of keys) {
+            if (item[k]) return item[k];
+        }
+        return null;
+    };
+
+    // 1. Parking
+    norm.parking = get('parking', 'parkingfood', 'parkinglodging', 'parkingculture', 'parkingshopping', 'parkingleports');
+    
+    // 2. Rest Date
+    norm.restdate = get('restdate', 'restdatefood', 'restdateculture', 'restdateshopping', 'restdateleports');
+    
+    // 3. Use Time / Open Time
+    if (type === 32) { // Stay
+        const inTime = item.checkintime || '';
+        const outTime = item.checkouttime || '';
+        norm.usetime = `입실 ${inTime} / 퇴실 ${outTime}`;
+    } else {
+        norm.usetime = get('usetime', 'opentimefood', 'usetimeculture', 'opentime', 'usetimeleports', 'playtime');
+    }
+    
+    // 4. Info Center (This often comes from Common, but sometimes Intro has specific)
+    // Common has 'tel', Intro might have 'infocenter'
+    norm.infocenter = get('infocenter', 'infocenterfood', 'infocenterculture', 'infocenterleports', 'infocentershopping');
+
+    return norm;
+}
+
+export function useTourDetail(contentId, contentTypeId) {
     return useQuery({
         queryKey: TOUR_KEYS.detail(contentId),
         queryFn: async () => {
-            const items = await fetchTourData('/detailCommon2', {
+            if (!contentId) return null;
+
+            // 1. Fetch Common Info
+            const commonPromise = fetchTourData('/detailCommon2', {
                 contentId,
                 overviewYN: 'Y',
                 defaultYN: 'Y',
@@ -60,8 +99,30 @@ export function useTourDetail(contentId) {
                 addrinfoYN: 'Y',
                 mapinfoYN: 'Y',
             });
-            // The API returns an array, we usually want the first item for detail
-            return items && items.length > 0 ? items[0] : null;
+
+            // 2. Fetch Intro Info
+            let introPromise = Promise.resolve([]);
+            if (contentTypeId) {
+                introPromise = fetchTourData('/detailIntro2', {
+                    contentId,
+                    contentTypeId,
+                });
+            }
+
+            const [commonItems, introItems] = await Promise.all([commonPromise, introPromise]);
+            
+            const common = commonItems && commonItems.length > 0 ? commonItems[0] : {};
+            const introRaw = introItems && introItems.length > 0 ? introItems[0] : {};
+            
+            // Normalize Intro Data
+            const intro = normalizeIntro(introRaw, contentTypeId);
+
+            // Merge: Intro should override if field exists, but we normalized unique keys.
+            // Also prioritize Common's tel if Intro's infocenter is missing
+            const merged = { ...common, ...intro };
+            if (!merged.infocenter && merged.tel) merged.infocenter = merged.tel;
+            
+            return merged;
         },
         enabled: !!contentId,
         keepPreviousData: true,

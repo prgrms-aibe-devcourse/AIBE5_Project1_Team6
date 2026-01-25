@@ -1,7 +1,7 @@
 import { useTripStore } from "../../stores/tripStore";
 import FunnelStepShell from "./FunnelStepShell";
 
-export default function StepTheme() {
+export default function StepTheme({ progressText = "3/4" }) {
   const { themes, setThemes, nextStep, prevStep } = useTripStore();
 
   const containerVariants = {
@@ -20,7 +20,7 @@ export default function StepTheme() {
   return (
     <FunnelStepShell
       title="이번 여행의 목적은 무엇인가요?"
-      progressText="4 / 6"
+      progressText={progressText}
       onBack={prevStep}
       motionVariants={containerVariants}
     >

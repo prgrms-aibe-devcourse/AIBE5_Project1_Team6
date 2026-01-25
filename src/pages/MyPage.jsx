@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import '../styles/mypage.css';
+import { useQuery } from '@tanstack/react-query';
+import { loadPlans } from '../services/plansStorage';
+import TravelBiorhythm from '../components/TravelBiorhythm';
 
 export default function MyPage() {
     const { user, setUser } = useAuthStore();
@@ -16,6 +19,12 @@ export default function MyPage() {
     const [profileImage, setProfileImage] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [saving, setSaving] = useState(false);
+
+    // ✅ Fetch Real Plans
+    const { data: myPlans = [] } = useQuery({
+        queryKey: ['plans'],
+        queryFn: loadPlans
+    });
 
     useEffect(() => {
         if (user) {
@@ -113,25 +122,28 @@ export default function MyPage() {
                             <button className="action-btn" onClick={() => nav('/plans')}>+ 새 일정 만들기</button>
                         </div>
                         <div className="content-grid">
-                            {mockSchedules.map(item => (
-                                <div key={item.id} className="feature-card">
+                            {myPlans.length > 0 ? myPlans.map(item => (
+                                <div key={item.id} className="feature-card" onClick={() => nav('/plans')} style={{cursor: 'pointer'}}>
                                     <div className="card-img-wrapper">
-                                        <img src={item.cover} alt={item.title} className="card-img" />
-                                        <span className="card-badge">{item.days}</span>
+                                        <img src={item.heroImage || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80"} alt={item.title} className="card-img" />
+                                        <span className="card-badge">{item.mood ? '#' + item.mood.toUpperCase() : '#TRIP'}</span>
                                     </div>
                                     <div className="card-body">
                                         <h3 className="card-title">{item.title}</h3>
                                         <div className="card-meta">
-                                            <span>📅 {item.date}</span>
-                                            <span>👥 {item.participants}명</span>
-                                        </div>
-                                        <div className="card-actions">
-                                            <button className="icon-btn">✏️</button>
-                                            <button className="icon-btn">🔗</button>
+                                            <span>📅 {new Date(item.createdAt).toLocaleDateString()}</span>
+                                            <span>👥 {item.people}명</span>
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <div className="empty-state">
+                                    <p>아직 저장된 일정이 없습니다.</p>
+                                    <button className="primary-btn" onClick={() => nav('/')} style={{marginTop: '1rem'}}>
+                                        여행 계획하러 가기
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </>
                 );
@@ -140,42 +152,12 @@ export default function MyPage() {
                     <>
                         <div className="content-header">
                             <div>
-                                <h1 className="page-title">나의 여행 성향</h1>
-                                <p className="page-subtitle">여행 MBTI 테스트 결과입니다.</p>
-                            </div>
-                            <button className="action-btn" onClick={() => alert('테스트 다시가기')}>+ 다시 테스트하기</button>
-                        </div>
-
-                        <div className="persona-card">
-                            <div className="persona-bg-glow"></div>
-                            <div className="persona-content">
-                                <span className="persona-icon">{mockPersona.icon}</span>
-                                <h2 className="persona-title">{mockPersona.title}</h2>
-                                <div className="persona-tag-container">
-                                    {mockPersona.tags.map((tag, i) => (
-                                        <span key={i} className="persona-tag">{tag}</span>
-                                    ))}
-                                </div>
-                                <p className="persona-desc">{mockPersona.desc}</p>
+                                <h1 className="page-title">나의 여행 바이오리듬</h1>
+                                <p className="page-subtitle">지금까지의 여행 데이터를 기반으로 분석한 당신의 스타일입니다.</p>
                             </div>
                         </div>
 
-                        <div className="preference-grid">
-                            {mockPersona.answers.map((item, index) => (
-                                <div key={index} className="preference-item">
-                                    <div className="pref-header">
-                                        <div className="pref-icon-wrapper">{item.icon}</div>
-                                        <div>
-                                            <div className="pref-label">{item.step}</div>
-                                            <div className="pref-question">{item.question}</div>
-                                        </div>
-                                    </div>
-                                    <div className="pref-answer-box">
-                                        <div className="pref-answer">{item.answer}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        <TravelBiorhythm plans={myPlans} />
                     </>
                 );
             case 'wishlist':

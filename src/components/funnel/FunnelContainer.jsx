@@ -1,24 +1,50 @@
 import { AnimatePresence } from 'framer-motion';
 import { useTripStore } from '../../stores/tripStore';
 import StepTransport from './StepTransport';
+import StepTrafficType from './StepTrafficType';
 import StepBudget from './StepBudget';
-import StepDuration from './StepDuration';
+import StepCompanion from './StepCompanion';
 import StepTheme from './StepTheme';
-import StepPriority from './StepPriority';
-import StepSave from './StepSave';
+import StepLoading from './StepLoading';
+import StepAuth from './StepAuth';
 
 export default function FunnelContainer() {
-  const { step } = useTripStore();
+  const { step, transport } = useTripStore();
 
+  // Traffic Flow has an extra step: TrafficType & Budget
+  // 0: Transport
+  // 1: TrafficType
+  // 2: Budget
+  // 3: Companion
+  // 4: Theme
+  // 5: Loading
+  // 6: Auth
+  
   const renderStep = () => {
+    // Universal Step 0
+    if (step === 0) return <StepTransport key="stepTransport" />;
+
+    // Traffic Flow
+    if (transport === 'Traffic') {
+        switch (step) {
+            case 1: return <StepTrafficType key="stepTrafficType" />;
+            case 2: return <StepBudget key="stepBudget" />;
+            case 3: return <StepCompanion key="stepComp" />;
+            case 4: return <StepTheme key="stepTheme" />;
+            case 5: return <StepLoading key="stepLoading" />;
+            case 6: return <StepAuth key="stepAuth" />;
+            default: return <StepTransport key="stepTransport" />;
+        }
+    }
+
+    // Default Flow (Walk)
     switch (step) {
-      case 0: return <StepTransport key="step0" />;
-      case 1: return <StepBudget key="step1" />;
-      case 2: return <StepDuration key="step2" />;
-      case 3: return <StepTheme key="step3" />;
-      case 4: return <StepPriority key="stepPriority" />;
-      case 5: return <StepSave key="stepSave" />;
-      default: return <StepTransport key="step0" />;
+      case 1: return <StepCompanion key="stepComp" progressText="2/4" />;
+      case 2: return <StepBudget key="stepBudget" progressText="3/4" />;
+      case 3: return <StepTheme key="stepTheme" progressText="4/4" />;
+      case 4: return <StepLoading key="stepLoading" />;
+      case 5: return <StepAuth key="stepAuth" />;
+      default: return <StepTransport key="stepTransport" />;
     }
   };
 

@@ -1,49 +1,46 @@
 import { motion } from 'framer-motion';
 import { useTripStore } from '../../stores/tripStore';
-import { useNavigate } from 'react-router-dom';
+import FunnelStepShell from './FunnelStepShell';
+import { containerVariants, itemVariants } from '../../utils/animationVariants';
 
 export default function StepDestination() {
-  const { transport, setDestination, prevStep } = useTripStore();
-  const nav = useNavigate();
+  const { setDestination, nextStep, prevStep } = useTripStore();
 
-  const handleSelect = (type) => {
-    setDestination(type);
-    if (type === 'anywhere') {
-      // "아무데나" 선택 시 추천 로직 (임시로 현재 페이지에서 처리하거나 추천 페이지로 이동)
-      // 여기서는 일단 해당 교통수단 페이지로 이동하되, state를 통해 추천 뷰를 띄우도록 설정할 수 있음
-      // 우선 사용자 요청대로 트래픽 -> 추천 뷰 로직 등을 고려하여,
-      // 각 페이지(walk, traffic, airplane)로 이동시킨 후 거기서 state를 읽어 처리하도록 함.
-      nav(`/${transport}`);
-    } else {
-      // "확정된 지역" 선택 시 -> 지도 뷰로 이동 (기본 동작)
-      nav(`/${transport}`);
-    }
+  const handleSelect = (dest) => {
+    setDestination(dest);
+    nextStep();
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0, x: 50 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.5 } },
-    exit: { opacity: 0, x: -50 }
-  };
+  const destinations = [
+    { id: 'seoul', label: '🏙️ 서울', desc: '도심 속 힐링' },
+    { id: 'busan', label: '🌊 부산', desc: '바다와 함께' },
+    { id: 'jeju', label: '🍊 제주', desc: '자연 그 자체' },
+    { id: 'current', label: '📍 내 주변', desc: '지금 있는 곳에서' },
+  ];
 
   return (
-    <motion.div 
-      className="funnelStep"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
+    <FunnelStepShell
+      title="어디로 떠날까요?"
+      subtitle="원하는 지역이나 현재 위치를 선택해주세요."
+      onBack={prevStep}
+      progressText="2/4"
+      motionVariants={containerVariants}
     >
-      <button className="backBtn" onClick={prevStep}>← 이전</button>
-      <h2 className="stepTitle">어디로 떠날까요?</h2>
       <div className="selectionGrid col-2">
-        <button className="selectionCard full" onClick={() => handleSelect('specific')}>
-          <span className="label">콕 집어 갈래요</span>
-        </button>
-        <button className="selectionCard full" onClick={() => handleSelect('anywhere')}>
-          <span className="label">아무 데나 추천해줘</span>
-        </button>
+        {destinations.map((option) => (
+          <motion.button
+            key={option.id}
+            className="selectionCard"
+            variants={itemVariants}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => handleSelect(option.id)}
+          >
+             <h3 className="cardTitle" style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{option.label}</h3>
+             <p className="cardDesc" style={{ fontSize: '0.9rem', color: '#666' }}>{option.desc}</p>
+          </motion.button>
+        ))}
       </div>
-    </motion.div>
+    </FunnelStepShell>
   );
 }

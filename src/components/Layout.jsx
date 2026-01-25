@@ -19,7 +19,7 @@ export default function Layout() {
   return (
     <div className="appShell">
       <header className="topbar">
-        <div className="brand" onClick={() => nav("/")}>trip_plan</div>
+        <div className="brand" onClick={() => nav("/")}>Trip2Road</div>
         <nav className="nav">
         </nav>
 
