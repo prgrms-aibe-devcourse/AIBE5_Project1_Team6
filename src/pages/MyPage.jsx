@@ -4,14 +4,67 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import '../styles/mypage.css';
-import { useQuery } from '@tanstack/react-query';
-import { loadPlans } from '../services/plansStorage';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { loadPlans, removePlan } from '../services/plansStorage';
 import TravelBiorhythm from '../components/TravelBiorhythm';
+
+// ✅ Helpers for Human-Readable Wellness
+const formatNoise = (val) => {
+    if (!val && val !== 0) return '정보 없음';
+    const num = Number(val);
+    // If level (1-5)
+    if (num <= 5) {
+        if (num <= 1) return '매우 조용함';
+        if (num <= 2) return '조용함';
+        if (num <= 3) return '보통';
+        if (num <= 4) return '다소 시끄러움';
+        return '시끄러움';
+    }
+    // If dB (30-100)
+    if (num < 40) return '조용함 (ASMR급)';
+    if (num < 60) return '적당한 대화';
+    return '북적이는 소음';
+};
+
+const formatLight = (val) => {
+    if (!val && val !== 0) return '정보 없음';
+    const num = Number(val);
+    // If level (1-5)
+    if (num <= 5) {
+        if (num <= 2) return '은은한 무드';
+        if (num <= 3) return '적당한 밝기';
+        return '화사하고 밝음';
+    }
+    // If lux (100-2000)
+    if (num < 300) return '아늑한 분위기';
+    if (num < 1000) return '일상적인 밝기';
+    return '햇살 가득한 밝기';
+};
 
 export default function MyPage() {
     const { user, setUser } = useAuthStore();
     const nav = useNavigate();
     const [activeTab, setActiveTab] = useState('schedules');
+    const queryClient = useQueryClient();
+
+    // ✅ Delete Plan Mutation
+    const deleteMutation = useMutation({
+        mutationFn: removePlan,
+        onSuccess: () => {
+            toast.success("일정이 삭제되었습니다.");
+            queryClient.invalidateQueries(['plans']);
+        },
+        onError: (err) => {
+            toast.error("삭제 실패: " + err.message);
+        }
+    });
+
+    const handleDelete = (e, id) => {
+        e.stopPropagation(); // prevent card click
+        if (window.confirm("정말 이 일정을 삭제하시겠습니까?")) {
+            deleteMutation.mutate(id);
+        }
+    };
 
     // Profile State
     const [profileName, setProfileName] = useState('');
@@ -123,17 +176,41 @@ export default function MyPage() {
                         </div>
                         <div className="content-grid">
                             {myPlans.length > 0 ? myPlans.map(item => (
-                                <div key={item.id} className="feature-card" onClick={() => nav('/plans')} style={{cursor: 'pointer'}}>
+                                <div key={item.id} className="feature-card" onClick={() => nav('/plans')} style={{cursor: 'pointer', position: 'relative'}}>
                                     <div className="card-img-wrapper">
                                         <img src={item.heroImage || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80"} alt={item.title} className="card-img" />
                                         <span className="card-badge">{item.mood ? '#' + item.mood.toUpperCase() : '#TRIP'}</span>
+                                        {/* Delete Button */}
+                                        <button 
+                                            onClick={(e) => handleDelete(e, item.id)}
+                                            style={{
+                                                position: 'absolute', top: '10px', right: '10px',
+                                                background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%',
+                                                width: '28px', height: '28px', color: '#fff', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}
+                                            title="삭제"
+                                        >
+                                            ✕
+                                        </button>
                                     </div>
                                     <div className="card-body">
                                         <h3 className="card-title">{item.title}</h3>
                                         <div className="card-meta">
                                             <span>📅 {new Date(item.createdAt).toLocaleDateString()}</span>
                                             <span>👥 {item.people}명</span>
+                                            {item.totalCost > 0 && <span>💰 {Math.round(item.totalCost/10000)}만원</span>}
                                         </div>
+                                        {/* Wellness Info */}
+                                        {item.wellness && (
+                                            <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#666', display: 'flex', gap: '8px', background: '#f8f9fa', padding: '6px 10px', borderRadius: '6px' }}>
+                                                <span>🔊 {formatNoise(item.wellness.noise)}</span>
+                                                <span style={{color: '#ddd'}}>|</span>
+                                                <span>💡 {formatLight(item.wellness.light)}</span>
+                                                <span style={{color: '#ddd'}}>|</span>
+                                                <span>👥 {item.wellness.crowd}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )) : (

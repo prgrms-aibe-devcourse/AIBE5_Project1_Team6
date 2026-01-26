@@ -7,17 +7,18 @@ function toDb(plan) {
     // id: plan.id, // Supabase generates ID
     title: plan.title,
     subtitle: plan.subtitle,
-    image: plan.image || plan.heroImage, // check usages
+    hero_image: plan.image || plan.heroImage, 
     nights: plan.nights,
     people: plan.people,
     plan_text: plan.planText,
-    lat: plan.lat,
-    lon: plan.lon,
+    // lat: plan.lat, 
+    category: plan.category || 'walk',
+    
     // Start New Fields
-    type: plan.type || 'single',
-    items: plan.items || [], // Expecting Supabase to have 'items' jsonb or text
+    items: plan.items || [], // Expecting Supabase to have 'items' jsonb
     total_cost: plan.totalCost || 0,
-    // created_at: plan.createdAt
+    wellness: plan.wellness || {}, // { noise, light, crowd }
+    created_at: plan.createdAt
   };
 }
 
@@ -26,19 +27,18 @@ function fromDb(row) {
     id: row.id,
     title: row.title,
     subtitle: row.subtitle,
-    image: row.image,
-    heroImage: row.image, // compatibility
+    image: row.hero_image || row.image, // compatibility
+    heroImage: row.hero_image,
     nights: row.nights,
     people: row.people,
     planText: row.plan_text,
-    lat: row.lat,
-    lon: row.lon,
+    category: row.category,
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    
     // Start New Fields
-    type: row.type || 'single', // course | single
     items: row.items || [], // JSONB for course items
     totalCost: row.total_cost || 0,
+    wellness: row.wellness || {},
   };
 }
 

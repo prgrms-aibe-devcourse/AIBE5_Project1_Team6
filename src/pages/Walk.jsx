@@ -6,6 +6,7 @@ import { useTripStore } from "../stores/tripStore";
 import toast from "react-hot-toast";
 import DestinationCard from "../components/DestinationCard";
 import TripDetailDrawer from "../components/TripDetailDrawer";
+import WeatherWidget from "../components/WeatherWidget"; // Added
 import "../styles/cards.css";
 import "./Walk.css";
 import { addPlan } from "../services/plansStorage";
@@ -259,6 +260,12 @@ export default function Walk() {
           people,
           items: courseItems, 
           totalCost,
+          // ✅ Wellness Data (Simulated or Calculated)
+          wellness: {
+              noise: Math.floor(Math.random() * 40 + 30), // 30-70 dB
+              light: Math.floor(Math.random() * 1000 + 100), // lux
+              crowd: ['여유', '보통', '약간 혼잡'][Math.floor(Math.random() * 3)] // Text or Level
+          },
           planText: courseItems.map((it, i) => `${i+1}. ${it.title} (${estimateBudgetLevel(it).label})`).join('\n')
       };
 
@@ -298,6 +305,9 @@ export default function Walk() {
       </div>
 
       <div id="map" ref={mapRef} className="mapContainer"></div>
+
+      {/* ✅ Weather Widget */}
+      <WeatherWidget lat={searchCenter.lat} lon={searchCenter.lng} />
 
       <div className="coursesContainer" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
         {(rankedItems && Array.isArray(rankedItems) && rankedItems.length > 0) ? rankedItems.map((courseItems, courseIdx) => {

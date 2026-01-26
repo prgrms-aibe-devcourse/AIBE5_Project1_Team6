@@ -6,9 +6,12 @@ import AuthModal from "./AuthModal";
 import { supabase } from "../services/supabase";
 import { Toaster } from 'react-hot-toast';
 
+import { useTripStore } from "../stores/tripStore"; // Added
+
 export default function Layout() {
   const nav = useNavigate();
   const { user } = useAuthStore();
+  const { reset } = useTripStore(); // Added
   const [showAuth, setShowAuth] = useState(false);
 
   const handleLogout = async () => {
@@ -19,7 +22,13 @@ export default function Layout() {
   return (
     <div className="appShell">
       <header className="topbar">
-        <div className="brand" onClick={() => nav("/")}>Trip2Road</div>
+        <div 
+            className="brand" 
+            onClick={() => { reset(); nav("/"); }} // Reset first!
+            style={{ cursor: 'pointer' }}
+        >
+            Trip2Road
+        </div>
         <nav className="nav">
         </nav>
 

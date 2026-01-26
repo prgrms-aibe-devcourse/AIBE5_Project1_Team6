@@ -54,8 +54,9 @@ export default function TripDetailDrawer({
       createdAt: new Date().toISOString(),
       destinationId: item.id,
       title: item.title,
-      subtitle: item.subtitle,
-      heroImage: item.firstimage || item.image,
+      // ✅ Fix: Robust Fallbacks
+      subtitle: item.subtitle || item.addr1 || "주소 정보 없음",
+      heroImage: item.firstimage || item.image || item.firstimage2 || "https://images.unsplash.com/photo-1533658280665-224492bf552f", 
       nights,
       people,
       planText,
@@ -63,6 +64,14 @@ export default function TripDetailDrawer({
       foods: item.foods ?? [],
       lat: parseFloat(item.mapy || item.lat),
       lon: parseFloat(item.mapx || item.lon),
+      // ✅ Fix: Add missing fields for Supabase
+      items: [item],
+      totalCost: itemCost || 0,
+      wellness: {
+          noise: getSensoryTags(item).noise?.level ?? 5,
+          light: getSensoryTags(item).light?.level ?? 5,
+          crowd: getSensoryTags(item).crowd?.text ?? '보통'
+      },
     };
     onSave?.(payload);
   };

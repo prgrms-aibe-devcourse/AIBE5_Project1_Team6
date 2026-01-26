@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
 import { useTripStore } from '../../stores/tripStore';
+import { useAuthStore } from '../../stores/authStore';
 import FunnelStepShell from './FunnelStepShell';
 import { containerVariants, itemVariants } from '../../utils/animationVariants';
 import { useNavigate } from 'react-router-dom';
@@ -7,15 +9,26 @@ import { useNavigate } from 'react-router-dom';
 export default function StepAuth() {
   const navigate = useNavigate();
   const { transport } = useTripStore();
+  const { user } = useAuthStore();
+
+  // ✅ Auto-skip if already logged in
+  useEffect(() => {
+    if (user) {
+        handleNonMember(); // Reuse navigation logic
+    }
+  }, [user]);
 
   const handleNonMember = () => {
     // Navigate based on selected transport
     if (transport === 'Traffic') navigate('/traffic');
     else if (transport === 'Airplane') navigate('/airplane');
-    else navigate('/walk'); // Default to walk
+    else if (transport === 'Walk' || !transport) navigate('/walk');
+    else navigate('/walk');
   };
 
-  const handleLogin = () => {
+  const handleLogin = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     navigate('/login');
   };
 
@@ -34,7 +47,19 @@ export default function StepAuth() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleLogin}
-            style={{ padding: '1.2rem', fontSize: '1.1rem', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer' }}
+            type="button" 
+            style={{ 
+                padding: '1.2rem', 
+                fontSize: '1.1rem', 
+                backgroundColor: '#333', 
+                color: '#fff', 
+                border: 'none', 
+                borderRadius: '12px', 
+                cursor: 'pointer',
+                pointerEvents: 'auto',
+                zIndex: 10,
+                position: 'relative'
+            }}
           >
              로그인 / 회원가입
           </motion.button>
@@ -44,8 +69,20 @@ export default function StepAuth() {
             variants={itemVariants}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={handleNonMember}
-            style={{ padding: '1rem', fontSize: '1rem', backgroundColor: 'transparent', color: '#666', border: '1px solid #ddd', borderRadius: '12px', cursor: 'pointer' }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleNonMember(); }}
+            type="button"
+            style={{ 
+                padding: '1rem', 
+                fontSize: '1rem', 
+                backgroundColor: 'transparent', 
+                color: '#666', 
+                border: '1px solid #ddd', 
+                borderRadius: '12px', 
+                cursor: 'pointer',
+                pointerEvents: 'auto',
+                zIndex: 10,
+                position: 'relative'
+            }}
           >
              비회원으로 계속하기
           </motion.button>
