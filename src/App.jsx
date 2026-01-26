@@ -6,6 +6,7 @@ import Traffic from "./pages/Traffic";
 import Airplane from "./pages/Airplane";
 import Plans from "./pages/Plans";
 import Reviews from "./pages/Reviews";
+import MyPage from "./pages/MyPage";
 import { useEffect } from "react";
 import { supabase } from "./services/supabase";
 import { useAuthStore } from "./stores/authStore";
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/airplane" element={<Airplane />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/reviews" element={<Reviews />} />
+        <Route path="/mypage" element={<MyPage />} />
       </Route>
     </Routes>
   );

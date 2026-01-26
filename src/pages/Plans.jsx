@@ -127,47 +127,82 @@ export default function Plans() {
           {plans.map((p) => (
             <article
               key={p.id}
-              className="planCard"
-              style={{ cursor: "pointer" }}
+              className={`planCard ${p.type === 'course' ? 'coursePlan' : ''}`}
+              style={{ cursor: "pointer", gridColumn: p.type === 'course' ? '1 / -1' : 'auto' }}
               onClick={() => openEdit(p)}
             >
-              <div className="planThumb">
-                {p.heroImage && <img src={p.heroImage} alt={p.title} />}
-              </div>
-
-              <div className="planBody" onClick={(e) => e.stopPropagation()}>
-                <div className="planTopRow">
-                  <div>
-                    <div className="planTitle">{p.title}</div>
-                    <div className="planSub">{p.subtitle}</div>
+              {p.type === 'course' && p.items?.length > 0 ? (
+                  /* ✅ Course View Layout */
+                  <div className="courseBody" onClick={(e) => e.stopPropagation()}>
+                      <div className="planTopRow">
+                          <div>
+                              <div className="planTitle">📦 {p.title}</div>
+                              <div className="planSub" style={{ color: '#ffd700' }}>{p.subtitle}</div>
+                          </div>
+                          <div className="planBtns">
+                              <button className="dangerBtn" onClick={(e) => { e.stopPropagation(); if(confirm("코스 전체 삭제?")) deleteMutation.mutate(p.id); }}>삭제</button>
+                          </div>
+                      </div>
+                      
+                      {/* Timeline View */}
+                      <div className="courseTimeline" style={{ display: 'flex', gap: '12px', marginTop: '16px', overflowX: 'auto', paddingBottom: '12px' }}>
+                          {p.items.map((item, idx) => (
+                              <div key={idx} style={{ minWidth: '160px', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                  <div style={{ width: '100%', height: '100px', borderRadius: '8px', overflow: 'hidden', marginBottom: '8px' }}>
+                                      <img src={item.firstimage || item.image || "https://images.unsplash.com/photo-1533658280665-224492bf552f"} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  </div>
+                                  <div style={{ fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'center' }}>{idx + 1}. {item.title}</div>
+                                  {idx < p.items.length - 1 && <div style={{ position: 'absolute', right: '-16px', top: '40%', fontSize: '1.2rem', color: '#666' }}>→</div>}
+                              </div>
+                          ))}
+                      </div>
+                      
+                      <div className="planSmall" style={{ marginTop: '8px' }}>
+                          {p.createdAt ? `저장일: ${formatDate(p.createdAt)}` : ""}
+                      </div>
                   </div>
-                  <div className="planMeta">
-                    <div>{p.nights}박</div>
-                    <div>{p.people}명</div>
-                  </div>
-                </div>
+              ) : (
+                  /* ✅ Single Item View (Existing) */
+                  <>
+                      <div className="planThumb">
+                        {p.heroImage && <img src={p.heroImage} alt={p.title} />}
+                      </div>
 
-                {p.rateText && <div className="planSmall">환율: {p.rateText}</div>}
-                {p.safety && <div className="planSmall">안전: {String(p.safety).toUpperCase()}</div>}
+                      <div className="planBody" onClick={(e) => e.stopPropagation()}>
+                        <div className="planTopRow">
+                          <div>
+                            <div className="planTitle">{p.title}</div>
+                            <div className="planSub">{p.subtitle}</div>
+                          </div>
+                          <div className="planMeta">
+                            <div>{p.nights}박</div>
+                            <div>{p.people}명</div>
+                          </div>
+                        </div>
 
-                <div className="planSmall">
-                  {p.createdAt ? `저장일: ${formatDate(p.createdAt)}` : ""}
-                </div>
+                        {p.rateText && <div className="planSmall">환율: {p.rateText}</div>}
+                        {p.safety && <div className="planSmall">안전: {String(p.safety).toUpperCase()}</div>}
 
-                {p.planText?.trim() && <pre className="planText">{p.planText}</pre>}
+                        <div className="planSmall">
+                          {p.createdAt ? `저장일: ${formatDate(p.createdAt)}` : ""}
+                        </div>
 
-                <div className="planBtns">
-                  <button
-                    className="dangerBtn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if(confirm("삭제할까요?")) deleteMutation.mutate(p.id);
-                    }}
-                  >
-                    삭제
-                  </button>
-                </div>
-              </div>
+                        {p.planText?.trim() && <pre className="planText">{p.planText}</pre>}
+
+                        <div className="planBtns">
+                          <button
+                            className="dangerBtn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if(confirm("삭제할까요?")) deleteMutation.mutate(p.id);
+                            }}
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                  </>
+              )}
             </article>
           ))}
         </div>

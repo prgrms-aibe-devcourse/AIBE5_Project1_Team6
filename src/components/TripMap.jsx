@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
+import OSMMap from './OSMMap';
 
-export default function TripMap({ lat, lon, title }) {
+function KakaoStaticMap({ lat, lon, title }) {
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -13,16 +14,13 @@ export default function TripMap({ lat, lon, title }) {
         }
 
         kakao.maps.load(() => {
-            // Re-check ref just in case
             if(!mapRef.current) return;
-            
-            // Clear previous map if needed
-            mapRef.current.innerHTML = '';
+            mapRef.current.innerHTML = ''; // Clear
 
             const position = new kakao.maps.LatLng(lat, lon);
             const options = {
                 center: position,
-                level: 3
+                level: 5 // 약간 넓게
             };
 
             const map = new kakao.maps.Map(mapRef.current, options);
@@ -32,12 +30,8 @@ export default function TripMap({ lat, lon, title }) {
             });
             marker.setMap(map);
             
-            if (title) {
-                const infowindow = new kakao.maps.InfoWindow({
-                    content: `<div style="padding:5px; color:black;">${title}</div>`
-                });
-                // Optional: infowindow.open(map, marker);
-            }
+            // InfoWindow is optional, keeping it simple for now
+            // if (title) { ... }
         });
         return true;
     };
@@ -50,10 +44,7 @@ export default function TripMap({ lat, lon, title }) {
         }, 500);
         return () => clearInterval(intervalId);
     }
-
   }, [lat, lon, title]);
-
-  if (!lat || !lon) return null;
 
   return (
     <div 
@@ -63,8 +54,22 @@ export default function TripMap({ lat, lon, title }) {
             height: '240px',
             borderRadius: '16px',
             marginTop: '16px',
-            backgroundColor: '#333' // 로딩 전 배경
+            backgroundColor: '#f0f0f0'
         }}
     />
   );
+}
+
+export default function TripMap({ lat, lon, title }) {
+  if (!lat || !lon) return null;
+
+  // 🇰🇷 Simple Check for Korea Coordinates
+  // Approx: Lat 33~39, Lon 124~132
+  const isKorea = (lat >= 33 && lat <= 39 && lon >= 124 && lon <= 132);
+
+  if (isKorea) {
+    return <KakaoStaticMap lat={lat} lon={lon} title={title} />;
+  } else {
+    return <OSMMap lat={lat} lon={lon} title={title} />;
+  }
 }

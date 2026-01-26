@@ -13,6 +13,10 @@ function toDb(plan) {
     plan_text: plan.planText,
     lat: plan.lat,
     lon: plan.lon,
+    // Start New Fields
+    type: plan.type || 'single',
+    items: plan.items || [], // Expecting Supabase to have 'items' jsonb or text
+    total_cost: plan.totalCost || 0,
     // created_at: plan.createdAt
   };
 }
@@ -31,6 +35,10 @@ function fromDb(row) {
     lon: row.lon,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    // Start New Fields
+    type: row.type || 'single', // course | single
+    items: row.items || [], // JSONB for course items
+    totalCost: row.total_cost || 0,
   };
 }
 
