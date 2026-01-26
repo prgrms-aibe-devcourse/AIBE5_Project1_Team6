@@ -1,0 +1,123 @@
+/* Confirm Modal */
+
+.confirmOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+.confirmModal {
+    background: #1a1f35;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 32px;
+    width: min(440px, 100%);
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.confirmIcon {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+.confirmTitle {
+    margin: 0 0 12px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.confirmMessage {
+    margin: 0 0 28px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #e0e0e0;
+    opacity: 0.8;
+}
+
+.confirmActions {
+    display: flex;
+    gap: 12px;
+}
+
+.confirmCancelBtn,
+.confirmDeleteBtn {
+    flex: 1;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.confirmCancelBtn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #e0e0e0;
+}
+
+.confirmCancelBtn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-2px);
+}
+
+.confirmDeleteBtn {
+    background: linear-gradient(135deg, #f44336 0%, #e57373 100%);
+    border: none;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(244, 67, 54, 0.4);
+}
+
+.confirmDeleteBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(244, 67, 54, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .confirmModal {
+        padding: 24px;
+    }
+
+    .confirmIcon {
+        font-size: 48px;
+    }
+
+    .confirmTitle {
+        font-size: 20px;
+    }
+
+    .confirmMessage {
+        font-size: 14px;
+    }
+
+    .confirmActions {
+        flex-direction: column;
+    }
+}

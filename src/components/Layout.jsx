@@ -6,9 +6,12 @@ import AuthModal from "./AuthModal";
 import { supabase } from "../services/supabase";
 import { Toaster } from 'react-hot-toast';
 
+import { useTripStore } from "../stores/tripStore"; // Added
+
 export default function Layout() {
   const nav = useNavigate();
   const { user } = useAuthStore();
+  const { reset } = useTripStore(); // Added
   const [showAuth, setShowAuth] = useState(false);
 
   const handleLogout = async () => {
@@ -19,13 +22,20 @@ export default function Layout() {
   return (
     <div className="appShell">
       <header className="topbar">
-        <div className="brand" onClick={() => nav("/")}>Trip2Road</div>
+        <div 
+            className="brand" 
+            onClick={() => { reset(); nav("/"); }} // Reset first!
+            style={{ cursor: 'pointer' }}
+        >
+            Trip2Road
+        </div>
         <nav className="nav">
         </nav>
 
         <div style={{ marginLeft: "auto", paddingRight: 20, display: 'flex', gap: 10, alignItems: 'center' }}>
           <button className="navBtn" onClick={() => nav('/mypage')} style={{ fontSize: 13 }}>마이페이지</button>
           <button className="navBtn" onClick={() => nav('/reviews')} style={{ fontSize: 13 }}>후기</button>
+          <button className="navBtn" onClick={() => nav('/planlab')} style={{ fontSize: 13 }}>일정관리</button>
           {user ? (
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <span style={{ fontSize: 13, color: '#aaa' }}>{user.email.split('@')[0]}님</span>

@@ -9,10 +9,63 @@ import { loadPlans } from '../services/plansStorage';
 import { getMemories, getNotifications, getUserBadges, initializeUserBadgesIfEmpty, markNotificationAsRead } from '../services/mypageService';
 import TravelBiorhythm from '../components/TravelBiorhythm';
 
+// ✅ Helpers for Human-Readable Wellness
+const formatNoise = (val) => {
+    if (!val && val !== 0) return '정보 없음';
+    const num = Number(val);
+    // If level (1-5)
+    if (num <= 5) {
+        if (num <= 1) return '매우 조용함';
+        if (num <= 2) return '조용함';
+        if (num <= 3) return '보통';
+        if (num <= 4) return '다소 시끄러움';
+        return '시끄러움';
+    }
+    // If dB (30-100)
+    if (num < 40) return '조용함 (ASMR급)';
+    if (num < 60) return '적당한 대화';
+    return '북적이는 소음';
+};
+
+const formatLight = (val) => {
+    if (!val && val !== 0) return '정보 없음';
+    const num = Number(val);
+    // If level (1-5)
+    if (num <= 5) {
+        if (num <= 2) return '은은한 무드';
+        if (num <= 3) return '적당한 밝기';
+        return '화사하고 밝음';
+    }
+    // If lux (100-2000)
+    if (num < 300) return '아늑한 분위기';
+    if (num < 1000) return '일상적인 밝기';
+    return '햇살 가득한 밝기';
+};
+
 export default function MyPage() {
     const { user, setUser } = useAuthStore();
     const nav = useNavigate();
     const [activeTab, setActiveTab] = useState('schedules');
+    const queryClient = useQueryClient();
+
+    // ✅ Delete Plan Mutation
+    const deleteMutation = useMutation({
+        mutationFn: removePlan,
+        onSuccess: () => {
+            toast.success("일정이 삭제되었습니다.");
+            queryClient.invalidateQueries(['plans']);
+        },
+        onError: (err) => {
+            toast.error("삭제 실패: " + err.message);
+        }
+    });
+
+    const handleDelete = (e, id) => {
+        e.stopPropagation(); // prevent card click
+        if (window.confirm("정말 이 일정을 삭제하시겠습니까?")) {
+            deleteMutation.mutate(id);
+        }
+    };
 
     // Profile State
     const [profileName, setProfileName] = useState('');
@@ -121,6 +174,26 @@ export default function MyPage() {
     const nextLevelXp = currentLevel * 100;
     const progressToNextLevel = totalXp % 100;
 
+    const mockBadges = [
+        { id: 1, title: "첫 여권의 설렘", desc: "첫 해외여행을 완료했습니다.", icon: "✈️", unlocked: true, date: "2023.05.10" },
+        { id: 2, title: "유럽 정복자", desc: "유럽 3개국 이상을 여행했습니다.", icon: "🏰", unlocked: true, date: "2024.08.15" },
+        { id: 3, title: "단골 여행러", desc: "총 10회 이상 여행을 완료했습니다.", icon: "🏅", unlocked: false, progress: "8/10" },
+        { id: 4, title: "미식가", desc: "맛집 리뷰를 20개 이상 작성했습니다.", icon: "🍽️", unlocked: false, progress: "12/20" },
+        { id: 5, title: "5대륙 탐험가", desc: "5개 대륙을 모두 방문했습니다.", icon: "🌍", unlocked: false, progress: "2/5" },
+        { id: 6, title: "사진 작가", desc: "포토 스팟 50곳을 방문했습니다.", icon: "📸", unlocked: true, date: "2024.12.20" },
+        { id: 7, title: "혼행의 고수", desc: "나홀로 여행을 3회 이상 다녀왔습니다.", icon: "🎒", unlocked: false, progress: "1/3" },
+        { id: 8, title: "섬 여행가", desc: "제주도, 발리 등 섬 여행지 5곳을 정복했습니다.", icon: "🏝️", unlocked: false, progress: "3/5" },
+        { id: 9, title: "새벽을 여는 사람", desc: "일출 명소 3곳을 방문했습니다.", icon: "🌅", unlocked: true, date: "2024.01.01" },
+        { id: 10, title: "계획형 인간", desc: "여행 일정을 100% 상세하게 작성했습니다.", icon: "📝", unlocked: true, date: "2023.11.12" },
+    ];
+
+    const mockNotifications = [
+        { id: 1, type: 'like', actor: 'traveler_kim', message: '님이 회원님의 "스위스 알프스" 후기를 좋아합니다.', time: '방금 전', read: false, icon: '❤️' },
+        { id: 2, type: 'comment', actor: 'happy_day', message: '님이 댓글을 남겼습니다: "저도 여기 꼭 가보고 싶네요!"', time: '2시간 전', read: false, icon: '💬' },
+        { id: 3, type: 'badge', actor: '시스템', message: '축하합니다! "사진 작가" 뱃지를 획득하셨습니다. 🏆', time: '1일 전', read: true, icon: '🎉' },
+        { id: 4, type: 'system', actor: '관리자', message: '회원님의 여행 일정이 3일 남았습니다. 준비물은 챙기셨나요?', time: '3일 전', read: true, icon: '🔔' },
+    ];
+
     const renderContent = () => {
         switch (activeTab) {
             case 'schedules':
@@ -139,13 +212,37 @@ export default function MyPage() {
                                     <div className="card-img-wrapper">
                                         <img src={item.heroImage || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80"} alt={item.title} className="card-img" />
                                         <span className="card-badge">{item.mood ? '#' + item.mood.toUpperCase() : '#TRIP'}</span>
+                                        {/* Delete Button */}
+                                        <button 
+                                            onClick={(e) => handleDelete(e, item.id)}
+                                            style={{
+                                                position: 'absolute', top: '10px', right: '10px',
+                                                background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%',
+                                                width: '28px', height: '28px', color: '#fff', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}
+                                            title="삭제"
+                                        >
+                                            ✕
+                                        </button>
                                     </div>
                                     <div className="card-body">
                                         <h3 className="card-title">{item.title}</h3>
                                         <div className="card-meta">
                                             <span>📅 {new Date(item.createdAt).toLocaleDateString()}</span>
                                             <span>👥 {item.people}명</span>
+                                            {item.totalCost > 0 && <span>💰 {Math.round(item.totalCost/10000)}만원</span>}
                                         </div>
+                                        {/* Wellness Info */}
+                                        {item.wellness && (
+                                            <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#666', display: 'flex', gap: '8px', background: '#f8f9fa', padding: '6px 10px', borderRadius: '6px' }}>
+                                                <span>🔊 {formatNoise(item.wellness.noise)}</span>
+                                                <span style={{color: '#ddd'}}>|</span>
+                                                <span>💡 {formatLight(item.wellness.light)}</span>
+                                                <span style={{color: '#ddd'}}>|</span>
+                                                <span>👥 {item.wellness.crowd}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )) : (
@@ -170,6 +267,75 @@ export default function MyPage() {
                         </div>
 
                         <TravelBiorhythm plans={myPlans} />
+                    </>
+                );
+            case 'badges':
+                return (
+                    <>
+                        <div className="content-header">
+                            <div>
+                                <h1 className="page-title">나의 여행 뱃지</h1>
+                                <p className="page-subtitle">여행의 추억을 모아 업적을 달성해보세요.</p>
+                            </div>
+                            <div className="badge-stats">
+                                <span>🏆 획득한 뱃지: <strong>{mockBadges.filter(b => b.unlocked).length}</strong> / {mockBadges.length}</span>
+                            </div>
+                        </div>
+                        <div className="badge-grid">
+                            {mockBadges.map(badge => (
+                                <div key={badge.id} className={`badge-card ${badge.unlocked ? 'unlocked' : 'locked'}`}>
+                                    <div className="badge-icon-wrapper">
+                                        <span className="badge-icon">{badge.icon}</span>
+                                        {!badge.unlocked && <span className="lock-overlay">🔒</span>}
+                                    </div>
+                                    <div className="badge-info">
+                                        <h3 className="badge-title">{badge.title}</h3>
+                                        <p className="badge-desc">{badge.desc}</p>
+                                        {badge.unlocked ? (
+                                            <span className="badge-date">달성일: {badge.date}</span>
+                                        ) : (
+                                            <div className="badge-progress-container">
+                                                <span className="badge-progress-text">진행도: {badge.progress}</span>
+                                                <div className="progress-bar">
+                                                    <div
+                                                        className="progress-fill"
+                                                        style={{ width: `${(parseInt(badge.progress.split('/')[0]) / parseInt(badge.progress.split('/')[1])) * 100}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                );
+            case 'notifications':
+                return (
+                    <>
+                        <div className="content-header">
+                            <div>
+                                <h1 className="page-title">알림 센터</h1>
+                                <p className="page-subtitle">새로운 소식과 반응을 확인하세요.</p>
+                            </div>
+                            <button className="action-btn" style={{ background: 'rgba(255,255,255,0.1)' }}>모두 읽음 처리</button>
+                        </div>
+                        <div className="notification-list">
+                            {mockNotifications.map(noti => (
+                                <div key={noti.id} className={`notification-item ${!noti.read ? 'unread' : ''}`}>
+                                    <div className="notification-icon-box">
+                                        {noti.icon}
+                                    </div>
+                                    <div className="notification-content">
+                                        <div className="notification-text">
+                                            <strong>{noti.actor}</strong>{noti.message}
+                                        </div>
+                                        <span className="notification-time">{noti.time}</span>
+                                    </div>
+                                    {!noti.read && <div className="notification-dot"></div>}
+                                </div>
+                            ))}
+                        </div>
                     </>
                 );
             case 'wishlist':
@@ -487,6 +653,9 @@ export default function MyPage() {
                     </div>
                     <div className={`nav-item ${activeTab === 'style' ? 'active' : ''}`} onClick={() => setActiveTab('style')}>
                         <span className="nav-icon">🧬</span> 여행 성향
+                    </div>
+                    <div className={`nav-item ${activeTab === 'badges' ? 'active' : ''}`} onClick={() => setActiveTab('badges')}>
+                        <span className="nav-icon">🏆</span> 나의 뱃지
                     </div>
                     <div className={`nav-item ${activeTab === 'wishlist' ? 'active' : ''}`} onClick={() => setActiveTab('wishlist')}>
                         <span className="nav-icon">❤️</span> 찜 목록
