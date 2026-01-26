@@ -17,7 +17,9 @@ const MOCK_REVIEWS = [
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2일 전
         likes: 12,
         comments: 3,
-        is_liked: false
+        is_liked: false,
+        mood: 'burnout',
+        themes: ['healing']
     },
     {
         id: '2',
@@ -33,7 +35,9 @@ const MOCK_REVIEWS = [
         created_at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5시간 전
         likes: 45,
         comments: 8,
-        is_liked: true
+        is_liked: true,
+        mood: 'refresh',
+        themes: ['food']
     },
     {
         id: '3',
@@ -50,7 +54,9 @@ const MOCK_REVIEWS = [
         created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30분 전
         likes: 5,
         comments: 0,
-        is_liked: false
+        is_liked: false,
+        mood: 'active',
+        themes: ['activity']
     }
 ];
 
@@ -71,7 +77,7 @@ let localComments = { ...MOCK_COMMENTS };
 
 export const reviewService = {
     // 후기 목록 가져오기
-    async getReviews(sort = 'latest', search = { type: '', keyword: '' }) {
+    async getReviews(sort = 'latest', search = { type: '', keyword: '' }, wellnessOptions = { mood: null, themes: [] }) {
         // 실제 Supabase 연동 시 아래 코드를 활성화
         // let query = supabase.from('reviews').select(`
         //   *,
@@ -99,13 +105,48 @@ export const reviewService = {
             });
         }
 
-        // 정렬
-        if (sort === 'likes') {
-            filtered.sort((a, b) => b.likes - a.likes);
-        } else {
-            // 최신순 (기본값)
-            filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        // 웰니스 필터 (사용자가 명시적으로 필터를 걸었을 때)
+        if (wellnessOptions.mood || (wellnessOptions.themes && wellnessOptions.themes.length > 0)) {
+            filtered = filtered.filter(review => {
+                let match = true;
+                if (wellnessOptions.mood && review.mood !== wellnessOptions.mood) match = false;
+                if (wellnessOptions.themes && wellnessOptions.themes.length > 0) {
+                    const hasTheme = wellnessOptions.themes.some(t => review.themes?.includes(t));
+                    if (!hasTheme) match = false;
+                }
+                return match;
+            });
         }
+
+        // 정렬 및 가중치 부여 (추천)
+        filtered.sort((a, b) => {
+            // 웰니스 일치 가중치 부여 (사용자 취향 일치 시 상단 노출)
+            if (wellnessOptions.mood || (wellnessOptions.themes && wellnessOptions.themes.length > 0)) {
+                let scoreA = 0;
+                let scoreB = 0;
+
+                if (wellnessOptions.mood) {
+                    if (a.mood === wellnessOptions.mood) scoreA += 10;
+                    if (b.mood === wellnessOptions.mood) scoreB += 10;
+                }
+
+                if (wellnessOptions.themes && wellnessOptions.themes.length > 0) {
+                    wellnessOptions.themes.forEach(t => {
+                        if (a.themes?.includes(t)) scoreA += 5;
+                        if (b.themes?.includes(t)) scoreB += 5;
+                    });
+                }
+
+                if (scoreA !== scoreB) return scoreB - scoreA;
+            }
+
+            if (sort === 'likes') {
+                return b.likes - a.likes;
+            } else {
+                // 최신순 (기본값)
+                return new Date(b.created_at) - new Date(a.created_at);
+            }
+        });
 
         return { data: filtered, error: null };
     },

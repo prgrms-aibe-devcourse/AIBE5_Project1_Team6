@@ -6,7 +6,9 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
         destination: '',
         rating: 5,
         content: '',
-        media: [] // [{ url: '', type: 'image' }]
+        media: [], // [{ url: '', type: 'image' }]
+        mood: '',
+        themes: []
     });
 
     // 새 미디어 입력 상태
@@ -18,7 +20,9 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
                 destination: initialData.destination,
                 rating: initialData.rating,
                 content: initialData.content,
-                media: initialData.media || []
+                media: initialData.media || [],
+                mood: initialData.mood || '',
+                themes: initialData.themes || []
             });
         }
     }, [initialData]);
@@ -132,6 +136,69 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
                     </div>
 
                     <div className="form-group">
+                        <label>여행 무드</label>
+                        <div className="mood-selection" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+                            {[
+                                { id: 'burnout', label: '🔥 번아웃 케어' },
+                                { id: 'refresh', label: '🌈 리프레시' },
+                                { id: 'active', label: '👟 에너지 충전' },
+                                { id: 'calm', label: '🤫 고요한 휴식' }
+                            ].map((mood) => (
+                                <button
+                                    key={mood.id}
+                                    type="button"
+                                    className={`action-btn ${formData.mood === mood.id ? 'active' : ''}`}
+                                    onClick={() => setFormData(prev => ({ ...prev, mood: mood.id }))}
+                                    style={{
+                                        background: formData.mood === mood.id ? 'white' : '#374151',
+                                        color: formData.mood === mood.id ? '#1e1e1e' : 'white',
+                                        fontSize: '0.9rem',
+                                        padding: '0.6rem'
+                                    }}
+                                >
+                                    {mood.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label>여행 테마 (복수 선택 가능)</label>
+                        <div className="theme-selection" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {[
+                                { id: 'activity', label: '🪂 액티비티' },
+                                { id: 'food', label: '🍱 맛집 탐방' },
+                                { id: 'healing', label: '🌿 힐링/휴식' }
+                            ].map((theme) => {
+                                const isSelected = formData.themes.includes(theme.id);
+                                return (
+                                    <button
+                                        key={theme.id}
+                                        type="button"
+                                        className={`action-btn ${isSelected ? 'active' : ''}`}
+                                        onClick={() => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                themes: isSelected
+                                                    ? prev.themes.filter(t => t !== theme.id)
+                                                    : [...prev.themes, theme.id]
+                                            }));
+                                        }}
+                                        style={{
+                                            background: isSelected ? 'white' : '#374151',
+                                            color: isSelected ? '#1e1e1e' : 'white',
+                                            fontSize: '0.9rem',
+                                            padding: '0.5rem 1rem'
+                                        }}
+                                    >
+                                        {theme.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="form-group">
                         <label>이미지/동영상 추가</label>
 
                         <input
@@ -161,7 +228,7 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
                                 type="button"
                                 onClick={handleAddMedia}
                                 className="action-btn"
-                                style={{ background: '#3b82f6', color: 'white', padding: '0 1rem', borderRadius: 8 }}
+                                style={{ background: 'white', color: '#1e1e1e', padding: '0 1rem', borderRadius: 8 }}
                             >
                                 <FaPlus />
                             </button>
@@ -193,8 +260,8 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
                     </div>
 
                     <div className="modal-actions">
-                        <button type="button" onClick={onClose} className="action-btn" style={{ background: '#444', padding: '0.8rem 1.5rem', borderRadius: 8 }}>취소</button>
-                        <button type="submit" className="action-btn" style={{ background: '#3b82f6', color: 'white', padding: '0.8rem 1.5rem', borderRadius: 8 }}>저장하기</button>
+                        <button type="button" onClick={onClose} className="action-btn" style={{ background: '#333', color: 'white', padding: '0.8rem 1.5rem', borderRadius: 8 }}>취소</button>
+                        <button type="submit" className="action-btn submit-btn" style={{ background: 'white', color: '#000', padding: '0.8rem 1.5rem', borderRadius: 8, fontWeight: 'bold' }}>저장하기</button>
                     </div>
                 </form>
             </div>

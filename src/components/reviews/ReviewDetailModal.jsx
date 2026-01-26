@@ -120,6 +120,24 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                         </div>
 
                         <div className="scrollable-content">
+                            <div className="wellness-tags" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                                {review.mood && (
+                                    <span className="wellness-tag mood" style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#eee', fontSize: '0.85rem', padding: '4px 12px', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                                        {review.mood === 'burnout' ? '🔥 번아웃 케어' :
+                                            review.mood === 'refresh' ? '🌈 리프레시' :
+                                                review.mood === 'active' ? '👟 에너지 충전' : '🤫 고요한 휴식'}
+                                    </span>
+                                )}
+                                {review.mood && review.themes?.length > 0 && (
+                                    <span style={{ color: '#4b5563', fontSize: '1rem', margin: '0 4px' }}>•</span>
+                                )}
+                                {review.themes?.map(theme => (
+                                    <span key={theme} className="wellness-tag theme" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#bbb', fontSize: '0.85rem', padding: '4px 12px', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                                        {theme === 'activity' ? '🪂 액티비티' :
+                                            theme === 'food' ? '🍱 맛집 탐방' : '🌿 힐링/휴식'}
+                                    </span>
+                                ))}
+                            </div>
                             <p className="detail-text">{review.content}</p>
                             <p className="detail-date">{timeAgo}</p>
 
@@ -142,10 +160,13 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
 
                         <div className="detail-footer">
                             <div className="action-row">
-                                <button className={`action-btn ${review.is_liked ? 'liked' : ''}`} onClick={() => onLike(review.id)}>
-                                    {review.is_liked ? <FaHeart size={24} /> : <FaRegHeart size={24} />}
+                                <button
+                                    className={`action-btn ${review.is_liked ? 'liked' : ''}`}
+                                    onClick={() => onLike(review.id)}
+                                >
+                                    {review.is_liked ? <FaHeart size={20} /> : <FaRegHeart size={20} />}
                                 </button>
-                                <span className="likes-count">좋아요 {review.likes}개</span>
+                                <span className="likes-count" style={{ color: '#aaa' }}>좋아요 {review.likes}개</span>
                             </div>
 
                             <form className="comment-form" onSubmit={handleSubmitComment}>

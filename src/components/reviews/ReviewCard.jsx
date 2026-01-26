@@ -57,6 +57,24 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
                         <FaStar key={i} color={i < review.rating ? "#fbbf24" : "#4b5563"} />
                     ))}
                 </div>
+                <div className="wellness-tags" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', margin: '8px 0' }}>
+                    {review.mood && (
+                        <span className="wellness-tag mood" style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#eee', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                            {review.mood === 'burnout' ? '🔥 번아웃' :
+                                review.mood === 'refresh' ? '🌈 리프레시' :
+                                    review.mood === 'active' ? '👟 에너지' : '🤫 고요함'}
+                        </span>
+                    )}
+                    {review.mood && review.themes?.length > 0 && (
+                        <span style={{ color: '#4b5563', fontSize: '0.8rem', margin: '0 2px' }}>•</span>
+                    )}
+                    {review.themes?.map(theme => (
+                        <span key={theme} className="wellness-tag theme" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#bbb', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                            {theme === 'activity' ? '🪂 액티비티' :
+                                theme === 'food' ? '🍱 맛집' : '🌿 힐링'}
+                        </span>
+                    ))}
+                </div>
                 <p className="review-text">{review.content}</p>
             </div>
 
