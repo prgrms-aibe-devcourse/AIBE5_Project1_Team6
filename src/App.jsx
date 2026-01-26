@@ -4,7 +4,7 @@ import Home from "./pages/Home";
 import Walk from "./pages/Walk";
 import Traffic from "./pages/Traffic";
 import Airplane from "./pages/Airplane";
-import Plans from "./pages/Plans";
+
 import PlanLab from "./pages/PlanLab";
 import { useEffect } from "react";
 import { supabase } from "./services/supabase";
@@ -38,7 +38,7 @@ export default function App() {
         <Route path="/walk" element={<Walk />} />
         <Route path="/traffic" element={<Traffic />} />
         <Route path="/airplane" element={<Airplane />} />
-        <Route path="/plans" element={<Plans />} />
+
         <Route path="/planlab" element={<PlanLab />} />
       </Route>
     </Routes>
