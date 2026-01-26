@@ -7,7 +7,7 @@ import { RiKakaoTalkFill } from 'react-icons/ri';
 import { IoClose } from 'react-icons/io5';
 import '../styles/auth.css';
 
-export default function AuthModal({ onClose }) {
+export default function AuthModal({ onClose, onSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,9 +30,10 @@ export default function AuthModal({ onClose }) {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("로그인 성공!");
+        if (onSuccess) onSuccess(data.user);
         onClose();
       } else {
         const { error, data } = await supabase.auth.signUp({ email, password });
@@ -43,6 +44,7 @@ export default function AuthModal({ onClose }) {
             toast("가입 인증 메일을 보냈습니다! 메일함을 확인해주세요.", { icon: "📧", duration: 5000 });
         } else {
             toast.success("가입이 완료되었습니다!");
+            if (onSuccess) onSuccess(data.user);
             onClose();
         }
       }
