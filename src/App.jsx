@@ -13,6 +13,8 @@ import { useEffect } from "react";
 import { supabase } from "./services/supabase";
 import { useAuthStore } from "./stores/authStore";
 
+import AuthPage from "./pages/AuthPage";
+
 export default function App() {
   const { setSession, setUser } = useAuthStore();
 
@@ -45,6 +47,7 @@ export default function App() {
         {/* <Route path="/plans" element={<Plans />} /> */}
         <Route path="/reviews" element={<Reviews />} />
         <Route path="/mypage" element={<MyPage />} />
+        <Route path="/login" element={<AuthPage />} />
       </Route>
     </Routes>
   );

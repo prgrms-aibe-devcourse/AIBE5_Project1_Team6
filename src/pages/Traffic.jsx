@@ -6,6 +6,7 @@ import { useTripStore } from "../stores/tripStore";
 import toast from "react-hot-toast";
 import DestinationCard from "../components/DestinationCard";
 import TripDetailDrawer from "../components/TripDetailDrawer";
+import WeatherWidget from "../components/WeatherWidget"; // Added
 import { improvePlanText } from "../services/aiPlanner";
 import { addPlan } from "../services/plansStorage";
 import "../styles/cards.css";
@@ -316,6 +317,13 @@ export default function Traffic() {
           people,
           items: courseItems, // Store full array
           totalCost,
+          // ✅ Wellness Data (Simulated)
+          wellness: {
+              noise: Math.floor(Math.random() * 30 + 40), // 40-70 dB (Driving might be louder?)
+              light: Math.floor(Math.random() * 800 + 200),
+              crowd: ['원활', '서행', '정체'][Math.floor(Math.random() * 3)] // Traffic status
+          },
+          mood: mood || 'active',
           // Generate a simple text summary for legacy view or AI context
           planText: courseItems.map((it, i) => `${i+1}. ${it.title} (${estimateBudgetLevel(it).label})`).join('\n')
       };
@@ -401,6 +409,9 @@ export default function Traffic() {
       )}
 
       <div id="map" ref={mapRef} className="mapContainer"></div>
+
+      {/* ✅ Weather Widget */}
+      <WeatherWidget lat={searchCenter.lat} lon={searchCenter.lng} />
 
       <div className="coursesContainer" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
         {(rankedItems && Array.isArray(rankedItems) && rankedItems.length > 0) ? rankedItems.map((courseItems, courseIdx) => {

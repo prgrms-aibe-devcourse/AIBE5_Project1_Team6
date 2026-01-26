@@ -5,15 +5,18 @@ import FunnelStepShell from './FunnelStepShell';
 import { containerVariants } from '../../utils/animationVariants';
 
 export default function StepBudget({ progressText = "3/5" }) {
-  const { setBudgetAmount, nextStep, prevStep } = useTripStore();
-  const [value, setValue] = useState(300000); // Default 300k
+  const { setBudgetAmount, nextStep, prevStep, transport } = useTripStore(); // Get transport
+  
+  const isAirplane = transport === 'Airplane';
+  const basePresets = [100000, 300000, 500000, 1000000];
+  const presets = isAirplane ? basePresets.map(p => p * 10) : basePresets;
+  
+  const [value, setValue] = useState(isAirplane ? 3000000 : 300000);
 
   const handleNext = () => {
     setBudgetAmount(value);
     nextStep();
   };
-
-  const presets = [100000, 300000, 500000, 1000000];
 
   return (
     <FunnelStepShell

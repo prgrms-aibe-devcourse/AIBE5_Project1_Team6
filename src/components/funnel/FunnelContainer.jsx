@@ -37,6 +37,22 @@ export default function FunnelContainer() {
         }
     }
 
+    // Airplane Flow (Global Travel)
+    if (transport === 'Airplane') {
+        // 0: Transport
+        // 1: Budget (x10)
+        // 2: Companion
+        // 3: Loading
+        // 4: Auth
+        switch (step) {
+            case 1: return <StepBudget key="stepBudget" />;
+            case 2: return <StepCompanion key="stepComp" />;
+            case 3: return <StepLoading key="stepLoading" />;
+            case 4: return <StepAuth key="stepAuth" />;
+            default: return <StepTransport key="stepTransport" />;
+        }
+    }
+
     // Default Flow (Walk)
     switch (step) {
       case 1: return <StepCompanion key="stepComp" progressText="2/4" />;
