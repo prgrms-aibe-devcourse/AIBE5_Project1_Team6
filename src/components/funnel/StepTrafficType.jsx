@@ -3,28 +3,28 @@ import { useTripStore } from '../../stores/tripStore';
 import FunnelStepShell from './FunnelStepShell';
 import { containerVariants, itemVariants } from '../../utils/animationVariants';
 
-export default function StepTransport() {
-  const { setTransport, nextStep } = useTripStore();
+export default function StepTrafficType() {
+  const { setTrafficOption, nextStep, prevStep } = useTripStore();
 
-  const handleSelect = (transport) => {
-    setTransport(transport);
+  const handleSelect = (option) => {
+    setTrafficOption(option);
     nextStep();
   };
   
   const options = [
-    { id: 'Walk', label: '👟 Walk', desc: '이색적인 골목 여행' },
-    { id: 'Traffic', label: '🚌 Traffic', desc: '편리한 대중교통' },
-    { id: 'Airplane', label: '✈️ Airplane', desc: '설레는 장거리 여행' },
+    { id: 'near', label: '🏙️ 근교', desc: '가볍게 떠나는 드라이브 (<100km)' },
+    { id: 'far', label: '✈️ 멀리', desc: '일상을 벗어나 새로운 곳으로 (>100km)' },
   ];
 
   return (
     <FunnelStepShell
-      title="이번 여행의 이동 수단은?"
-      subtitle="원하시는 여행 스타일에 맞춰 추천해드릴게요."
-      progressText="1/4"
+      title="어디로 떠나고 싶으신가요?"
+      subtitle="선호하는 여행지를 선택해주세요."
+      progressText="2/5"
+      onBack={prevStep}
       motionVariants={containerVariants}
     >
-      <div className="selectionGrid col-3">
+      <div className="selectionGrid col-2">
          {options.map((option) => (
           <motion.button
             key={option.id}
