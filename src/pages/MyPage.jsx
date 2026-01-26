@@ -109,6 +109,26 @@ export default function MyPage() {
         ]
     };
 
+    const mockBadges = [
+        { id: 1, title: "첫 여권의 설렘", desc: "첫 해외여행을 완료했습니다.", icon: "✈️", unlocked: true, date: "2023.05.10" },
+        { id: 2, title: "유럽 정복자", desc: "유럽 3개국 이상을 여행했습니다.", icon: "🏰", unlocked: true, date: "2024.08.15" },
+        { id: 3, title: "단골 여행러", desc: "총 10회 이상 여행을 완료했습니다.", icon: "🏅", unlocked: false, progress: "8/10" },
+        { id: 4, title: "미식가", desc: "맛집 리뷰를 20개 이상 작성했습니다.", icon: "🍽️", unlocked: false, progress: "12/20" },
+        { id: 5, title: "5대륙 탐험가", desc: "5개 대륙을 모두 방문했습니다.", icon: "🌍", unlocked: false, progress: "2/5" },
+        { id: 6, title: "사진 작가", desc: "포토 스팟 50곳을 방문했습니다.", icon: "📸", unlocked: true, date: "2024.12.20" },
+        { id: 7, title: "혼행의 고수", desc: "나홀로 여행을 3회 이상 다녀왔습니다.", icon: "🎒", unlocked: false, progress: "1/3" },
+        { id: 8, title: "섬 여행가", desc: "제주도, 발리 등 섬 여행지 5곳을 정복했습니다.", icon: "🏝️", unlocked: false, progress: "3/5" },
+        { id: 9, title: "새벽을 여는 사람", desc: "일출 명소 3곳을 방문했습니다.", icon: "🌅", unlocked: true, date: "2024.01.01" },
+        { id: 10, title: "계획형 인간", desc: "여행 일정을 100% 상세하게 작성했습니다.", icon: "📝", unlocked: true, date: "2023.11.12" },
+    ];
+
+    const mockNotifications = [
+        { id: 1, type: 'like', actor: 'traveler_kim', message: '님이 회원님의 "스위스 알프스" 후기를 좋아합니다.', time: '방금 전', read: false, icon: '❤️' },
+        { id: 2, type: 'comment', actor: 'happy_day', message: '님이 댓글을 남겼습니다: "저도 여기 꼭 가보고 싶네요!"', time: '2시간 전', read: false, icon: '💬' },
+        { id: 3, type: 'badge', actor: '시스템', message: '축하합니다! "사진 작가" 뱃지를 획득하셨습니다. 🏆', time: '1일 전', read: true, icon: '🎉' },
+        { id: 4, type: 'system', actor: '관리자', message: '회원님의 여행 일정이 3일 남았습니다. 준비물은 챙기셨나요?', time: '3일 전', read: true, icon: '🔔' },
+    ];
+
     const renderContent = () => {
         switch (activeTab) {
             case 'schedules':
@@ -123,7 +143,7 @@ export default function MyPage() {
                         </div>
                         <div className="content-grid">
                             {myPlans.length > 0 ? myPlans.map(item => (
-                                <div key={item.id} className="feature-card" onClick={() => nav('/plans')} style={{cursor: 'pointer'}}>
+                                <div key={item.id} className="feature-card" onClick={() => nav('/plans')} style={{ cursor: 'pointer' }}>
                                     <div className="card-img-wrapper">
                                         <img src={item.heroImage || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80"} alt={item.title} className="card-img" />
                                         <span className="card-badge">{item.mood ? '#' + item.mood.toUpperCase() : '#TRIP'}</span>
@@ -139,7 +159,7 @@ export default function MyPage() {
                             )) : (
                                 <div className="empty-state">
                                     <p>아직 저장된 일정이 없습니다.</p>
-                                    <button className="primary-btn" onClick={() => nav('/')} style={{marginTop: '1rem'}}>
+                                    <button className="primary-btn" onClick={() => nav('/')} style={{ marginTop: '1rem' }}>
                                         여행 계획하러 가기
                                     </button>
                                 </div>
@@ -158,6 +178,75 @@ export default function MyPage() {
                         </div>
 
                         <TravelBiorhythm plans={myPlans} />
+                    </>
+                );
+            case 'badges':
+                return (
+                    <>
+                        <div className="content-header">
+                            <div>
+                                <h1 className="page-title">나의 여행 뱃지</h1>
+                                <p className="page-subtitle">여행의 추억을 모아 업적을 달성해보세요.</p>
+                            </div>
+                            <div className="badge-stats">
+                                <span>🏆 획득한 뱃지: <strong>{mockBadges.filter(b => b.unlocked).length}</strong> / {mockBadges.length}</span>
+                            </div>
+                        </div>
+                        <div className="badge-grid">
+                            {mockBadges.map(badge => (
+                                <div key={badge.id} className={`badge-card ${badge.unlocked ? 'unlocked' : 'locked'}`}>
+                                    <div className="badge-icon-wrapper">
+                                        <span className="badge-icon">{badge.icon}</span>
+                                        {!badge.unlocked && <span className="lock-overlay">🔒</span>}
+                                    </div>
+                                    <div className="badge-info">
+                                        <h3 className="badge-title">{badge.title}</h3>
+                                        <p className="badge-desc">{badge.desc}</p>
+                                        {badge.unlocked ? (
+                                            <span className="badge-date">달성일: {badge.date}</span>
+                                        ) : (
+                                            <div className="badge-progress-container">
+                                                <span className="badge-progress-text">진행도: {badge.progress}</span>
+                                                <div className="progress-bar">
+                                                    <div
+                                                        className="progress-fill"
+                                                        style={{ width: `${(parseInt(badge.progress.split('/')[0]) / parseInt(badge.progress.split('/')[1])) * 100}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                );
+            case 'notifications':
+                return (
+                    <>
+                        <div className="content-header">
+                            <div>
+                                <h1 className="page-title">알림 센터</h1>
+                                <p className="page-subtitle">새로운 소식과 반응을 확인하세요.</p>
+                            </div>
+                            <button className="action-btn" style={{ background: 'rgba(255,255,255,0.1)' }}>모두 읽음 처리</button>
+                        </div>
+                        <div className="notification-list">
+                            {mockNotifications.map(noti => (
+                                <div key={noti.id} className={`notification-item ${!noti.read ? 'unread' : ''}`}>
+                                    <div className="notification-icon-box">
+                                        {noti.icon}
+                                    </div>
+                                    <div className="notification-content">
+                                        <div className="notification-text">
+                                            <strong>{noti.actor}</strong>{noti.message}
+                                        </div>
+                                        <span className="notification-time">{noti.time}</span>
+                                    </div>
+                                    {!noti.read && <div className="notification-dot"></div>}
+                                </div>
+                            ))}
+                        </div>
                     </>
                 );
             case 'wishlist':
@@ -384,20 +473,7 @@ export default function MyPage() {
                         </p>
                     )}
 
-                    <div className="stats-grid">
-                        <div className="stat-item">
-                            <span className="stat-value">12</span>
-                            <span className="stat-label">국가</span>
-                        </div>
-                        <div className="stat-item">
-                            <span className="stat-value">45</span>
-                            <span className="stat-label">일수</span>
-                        </div>
-                        <div className="stat-item">
-                            <span className="stat-value">8</span>
-                            <span className="stat-label">도시</span>
-                        </div>
-                    </div>
+
                 </div>
 
                 <nav className="sidebar-nav">
@@ -406,6 +482,9 @@ export default function MyPage() {
                     </div>
                     <div className={`nav-item ${activeTab === 'style' ? 'active' : ''}`} onClick={() => setActiveTab('style')}>
                         <span className="nav-icon">🧬</span> 여행 성향
+                    </div>
+                    <div className={`nav-item ${activeTab === 'badges' ? 'active' : ''}`} onClick={() => setActiveTab('badges')}>
+                        <span className="nav-icon">🏆</span> 나의 뱃지
                     </div>
                     <div className={`nav-item ${activeTab === 'wishlist' ? 'active' : ''}`} onClick={() => setActiveTab('wishlist')}>
                         <span className="nav-icon">❤️</span> 찜 목록
@@ -416,9 +495,13 @@ export default function MyPage() {
                     <div className="nav-item" onClick={() => nav('/reviews')}>
                         <span className="nav-icon">✍️</span> 나의 후기
                     </div>
-                    <div className={`nav-item ${activeTab === 'bookings' ? 'active' : ''}`} onClick={() => setActiveTab('bookings')}>
-                        <span className="nav-icon">🎫</span> 예약 내역
+                    <div className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>
+                        <span className="nav-icon">🔔</span> 알림
+                        {mockNotifications.filter(n => !n.read).length > 0 && (
+                            <span className="nav-badge">{mockNotifications.filter(n => !n.read).length}</span>
+                        )}
                     </div>
+
                     <div className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
                         <span className="nav-icon">⚙️</span> 설정
                     </div>
