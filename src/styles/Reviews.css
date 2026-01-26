@@ -578,6 +578,17 @@
     font-size: 0.9rem;
 }
 
+.comment-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.comment-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .comment-author {
     font-weight: bold;
     color: #ddd;
@@ -585,6 +596,38 @@
 
 .comment-text {
     color: #aaa;
+    line-height: 1.4;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 0.8rem;
+    margin-top: 4px;
+}
+
+.comment-actions button {
+    background: none;
+    border: none;
+    font-size: 0.75rem;
+    padding: 0;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.comment-actions .reply-btn {
+    color: #888;
+}
+
+.comment-actions .reply-btn:hover {
+    color: #60a5fa;
+}
+
+.comment-actions .del-btn {
+    color: #666;
+}
+
+.comment-actions .del-btn:hover {
+    color: #ef4444;
 }
 
 /* 하단 액션 */

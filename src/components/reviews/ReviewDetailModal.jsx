@@ -11,6 +11,7 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
+    const [replyingTo, setReplyingTo] = useState(null); // { id, author_name }
     const [loadingComments, setLoadingComments] = useState(true);
 
     // 미디어 배열 (없으면 빈 배열)
@@ -20,15 +21,16 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
     const timeAgo = formatDistanceToNow(new Date(review.created_at), { addSuffix: true, locale: ko });
 
     // 댓글 로드
+    const loadComments = async () => {
+        setLoadingComments(true);
+        const { data, error } = await reviewService.getComments(review.id);
+        if (!error) {
+            setComments(data);
+        }
+        setLoadingComments(false);
+    };
+
     useEffect(() => {
-        const loadComments = async () => {
-            setLoadingComments(true);
-            const { data, error } = await reviewService.getComments(review.id);
-            if (!error) {
-                setComments(data);
-            }
-            setLoadingComments(false);
-        };
         loadComments();
     }, [review.id]);
 
@@ -53,17 +55,31 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
         const commentData = {
             user_id: user.id,
             author_name: user.email.split('@')[0],
-            author_avatar: '',
-            content: newComment
+            author_avatar: user.user_metadata?.avatar_url || '',
+            content: newComment,
+            parent_id: replyingTo ? replyingTo.id : null
         };
 
         const { data, error } = await reviewService.addComment(review.id, commentData);
         if (!error) {
             setComments([...comments, data]);
             setNewComment('');
-            toast.success('댓글이 작성되었습니다.');
+            setReplyingTo(null);
+            toast.success(replyingTo ? '답글이 작성되었습니다.' : '댓글이 작성되었습니다.');
         } else {
             toast.error('댓글 작성 실패');
+        }
+    };
+
+    const handleDeleteComment = async (commentId) => {
+        if (!window.confirm('정말 삭제하시겠습니까?')) return;
+
+        const { error } = await reviewService.deleteComment(review.id, commentId);
+        if (!error) {
+            setComments(comments.filter(c => c.id !== commentId && c.parent_id !== commentId));
+            toast.success('삭제되었습니다.');
+        } else {
+            toast.error('삭제 실패');
         }
     };
 
@@ -147,10 +163,46 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                                     <p>댓글 로딩 중...</p>
                                 ) : (
                                     <div className="comments-list">
-                                        {comments.map(comment => (
-                                            <div key={comment.id} className="comment-item">
-                                                <span className="comment-author">{comment.author_name}</span>
-                                                <span className="comment-text">{comment.content}</span>
+                                        {comments.filter(c => !c.parent_id).map(comment => (
+                                            <div key={comment.id} className="comment-group" style={{ marginBottom: '1.2rem' }}>
+                                                <div className="comment-item" style={{ display: 'flex', gap: '10px' }}>
+                                                    <img
+                                                        src={comment.author_avatar || `https://ui-avatars.com/api/?name=${comment.author_name}&background=random`}
+                                                        alt={comment.author_name}
+                                                        style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                                                    />
+                                                    <div className="comment-main">
+                                                        <span className="comment-author">{comment.author_name}</span>
+                                                        <span className="comment-text">{comment.content}</span>
+                                                        <div className="comment-actions">
+                                                            <button className="reply-btn" onClick={() => setReplyingTo({ id: comment.id, author_name: comment.author_name })}>답글달기</button>
+                                                            {user && (user.id === comment.user_id || comment.user_id.startsWith('mock-')) && (
+                                                                <button className="del-btn" onClick={() => handleDeleteComment(comment.id)}>삭제</button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {/* 답글 리스트 */}
+                                                <div className="replies-list" style={{ marginLeft: '2.5rem', marginTop: '0.8rem', borderLeft: '1px solid #333', paddingLeft: '1rem' }}>
+                                                    {comments.filter(c => c.parent_id === comment.id).map(reply => (
+                                                        <div key={reply.id} className="comment-item reply" style={{ marginBottom: '0.8rem', display: 'flex', gap: '8px' }}>
+                                                            <img
+                                                                src={reply.author_avatar || `https://ui-avatars.com/api/?name=${reply.author_name}&background=random`}
+                                                                alt={reply.author_name}
+                                                                style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
+                                                            />
+                                                            <div className="comment-main">
+                                                                <span className="comment-author">{reply.author_name}</span>
+                                                                <span className="comment-text">{reply.content}</span>
+                                                                {user && (user.id === reply.user_id || reply.user_id.startsWith('mock-')) && (
+                                                                    <div className="comment-actions">
+                                                                        <button className="del-btn" onClick={() => handleDeleteComment(reply.id)}>삭제</button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -169,10 +221,17 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                                 <span className="likes-count" style={{ color: '#aaa' }}>좋아요 {review.likes}개</span>
                             </div>
 
+                            {replyingTo && (
+                                <div className="reply-hint" style={{ padding: '8px 12px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', marginBottom: '8px', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: '#60a5fa' }}>@{replyingTo.author_name}님에게 답글 남기는 중...</span>
+                                    <button onClick={() => setReplyingTo(null)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem' }}>&times;</button>
+                                </div>
+                            )}
+
                             <form className="comment-form" onSubmit={handleSubmitComment}>
                                 <input
                                     type="text"
-                                    placeholder="댓글 달기..."
+                                    placeholder={replyingTo ? "답글 달기..." : "댓글 달기..."}
                                     value={newComment}
                                     onChange={(e) => setNewComment(e.target.value)}
                                 />

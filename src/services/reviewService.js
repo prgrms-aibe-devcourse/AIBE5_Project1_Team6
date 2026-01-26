@@ -63,11 +63,11 @@ const MOCK_REVIEWS = [
 // 예시 댓글 데이터
 const MOCK_COMMENTS = {
     '1': [
-        { id: 'c1', user_id: 'u1', author_name: '댓글러1', content: '정말 멋지네요!', created_at: new Date().toISOString() },
-        { id: 'c2', user_id: 'u2', author_name: '댓글러2', content: '정보 감사합니다.', created_at: new Date().toISOString() }
+        { id: 'c1', user_id: 'u1', author_name: '댓글러1', content: '정말 멋지네요!', created_at: new Date().toISOString(), parent_id: null },
+        { id: 'c2', user_id: 'u2', author_name: '댓글러2', content: '정보 감사합니다.', created_at: new Date().toISOString(), parent_id: null }
     ],
     '2': [
-        { id: 'c3', user_id: 'u3', author_name: '부산사람', content: '부산은 사랑이죠.', created_at: new Date().toISOString() }
+        { id: 'c3', user_id: 'u3', author_name: '부산사람', content: '부산은 사랑이죠.', created_at: new Date().toISOString(), parent_id: null }
     ]
 };
 
@@ -211,6 +211,7 @@ export const reviewService = {
         const newComment = {
             id: String(Date.now()),
             ...commentData,
+            parent_id: commentData.parent_id || null,
             created_at: new Date().toISOString()
         };
 
@@ -225,5 +226,22 @@ export const reviewService = {
         );
 
         return { data: newComment, error: null };
+    },
+
+    // 댓글 삭제
+    async deleteComment(reviewId, commentId) {
+        if (!localComments[reviewId]) return { error: 'Not found' };
+
+        // 해당 댓글과 그 답글들까지 삭제 시도 (심플하게 필터링)
+        const originalCount = localComments[reviewId].length;
+        localComments[reviewId] = localComments[reviewId].filter(c => c.id !== commentId && c.parent_id !== commentId);
+        const deletedCount = originalCount - localComments[reviewId].length;
+
+        // 리뷰의 댓글 수 업데이트
+        localReviews = localReviews.map(r =>
+            r.id === reviewId ? { ...r, comments: Math.max(0, r.comments - deletedCount) } : r
+        );
+
+        return { error: null };
     }
 };

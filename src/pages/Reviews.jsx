@@ -23,8 +23,8 @@ export default function Reviews() {
     // 웰니스 필터 상태
     const tripStore = useTripStore();
     const [wellnessOptions, setWellnessOptions] = useState({
-        mood: tripStore.mood,
-        themes: tripStore.themes
+        mood: null,
+        themes: []
     });
 
     // 모달 상태
