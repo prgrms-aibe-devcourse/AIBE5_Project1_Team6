@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { GoogleGenAI } from "@google/genai";
 import { useTripStore } from "../stores/tripStore";
+import { useAuthStore } from "../stores/authStore";
+import { supabase } from "../services/supabase";
 import "../styles/chatbot.css";
 
 export default function ChatbotWidget() {
@@ -8,7 +11,31 @@ export default function ChatbotWidget() {
   
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const endRef = useRef(null);
+  const roomIdRef = useRef(null);
+
+  const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+  const MODEL_ID = "gemini-3-flash-preview";
+
+  const { user } = useAuthStore();
+
+  console.log("[ChatBot] Current State:", { mood, destination, themes });
+
+  const genAI = useMemo(() => {
+    if (!GEMINI_API_KEY) {
+      console.warn("[ChatBot] Gemini API Key 없음");
+      return null;
+    }
+    try {
+      console.log("[ChatBot] Gemini 클라이언트 생성 중...");
+      return new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    } catch (err) {
+      console.error("Gemini 클라이언트 생성 실패", err);
+      return null;
+    }
+  }, [GEMINI_API_KEY]);
+
 
   // Initialize Greeting
   useEffect(() => {
@@ -68,17 +95,165 @@ export default function ChatbotWidget() {
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   };
 
-  const send = () => {
-    const text = input.trim();
-    if (!text) return;
+  const ensureRoom = async () => {
+    if (roomIdRef.current || !user) return roomIdRef.current;
+    try {
+      const { data, error } = await supabase
+        .from("chat_room")
+        .insert([{ user_id: user.id }])
+        .select("id")
+        .single();
+      if (error) throw error;
+      roomIdRef.current = data.id;
+      return data.id;
+    } catch (err) {
+      console.error("chat_room 생성 실패", err);
+      return null;
+    }
+  };
 
+  const saveMessage = async (role, content) => {
+    if (!user) return;
+    const roomId = roomIdRef.current || (await ensureRoom());
+    if (!roomId) return;
+    try {
+      await supabase.from("chat_message").insert({
+        room_id: roomId,
+        user_id: user.id,
+        role,
+        content,
+      });
+    } catch (err) {
+      console.error("chat_message 저장 실패", err);
+    }
+  };
+
+  const resetChat = async () => {
+    const roomId = roomIdRef.current;
+    setMessages([{ role: "bot", text: "대화를 새로 시작해요. 무엇을 도와드릴까요?" }]);
+    if (!roomId || !user) return;
+    try {
+      await supabase.from("chat_message").delete().eq("room_id", roomId);
+      await supabase.from("chat_room").delete().eq("id", roomId);
+    } catch (err) {
+      console.error("채팅 초기화 실패", err);
+    }
+    roomIdRef.current = null;
+  };
+
+  const callGemini = async (text) => {
+    if (!GEMINI_API_KEY || !genAI) {
+      console.warn("[ChatBot] Gemini 호출 불가: API Key나 클라이언트 없음");
+      return null;
+    }
+
+    console.log("[ChatBot] Gemini 호출 시작:", text);
+
+    const history = messages
+      .slice(-6)
+      .map((m) => `${m.role === "bot" ? "assistant" : "user"}: ${m.text}`)
+      .join("\n");
+
+    const context = [
+      mood ? `기분: ${mood}` : null,
+      themes?.length ? `테마: ${themes.join(", ")}` : null,
+      destination ? `여행지: ${destination}` : null,
+    ]
+      .filter(Boolean)
+      .join(" | ");
+
+    const prompt = `너는 한국어 여행 플래너 챗봇이다.
+컨텍스트: ${context || "정보 없음"}
+
+최근 대화:
+${history}
+사용자 요청: ${text}
+
+규칙:
+1) 한국어로 3~5문장 이내로 간결하게.
+2) 각 항목이나 주제마다 줄바꿈(\\n)을 포함해서 가독성 있게 작성.
+3) 요청이 일정/체크리스트/예산/문제해결(분실, 숙박, 불편 신고) 관련이면 짧게 액션 아이템 위주로.
+4) 정보 부족 시 추가 질문 1개만.
+5) 안전/긴급 상황(분실, 부상, 불편) 질문 시 신고/연락처/기본 대응을 우선 안내.
+6) 명확하고 친근하게 여행 정보 제공하기`;
+
+    console.log("[ChatBot] 프롬프트:", prompt);
+
+    // 재시도 로직 (최대 3회)
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        console.log(`[ChatBot] Gemini API 호출 중... (재시도: ${4 - retries}/3)`);
+        const result = await genAI.models.generateContent({
+          model: MODEL_ID,
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.6, maxOutputTokens: 300 },
+        });
+
+        console.log("[ChatBot] Gemini 응답 전체:", result);
+
+        // 여러 가능성 시도
+        let text = null;
+        
+        // 1. candidates 직접 접근
+        if (result.candidates?.length > 0) {
+          text = result.candidates[0]?.content?.parts?.[0]?.text;
+          console.log("[ChatBot] 시도1 (candidates):", text);
+        }
+        
+        // 2. response.text() 메서드
+        if (!text && typeof result.response?.text === "function") {
+          text = result.response.text();
+          console.log("[ChatBot] 시도2 (response.text()):", text);
+        }
+        
+        // 3. response 직접 접근
+        if (!text) {
+          text = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
+          console.log("[ChatBot] 시도3 (response.candidates):", text);
+        }
+        
+        console.log("[ChatBot] 최종 추출된 응답:", text);
+        return text || null;
+      } catch (err) {
+        retries--;
+        console.error(`[ChatBot] Gemini 호출 실패 (남은 재시도: ${retries}):`, err.message);
+
+        // 503 또는 429 에러면 재시도, 나머지는 바로 실패
+        if ((err.message?.includes("503") || err.message?.includes("429")) && retries > 0) {
+          const waitTime = Math.pow(2, 3 - retries) * 1000; // 지수 백오프: 2s, 4s
+          console.log(`[ChatBot] ${waitTime}ms 대기 후 재시도...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        
+        // 최종 실패
+        console.error("[ChatBot] 최종 실패:", err.message);
+        return null;
+      }
+    }
+    
+    return null;
+  };
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    console.log("[ChatBot] 사용자 메시지:", text);
     setMessages((m) => [...m, { role: "user", text }]);
     setInput("");
+    setLoading(true);
 
-    setTimeout(() => {
-      const reply = generateSmartReply(text);
-      setMessages((m) => [...m, { role: "bot", text: reply }]);
-    }, 600 + Math.random() * 500); 
+    await saveMessage("user", text);
+
+    const aiReply = await callGemini(text);
+    const reply = aiReply || generateSmartReply(text);
+
+    console.log("[ChatBot] 최종 응답:", reply);
+    setMessages((m) => [...m, { role: "bot", text: reply }]);
+    await saveMessage("assistant", reply);
+    setLoading(false);
   };
 
   return (
@@ -100,6 +275,12 @@ export default function ChatbotWidget() {
                 {m.text}
               </div>
             ))}
+            {loading && (
+              <div className="loading-message">
+                <span className="loading-spinner"></span>
+                <span className="loading-text">여행 계획 고민중...</span>
+              </div>
+            )}
             <div ref={endRef} />
           </div>
 
@@ -115,7 +296,8 @@ export default function ChatbotWidget() {
                   }
               }}
             />
-            <button onClick={send}>전송</button>
+            <button onClick={send} disabled={loading}>전송</button>
+            <button onClick={resetChat} disabled={loading}>초기화</button>
           </div>
         </div>
       )}
