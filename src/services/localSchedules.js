@@ -18,6 +18,8 @@ export function addLocalSchedule(schedule) {
     const newSchedule = {
         id: Date.now().toString(),
         ...schedule,
+        accommodations: schedule.accommodations || [],
+        restaurants: schedule.restaurants || [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     };
