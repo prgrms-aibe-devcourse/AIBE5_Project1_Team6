@@ -54,7 +54,7 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
 
         const commentData = {
             user_id: user.id,
-            author_name: user.email.split('@')[0],
+            author_name: user?.user_metadata?.full_name || user.email.split('@')[0],
             author_avatar: user.user_metadata?.avatar_url || '',
             content: newComment,
             parent_id: replyingTo ? replyingTo.id : null
@@ -93,10 +93,10 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                     <div className="detail-media-section">
                         {mediaList.length > 0 ? (
                             <div className="media-carousel">
-                                {mediaList[currentMediaIndex].type === 'video' ? (
-                                    <video src={mediaList[currentMediaIndex].url} controls className="detail-media" />
+                                {((typeof mediaList[currentMediaIndex] === 'string' && (mediaList[currentMediaIndex].endsWith('.mp4') || mediaList[currentMediaIndex].endsWith('.webm'))) || mediaList[currentMediaIndex].type === 'video') ? (
+                                    <video src={typeof mediaList[currentMediaIndex] === 'string' ? mediaList[currentMediaIndex] : mediaList[currentMediaIndex].url} controls className="detail-media" />
                                 ) : (
-                                    <img src={mediaList[currentMediaIndex].url} alt="Review media" className="detail-media" />
+                                    <img src={typeof mediaList[currentMediaIndex] === 'string' ? mediaList[currentMediaIndex] : mediaList[currentMediaIndex].url} alt="Review media" className="detail-media" />
                                 )}
 
                                 {mediaList.length > 1 && (
@@ -121,12 +121,12 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                         <div className="detail-header">
                             <div className="author-info">
                                 <img
-                                    src={review.author_avatar || `https://ui-avatars.com/api/?name=${review.author_name}`}
-                                    alt={review.author_name}
+                                    src={review.author_avatar || `https://ui-avatars.com/api/?name=${review.author_name || '익명'}&background=random`}
+                                    alt={review.author_name || '익명'}
                                     className="author-avatar small"
                                 />
                                 <div>
-                                    <h4>{review.author_name}</h4>
+                                    <h4>{review.author_name || '익명'}</h4>
                                     <span className="location-tag">{review.destination}</span>
                                 </div>
                             </div>
@@ -167,13 +167,13 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                                             <div key={comment.id} className="comment-group" style={{ marginBottom: '1.2rem' }}>
                                                 <div className="comment-item" style={{ display: 'flex', gap: '10px' }}>
                                                     <img
-                                                        src={comment.author_avatar || `https://ui-avatars.com/api/?name=${comment.author_name}&background=random`}
-                                                        alt={comment.author_name}
+                                                        src={comment.author_avatar || `https://ui-avatars.com/api/?name=${comment.author_name || '익명'}&background=random`}
+                                                        alt={comment.author_name || '익명'}
                                                         style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
                                                     />
                                                     <div className="comment-main">
                                                         <div className="comment-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            <span className="comment-author">{comment.author_name}</span>
+                                                            <span className="comment-author">{comment.author_name || '익명'}</span>
                                                             <span className="comment-time" style={{ fontSize: '0.75rem', color: '#666' }}>
                                                                 {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ko })}
                                                             </span>

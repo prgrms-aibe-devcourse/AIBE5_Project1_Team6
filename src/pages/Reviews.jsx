@@ -39,7 +39,8 @@ export default function Reviews() {
         const { data, error } = await reviewService.getReviews(
             sortBy,
             { type: searchType, keyword: activeSearchKeyword },
-            wellnessOptions
+            wellnessOptions,
+            user?.id
         );
 
         if (error) {
@@ -74,9 +75,9 @@ export default function Reviews() {
             // 생성
             const newReview = {
                 ...formData,
-                user_id: user?.id || 'guest',
-                author_name: user?.email?.split('@')[0] || '익명',
-                author_avatar: ''
+                user_id: user?.id,
+                author_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || '익명',
+                author_avatar: user?.user_metadata?.avatar_url || ''
             };
 
             const { error } = await reviewService.createReview(newReview);

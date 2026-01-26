@@ -17,12 +17,12 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
         <div className="review-card" onClick={() => onClick(review)} style={{ cursor: 'pointer' }}>
             <div className="review-header">
                 <img
-                    src={review.author_avatar || `https://ui-avatars.com/api/?name=${review.author_name}`}
-                    alt={review.author_name}
+                    src={review.author_avatar || `https://ui-avatars.com/api/?name=${review.author_name || '익명'}&background=random`}
+                    alt={review.author_name || '익명'}
                     className="author-avatar"
                 />
                 <div className="review-info">
-                    <h4>{review.author_name}</h4>
+                    <h4>{review.author_name || '익명'}</h4>
                     <span className="review-date">{timeAgo}</span>
                 </div>
                 <span className="review-destination">{review.destination}</span>
@@ -31,11 +31,11 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
             {/* 미디어 썸네일 */}
             {firstMedia && (
                 <div className="review-media-container" style={{ position: 'relative' }}>
-                    {firstMedia.type === 'video' ? (
-                        <video src={firstMedia.url} className="review-media" />
+                    {(typeof firstMedia === 'string' && (firstMedia.endsWith('.mp4') || firstMedia.endsWith('.webm'))) || firstMedia.type === 'video' ? (
+                        <video src={typeof firstMedia === 'string' ? firstMedia : firstMedia.url} className="review-media" />
                     ) : (
                         <img
-                            src={imgError ? 'https://via.placeholder.com/600x400?text=No+Image' : firstMedia.url}
+                            src={imgError ? 'https://via.placeholder.com/600x400?text=No+Image' : (typeof firstMedia === 'string' ? firstMedia : firstMedia.url)}
                             alt="Review media"
                             className="review-media"
                             onError={() => setImgError(true)}
