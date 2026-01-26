@@ -1,0 +1,233 @@
+/* Food Recommendations */
+
+.foodSection {
+    padding: 20px 0;
+}
+
+.foodHeader {
+    margin-bottom: 24px;
+}
+
+.foodTitle {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #f5576c;
+}
+
+.foodSubtitle {
+    margin: 0;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Filters */
+.foodFilters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.foodFilterBtn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.foodFilterBtn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(245, 87, 108, 0.5);
+}
+
+.foodFilterBtn.active {
+    background: linear-gradient(135deg, #f5576c 0%, #FFC107 100%);
+    border-color: transparent;
+    color: #fff;
+}
+
+/* Food Grid */
+.foodGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.foodCard {
+    background: rgba(255, 255, 255, 0.06);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.foodCard:hover {
+    transform: translateY(-4px);
+    border-color: rgba(245, 87, 108, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.foodCard.selected {
+    border-color: rgba(245, 87, 108, 0.8);
+    background: rgba(245, 87, 108, 0.1);
+}
+
+.foodImageWrapper {
+    position: relative;
+    height: 130px;
+    background: linear-gradient(135deg, rgba(245, 87, 108, 0.2) 0%, rgba(255, 193, 7, 0.2) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.foodImage {
+    font-size: 64px;
+}
+
+.foodCategory {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.foodInfo {
+    padding: 18px;
+}
+
+.foodCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.foodName {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    flex: 1;
+}
+
+.foodRating {
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.foodPrice {
+    margin: 0 0 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #f5576c;
+}
+
+.foodDesc {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.foodHours {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.foodMenuList {
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.foodMenuList strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #fff;
+}
+
+.menuTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.menuTag {
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: rgba(255, 193, 7, 0.15);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    color: #ffc107;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.foodSelectBtn {
+    width: 100%;
+    padding: 11px;
+    border-radius: 10px;
+    border: 2px solid rgba(245, 87, 108, 0.3);
+    background: rgba(245, 87, 108, 0.1);
+    color: #f5576c;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.foodSelectBtn:hover {
+    background: rgba(245, 87, 108, 0.2);
+    transform: translateY(-2px);
+}
+
+.foodSelectBtn.selected {
+    background: linear-gradient(135deg, #f5576c 0%, #FFC107 100%);
+    border-color: transparent;
+    color: #fff;
+}
+
+.foodSelectedSummary {
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(245, 87, 108, 0.15);
+    border: 1px solid rgba(245, 87, 108, 0.3);
+    text-align: center;
+    color: #f5576c;
+    font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .foodGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .foodImageWrapper {
+        height: 110px;
+    }
+
+    .foodImage {
+        font-size: 48px;
+    }
+}

@@ -34,6 +34,8 @@ export default function Layout() {
 
         <div style={{ marginLeft: "auto", paddingRight: 20, display: 'flex', gap: 10, alignItems: 'center' }}>
           <button className="navBtn" onClick={() => nav('/mypage')} style={{ fontSize: 13 }}>마이페이지</button>
+          <button className="navBtn" onClick={() => nav('/reviews')} style={{ fontSize: 13 }}>후기</button>
+          <button className="navBtn" onClick={() => nav('/planlab')} style={{ fontSize: 13 }}>일정관리</button>
           {user ? (
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <span style={{ fontSize: 13, color: '#aaa' }}>{user.email.split('@')[0]}님</span>
@@ -43,6 +45,7 @@ export default function Layout() {
             <button className="navBtn" onClick={() => setShowAuth(true)} style={{ fontSize: 13, background: "#3b82f6", border: 'none', color: 'white' }}>Login</button>
           )}
         </div>
+
       </header>
 
       <main className="content">
