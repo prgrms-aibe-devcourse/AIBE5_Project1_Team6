@@ -18,7 +18,7 @@ const MOCK_REVIEWS = [
         likes: 12,
         comments: 3,
         is_liked: false,
-        mood: 'burnout',
+        mood: 'romantic',
         themes: ['healing']
     },
     {

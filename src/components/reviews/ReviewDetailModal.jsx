@@ -139,7 +139,7 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                             <div className="wellness-tags" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
                                 {review.mood && (
                                     <span className="wellness-tag mood" style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#eee', fontSize: '0.85rem', padding: '4px 12px', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
-                                        {review.mood === 'burnout' ? '🔥 번아웃 케어' :
+                                        {review.mood === 'romantic' ? '🌹 낭만' :
                                             review.mood === 'refresh' ? '🌈 리프레시' :
                                                 review.mood === 'active' ? '👟 에너지 충전' : '🤫 고요한 휴식'}
                                     </span>
@@ -172,7 +172,12 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                                                         style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
                                                     />
                                                     <div className="comment-main">
-                                                        <span className="comment-author">{comment.author_name}</span>
+                                                        <div className="comment-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <span className="comment-author">{comment.author_name}</span>
+                                                            <span className="comment-time" style={{ fontSize: '0.75rem', color: '#666' }}>
+                                                                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ko })}
+                                                            </span>
+                                                        </div>
                                                         <span className="comment-text">{comment.content}</span>
                                                         <div className="comment-actions">
                                                             <button className="reply-btn" onClick={() => setReplyingTo({ id: comment.id, author_name: comment.author_name })}>답글달기</button>
@@ -192,7 +197,12 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                                                                 style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
                                                             />
                                                             <div className="comment-main">
-                                                                <span className="comment-author">{reply.author_name}</span>
+                                                                <div className="comment-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <span className="comment-author">{reply.author_name}</span>
+                                                                    <span className="comment-time" style={{ fontSize: '0.75rem', color: '#666' }}>
+                                                                        {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true, locale: ko })}
+                                                                    </span>
+                                                                </div>
                                                                 <span className="comment-text">{reply.content}</span>
                                                                 {user && (user.id === reply.user_id || reply.user_id.startsWith('mock-')) && (
                                                                     <div className="comment-actions">

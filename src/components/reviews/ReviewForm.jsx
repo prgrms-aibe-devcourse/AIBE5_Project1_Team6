@@ -139,7 +139,7 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
                         <label>여행 무드</label>
                         <div className="mood-selection" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
                             {[
-                                { id: 'burnout', label: '🔥 번아웃 케어' },
+                                { id: 'romantic', label: '🌹 낭만' },
                                 { id: 'refresh', label: '🌈 리프레시' },
                                 { id: 'active', label: '👟 에너지 충전' },
                                 { id: 'calm', label: '🤫 고요한 휴식' }

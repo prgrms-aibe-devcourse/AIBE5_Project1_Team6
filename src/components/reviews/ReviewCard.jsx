@@ -60,7 +60,7 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
                 <div className="wellness-tags" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', margin: '8px 0' }}>
                     {review.mood && (
                         <span className="wellness-tag mood" style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#eee', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
-                            {review.mood === 'burnout' ? '🔥 번아웃' :
+                            {review.mood === 'romantic' ? '🌹 낭만' :
                                 review.mood === 'refresh' ? '🌈 리프레시' :
                                     review.mood === 'active' ? '👟 에너지' : '🤫 고요함'}
                         </span>

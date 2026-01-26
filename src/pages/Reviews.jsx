@@ -221,7 +221,7 @@ export default function Reviews() {
 
                     {/* 무드 그룹 */}
                     {[
-                        { id: 'burnout', label: '🔥 번아웃', type: 'mood' },
+                        { id: 'romantic', label: '🌹 낭만', type: 'mood' },
                         { id: 'refresh', label: '🌈 리프레시', type: 'mood' },
                         { id: 'active', label: '👟 에너지', type: 'mood' },
                         { id: 'calm', label: '🤫 고요함', type: 'mood' }
@@ -292,7 +292,7 @@ export default function Reviews() {
                 {/* 개인화 추천 알림 */}
                 {tripStore.mood && !wellnessOptions.mood && wellnessOptions.themes.length === 0 && (
                     <div className="personalized-recommendation" style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <span>✨ 당신의 최근 관심사(<strong>{tripStore.mood === 'burnout' ? '번아웃 케어' : tripStore.mood === 'refresh' ? '리프레시' : tripStore.mood === 'active' ? '에너지 충전' : '고요한 휴식'}</strong>)에 맞는 후기들을 먼저 보여드릴게요!</span>
+                        <span>✨ 당신의 최근 관심사(<strong>{tripStore.mood === 'romantic' ? '낭만 가득' : tripStore.mood === 'refresh' ? '리프레시' : tripStore.mood === 'active' ? '에너지 충전' : '고요한 휴식'}</strong>)에 맞는 후기들을 먼저 보여드릴게요!</span>
                     </div>
                 )}
             </div>
