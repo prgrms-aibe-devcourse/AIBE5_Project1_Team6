@@ -4,7 +4,9 @@ import Home from "./pages/Home";
 import Walk from "./pages/Walk";
 import Traffic from "./pages/Traffic";
 import Airplane from "./pages/Airplane";
-import Plans from "./pages/Plans";
+
+import PlanLab from "./pages/PlanLab";
+// import Plans from "./pages/Plans";
 import Reviews from "./pages/Reviews";
 import MyPage from "./pages/MyPage";
 import { useEffect } from "react";
@@ -39,7 +41,8 @@ export default function App() {
         <Route path="/walk" element={<Walk />} />
         <Route path="/traffic" element={<Traffic />} />
         <Route path="/airplane" element={<Airplane />} />
-        <Route path="/plans" element={<Plans />} />
+        <Route path="/planlab" element={<PlanLab />} />
+        {/* <Route path="/plans" element={<Plans />} /> */}
         <Route path="/reviews" element={<Reviews />} />
         <Route path="/mypage" element={<MyPage />} />
       </Route>
