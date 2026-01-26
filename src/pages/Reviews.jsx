@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
+import { useTripStore } from '../stores/tripStore';
 import { reviewService } from '../services/reviewService';
 import ReviewCard from '../components/reviews/ReviewCard';
 import ReviewForm from '../components/reviews/ReviewForm';
@@ -19,6 +20,13 @@ export default function Reviews() {
     const [activeSearchKeyword, setActiveSearchKeyword] = useState('');
     const [sortBy, setSortBy] = useState('latest'); // 'latest' 또는 'likes'
 
+    // 웰니스 필터 상태
+    const tripStore = useTripStore();
+    const [wellnessOptions, setWellnessOptions] = useState({
+        mood: null,
+        themes: []
+    });
+
     // 모달 상태
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSortOpen, setIsSortOpen] = useState(false);
@@ -28,7 +36,12 @@ export default function Reviews() {
     // 데이터 불러오기
     const loadReviews = async () => {
         setLoading(true);
-        const { data, error } = await reviewService.getReviews(sortBy, { type: searchType, keyword: activeSearchKeyword });
+        const { data, error } = await reviewService.getReviews(
+            sortBy,
+            { type: searchType, keyword: activeSearchKeyword },
+            wellnessOptions,
+            user?.id
+        );
 
         if (error) {
             toast.error('후기를 불러오는데 실패했습니다.');
@@ -41,7 +54,7 @@ export default function Reviews() {
     // 초기 로드 및 필터 변경 시 재로드
     useEffect(() => {
         loadReviews();
-    }, [sortBy, activeSearchKeyword]);
+    }, [sortBy, activeSearchKeyword, wellnessOptions]);
 
     const handleSearchTrigger = () => {
         setActiveSearchKeyword(keywordInput);
@@ -62,9 +75,9 @@ export default function Reviews() {
             // 생성
             const newReview = {
                 ...formData,
-                user_id: user?.id || 'guest',
-                author_name: user?.email?.split('@')[0] || '익명',
-                author_avatar: ''
+                user_id: user?.id,
+                author_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || '익명',
+                author_avatar: user?.user_metadata?.avatar_url || ''
             };
 
             const { error } = await reviewService.createReview(newReview);
@@ -185,6 +198,104 @@ export default function Reviews() {
                         </div>
                     </div>
                 </div>
+
+                {/* 웰니스 필터 섹션 */}
+                <div className="wellness-filter-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', padding: '1rem 0', marginBottom: '1rem' }}>
+                    <button
+                        className={`wellness-chip ${!wellnessOptions.mood && wellnessOptions.themes.length === 0 ? 'active' : ''}`}
+                        onClick={() => setWellnessOptions({ mood: null, themes: [] })}
+                        style={{
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            border: '1px solid #4b5563',
+                            background: !wellnessOptions.mood && wellnessOptions.themes.length === 0 ? 'white' : 'transparent',
+                            color: !wellnessOptions.mood && wellnessOptions.themes.length === 0 ? '#1e1e1e' : 'white',
+                            whiteSpace: 'nowrap',
+                            cursor: 'pointer',
+                            flexShrink: 0
+                        }}
+                    >
+                        전체
+                    </button>
+
+                    <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)', margin: '0 4px', flexShrink: 0 }}></div>
+
+                    {/* 무드 그룹 */}
+                    {[
+                        { id: 'romantic', label: '🌹 낭만', type: 'mood' },
+                        { id: 'refresh', label: '🌈 리프레시', type: 'mood' },
+                        { id: 'active', label: '👟 에너지', type: 'mood' },
+                        { id: 'calm', label: '🤫 고요함', type: 'mood' }
+                    ].map(item => {
+                        const isActive = wellnessOptions.mood === item.id;
+                        return (
+                            <button
+                                key={item.id}
+                                className={`wellness-chip ${isActive ? 'active' : ''}`}
+                                onClick={() => setWellnessOptions(prev => ({
+                                    ...prev,
+                                    mood: prev.mood === item.id ? null : item.id
+                                }))}
+                                style={{
+                                    padding: '8px 16px',
+                                    borderRadius: '20px',
+                                    border: '1px solid #4b5563',
+                                    background: isActive ? 'white' : 'transparent',
+                                    color: isActive ? '#1e1e1e' : 'white',
+                                    whiteSpace: 'nowrap',
+                                    cursor: 'pointer',
+                                    flexShrink: 0
+                                }}
+                            >
+                                {item.label}
+                            </button>
+                        );
+                    })}
+
+                    <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)', margin: '0 4px', flexShrink: 0 }}></div>
+
+                    {/* 테마 그룹 */}
+                    {[
+                        { id: 'activity', label: '🪂 액티비티', type: 'theme' },
+                        { id: 'food', label: '🍱 맛집', type: 'theme' },
+                        { id: 'healing', label: '🌿 힐링', type: 'theme' }
+                    ].map(item => {
+                        const isActive = wellnessOptions.themes.includes(item.id);
+                        return (
+                            <button
+                                key={item.id}
+                                className={`wellness-chip ${isActive ? 'active' : ''}`}
+                                onClick={() => {
+                                    setWellnessOptions(prev => ({
+                                        ...prev,
+                                        themes: prev.themes.includes(item.id)
+                                            ? prev.themes.filter(t => t !== item.id)
+                                            : [...prev.themes, item.id]
+                                    }));
+                                }}
+                                style={{
+                                    padding: '8px 16px',
+                                    borderRadius: '20px',
+                                    border: '1px solid #4b5563',
+                                    background: isActive ? '#555' : 'transparent',
+                                    color: 'white',
+                                    whiteSpace: 'nowrap',
+                                    cursor: 'pointer',
+                                    flexShrink: 0
+                                }}
+                            >
+                                {item.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* 개인화 추천 알림 */}
+                {tripStore.mood && !wellnessOptions.mood && wellnessOptions.themes.length === 0 && (
+                    <div className="personalized-recommendation" style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <span>✨ 당신의 최근 관심사(<strong>{tripStore.mood === 'romantic' ? '낭만 가득' : tripStore.mood === 'refresh' ? '리프레시' : tripStore.mood === 'active' ? '에너지 충전' : '고요한 휴식'}</strong>)에 맞는 후기들을 먼저 보여드릴게요!</span>
+                    </div>
+                )}
             </div>
 
             <div className="reviews-grid">

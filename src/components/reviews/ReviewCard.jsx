@@ -17,12 +17,12 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
         <div className="review-card" onClick={() => onClick(review)} style={{ cursor: 'pointer' }}>
             <div className="review-header">
                 <img
-                    src={review.author_avatar || `https://ui-avatars.com/api/?name=${review.author_name}`}
-                    alt={review.author_name}
+                    src={review.author_avatar || `https://ui-avatars.com/api/?name=${review.author_name || '익명'}&background=random`}
+                    alt={review.author_name || '익명'}
                     className="author-avatar"
                 />
                 <div className="review-info">
-                    <h4>{review.author_name}</h4>
+                    <h4>{review.author_name || '익명'}</h4>
                     <span className="review-date">{timeAgo}</span>
                 </div>
                 <span className="review-destination">{review.destination}</span>
@@ -31,11 +31,11 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
             {/* 미디어 썸네일 */}
             {firstMedia && (
                 <div className="review-media-container" style={{ position: 'relative' }}>
-                    {firstMedia.type === 'video' ? (
-                        <video src={firstMedia.url} className="review-media" />
+                    {(typeof firstMedia === 'string' && (firstMedia.endsWith('.mp4') || firstMedia.endsWith('.webm'))) || firstMedia.type === 'video' ? (
+                        <video src={typeof firstMedia === 'string' ? firstMedia : firstMedia.url} className="review-media" />
                     ) : (
                         <img
-                            src={imgError ? 'https://via.placeholder.com/600x400?text=No+Image' : firstMedia.url}
+                            src={imgError ? 'https://via.placeholder.com/600x400?text=No+Image' : (typeof firstMedia === 'string' ? firstMedia : firstMedia.url)}
                             alt="Review media"
                             className="review-media"
                             onError={() => setImgError(true)}
@@ -55,6 +55,24 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
                 <div className="rating">
                     {[...Array(5)].map((_, i) => (
                         <FaStar key={i} color={i < review.rating ? "#fbbf24" : "#4b5563"} />
+                    ))}
+                </div>
+                <div className="wellness-tags" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', margin: '8px 0' }}>
+                    {review.mood && (
+                        <span className="wellness-tag mood" style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#eee', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                            {review.mood === 'romantic' ? '🌹 낭만' :
+                                review.mood === 'refresh' ? '🌈 리프레시' :
+                                    review.mood === 'active' ? '👟 에너지' : '🤫 고요함'}
+                        </span>
+                    )}
+                    {review.mood && review.themes?.length > 0 && (
+                        <span style={{ color: '#4b5563', fontSize: '0.8rem', margin: '0 2px' }}>•</span>
+                    )}
+                    {review.themes?.map(theme => (
+                        <span key={theme} className="wellness-tag theme" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#bbb', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                            {theme === 'activity' ? '🪂 액티비티' :
+                                theme === 'food' ? '🍱 맛집' : '🌿 힐링'}
+                        </span>
                     ))}
                 </div>
                 <p className="review-text">{review.content}</p>
