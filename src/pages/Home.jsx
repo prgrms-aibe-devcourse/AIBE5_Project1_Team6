@@ -1,18 +1,19 @@
-import { useNavigate } from "react-router-dom";
+import FunnelContainer from "../components/funnel/FunnelContainer";
+import { useEffect } from "react";
+import { useTripStore } from "../stores/tripStore";
 
 export default function Home() {
-  const nav = useNavigate();
+  const { reset } = useTripStore();
+
+  useEffect(() => {
+    // 홈에 돌아오면 상태 초기화 (새로운 여행 계획 시작)
+    reset();
+  }, [reset]);
 
   return (
     <div className="centerPage">
       <section className="heroCard">
-        <h1 className="heroTitle">당신만의 여행을 계획해보세요.</h1>
-
-        <div className="heroButtons">
-          <button className="heroBtn" onClick={() => nav("/walk")}>Walk</button>
-          <button className="heroBtn" onClick={() => nav("/traffic")}>Traffic</button>
-          <button className="heroBtn" onClick={() => nav("/airplane")}>Airplane</button>
-        </div>
+         <FunnelContainer />
       </section>
     </div>
   );

@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import ChatbotWidget from "./ChatbotWidget";
 import { useAuthStore } from "../stores/authStore";
 import { useState } from "react";
@@ -6,10 +6,12 @@ import AuthModal from "./AuthModal";
 import { supabase } from "../services/supabase";
 import { Toaster } from 'react-hot-toast';
 
+import { useTripStore } from "../stores/tripStore"; // Added
+
 export default function Layout() {
   const nav = useNavigate();
-  const { pathname } = useLocation();
   const { user } = useAuthStore();
+  const { reset } = useTripStore(); // Added
   const [showAuth, setShowAuth] = useState(false);
 
   const handleLogout = async () => {
@@ -20,16 +22,20 @@ export default function Layout() {
   return (
     <div className="appShell">
       <header className="topbar">
-        <div className="brand" onClick={() => nav("/")}>trip_plan</div>
+        <div 
+            className="brand" 
+            onClick={() => { reset(); nav("/"); }} // Reset first!
+            style={{ cursor: 'pointer' }}
+        >
+            Trip2Road
+        </div>
         <nav className="nav">
-          <button className={pathname === "/walk" ? "navBtn active" : "navBtn"} onClick={() => nav("/walk")}>Walk</button>
-          <button className={pathname === "/traffic" ? "navBtn active" : "navBtn"} onClick={() => nav("/traffic")}>Traffic</button>
-          <button className={pathname === "/airplane" ? "navBtn active" : "navBtn"} onClick={() => nav("/airplane")}>Airplane</button>
-
-          <button className={pathname === "/planlab" ? "navBtn active" : "navBtn"} onClick={() => nav("/planlab")}>PlanLab</button>
         </nav>
 
-        <div style={{ marginLeft: "auto", paddingRight: 20 }}>
+        <div style={{ marginLeft: "auto", paddingRight: 20, display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button className="navBtn" onClick={() => nav('/mypage')} style={{ fontSize: 13 }}>마이페이지</button>
+          <button className="navBtn" onClick={() => nav('/reviews')} style={{ fontSize: 13 }}>후기</button>
+          <button className="navBtn" onClick={() => nav('/planlab')} style={{ fontSize: 13 }}>일정관리</button>
           {user ? (
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <span style={{ fontSize: 13, color: '#aaa' }}>{user.email.split('@')[0]}님</span>
@@ -39,6 +45,7 @@ export default function Layout() {
             <button className="navBtn" onClick={() => setShowAuth(true)} style={{ fontSize: 13, background: "#3b82f6", border: 'none', color: 'white' }}>Login</button>
           )}
         </div>
+
       </header>
 
       <main className="content">
