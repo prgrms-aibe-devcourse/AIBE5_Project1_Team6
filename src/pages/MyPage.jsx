@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import '../styles/mypage.css';
-import { useQuery } from '@tanstack/react-query';
-import { loadPlans } from '../services/plansStorage';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { loadPlans, removePlan } from '../services/plansStorage';
 import { getMemories, getNotifications, getUserBadges, initializeUserBadgesIfEmpty, markNotificationAsRead } from '../services/mypageService';
 import TravelBiorhythm from '../components/TravelBiorhythm';
 
@@ -213,7 +213,7 @@ export default function MyPage() {
                                         <img src={item.heroImage || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80"} alt={item.title} className="card-img" />
                                         <span className="card-badge">{item.mood ? '#' + item.mood.toUpperCase() : '#TRIP'}</span>
                                         {/* Delete Button */}
-                                        <button 
+                                        <button
                                             onClick={(e) => handleDelete(e, item.id)}
                                             style={{
                                                 position: 'absolute', top: '10px', right: '10px',
@@ -231,15 +231,15 @@ export default function MyPage() {
                                         <div className="card-meta">
                                             <span>📅 {new Date(item.createdAt).toLocaleDateString()}</span>
                                             <span>👥 {item.people}명</span>
-                                            {item.totalCost > 0 && <span>💰 {Math.round(item.totalCost/10000)}만원</span>}
+                                            {item.totalCost > 0 && <span>💰 {Math.round(item.totalCost / 10000)}만원</span>}
                                         </div>
                                         {/* Wellness Info */}
                                         {item.wellness && (
                                             <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#666', display: 'flex', gap: '8px', background: '#f8f9fa', padding: '6px 10px', borderRadius: '6px' }}>
                                                 <span>🔊 {formatNoise(item.wellness.noise)}</span>
-                                                <span style={{color: '#ddd'}}>|</span>
+                                                <span style={{ color: '#ddd' }}>|</span>
                                                 <span>💡 {formatLight(item.wellness.light)}</span>
-                                                <span style={{color: '#ddd'}}>|</span>
+                                                <span style={{ color: '#ddd' }}>|</span>
                                                 <span>👥 {item.wellness.crowd}</span>
                                             </div>
                                         )}
