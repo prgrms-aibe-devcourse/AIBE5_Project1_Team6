@@ -93,7 +93,7 @@ export default function StepAuth() {
             style={{ 
                 width: '100%', padding: '16px', fontSize: '1rem', fontWeight: 'bold',
                 backgroundColor: '#5C94FF', color: '#fff', border: 'none', borderRadius: '12px', 
-                cursor: 'pointer', marginBottom: '12px', boxShadow: '0 4px 12px rgba(92, 148, 255, 0.3)'
+                cursor: 'pointer', marginBottom: '12px', boxShadow: 'none'
             }}
         >
             로그인하기

@@ -10,6 +10,7 @@ import WeatherWidget from "../components/WeatherWidget";
 import Skeleton from "../components/common/Skeleton"; // Import Skeleton
 import "../styles/cards.css";
 import toast from "react-hot-toast";
+import LoadingOverlay from "../components/LoadingOverlay";
 
 /// Travel Warning Levels
 // 1: Blue (Attention), 2: Yellow (Caution), 3: Red (Restrain), 4: Black (Ban)
@@ -83,7 +84,7 @@ export default function Airplane() {
           }
 
           if (!mofaData) {
-              toast.error("국가를 찾을 수 없습니다. (정확한 국가명을 입력해주세요)");
+              // toast.error("국가를 찾을 수 없습니다. (정확한 국가명을 입력해주세요)"); // Removed as requested
               setLoading(false);
               return;
           }
@@ -117,7 +118,7 @@ export default function Airplane() {
           }
 
       } catch (e) {
-          toast.error("정보를 불러오는 중 오류가 발생했습니다.");
+          // toast.error("정보를 불러오는 중 오류가 발생했습니다."); // Removed as requested
           console.error(e);
       } finally {
           setLoading(false);
@@ -131,7 +132,10 @@ export default function Airplane() {
 
   return (
     <div className="pageWrap">
+      {loading && <LoadingOverlay message="비행 중..." icon="✈️" />}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+
           
           {/* 1. Dynamic Layout: Map & Basic Info */}
           {/* Responsive Grid handling via CSS recommended, but using simple media check logic here or keeping usage simple */}
@@ -144,33 +148,19 @@ export default function Airplane() {
           }}>
               
               {/* Left: Map */}
-              <div style={{ position: 'relative', width: "100%", height: "320px", borderRadius: "20px", overflow: "hidden", border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'var(--shadow-md)' }}>
+              <div style={{ position: 'relative', width: "100%", height: "450px", borderRadius: "20px", overflow: "hidden", border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none' }}>
                  {/* Map Component */}
                  <OSMMap 
                     lat={data?.lat || 37.5665} 
                     lon={data?.lon || 126.9780} 
                     title={data?.nameKr || "대한민국"} 
                     zoom={data ? 5 : 6} 
-                    style={{ height: '100%' }} 
+                    style={{ height: '100%', marginTop: 0 }} 
                     showMarker={!!data}
                  />
                  
-                 {/* Loading Mask (Glassmorphism) */}
-                 {loading && (
-                    <div style={{
-                        position: 'absolute', inset: 0, zIndex: 1100,
-                        background: 'rgba(255,255,255,0.4)',
-                        backdropFilter: 'blur(4px)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                        <div style={{ 
-                            padding: '12px 24px', background: 'white', borderRadius: '30px', 
-                            boxShadow: 'var(--shadow-lg)', fontWeight: 'bold', color: 'var(--primary)' 
-                        }}>
-                             ✈️ 비행 중...
-                        </div>
-                    </div>
-                 )}
+                 {/* Loading Mask Removed - Using Global LoadingOverlay */}
+                 {/* Map Component */}
 
                  {/* ⚠️ Warning Overlay (Bottom Left) */}
                  {!loading && data && warningInfo && (
@@ -283,33 +273,20 @@ export default function Airplane() {
           </div>
 
           {/* 🔍 Search Container */}
-          <div className="searchContainer" style={{ maxWidth: '600px', margin: '0 auto', position: 'relative', zIndex: 10 }}>
+          <div className="searchContainer">
               <input
                   type="text"
-                  placeholder="어디로 떠나볼까요? (예: 파리, 방콕, 뉴욕)"
+                  placeholder="어디로 떠나볼까요? (나라 이름으로 검색해주세요)"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   onKeyDown={onKeyDown}
                   className="searchInput"
-                  style={{ 
-                      boxShadow: 'var(--shadow-md)', 
-                      border: '1px solid rgba(0,0,0,0.05)',
-                      padding: '16px 24px', fontSize: '1.05rem', borderRadius: '50px' 
-                  }}
               />
               <button 
                 onClick={handleSearch} 
                 className="searchBtn" 
                 disabled={loading} 
-                style={{ 
-                    backgroundColor: '#3b82f6', 
-                    color: '#ffffff',
-                    borderRadius: '50px',
-                    padding: '0 28px',
-                    boxShadow: 'var(--shadow-md)',
-                    border: 'none',
-                    fontWeight: 'bold'
-                }}
+                style={{ background: '#3b82f6' }}
               >
                      {loading ? "..." : "검색"}
               </button>
@@ -330,12 +307,14 @@ export default function Airplane() {
                {/* Recommendation Section */}
                {warningInfo?.level < 3 && recommendations.length > 0 && (
                  <div style={{ marginTop: '40px' }}>
+                    {/* Header Removed */ /*
                     <div style={{ padding: '0 0 20px', display: 'flex', alignItems: 'baseline', gap: '10px' }}>
                         <h3 style={{ fontSize: '1.6rem', fontWeight: '800', margin: '0', color: 'var(--text-main)' }}>
                            ✨ {data.nameKr} 추천 여행지
                         </h3>
                         <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.95rem' }}>AI가 엄선한 힐링 & 웰니스 스팟</p>
                     </div>
+                    */ }
 
                     <div className="grid">
                       {recommendations.map((item, idx) => {

@@ -68,7 +68,7 @@ export default function StepLoading() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: '32px',
-                    boxShadow: '0 10px 20px rgba(92, 148, 255, 0.3)'
+                    boxShadow: 'none' /* Removed shadow */
                 }}
             >
                 <div style={{ fontSize: '3rem', color: 'white' }}>✨</div>

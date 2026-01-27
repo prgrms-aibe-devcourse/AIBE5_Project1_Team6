@@ -35,17 +35,17 @@ export default function ScheduleCard({ schedule, onEdit, onDelete, onClick }) {
     const moodLabel = hasMoodData?.mood?.label || "";
     const styleLabel = hasMoodData?.style?.label || "";
 
-    // Generate a gradient based on mood or title
-    const wellnessGradient = 'linear-gradient(135deg, rgba(102, 187, 106, 0.6) 0%, rgba(79, 195, 247, 0.6) 100%)';
-    const gradients = [
-        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    // Solid sky blue colors instead of gradients
+    const wellnessColor = '#5C94FF';
+    const cardColors = [
+        '#3b82f6',  // Sky Blue
+        '#60a5fa',  // Light Blue
+        '#5C94FF',  // Primary Blue
+        '#38bdf8',  // Cyan Blue
+        '#0ea5e9',  // Ocean Blue
     ];
-    const gradientIndex = (schedule.title?.charCodeAt(0) || 0) % gradients.length;
-    const cardGradient = hasMoodData ? wellnessGradient : gradients[gradientIndex];
+    const colorIndex = (schedule.title?.charCodeAt(0) || 0) % cardColors.length;
+    const cardGradient = hasMoodData ? wellnessColor : cardColors[colorIndex];
 
     const handleCardClick = () => {
         if (onClick) {

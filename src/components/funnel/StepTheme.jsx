@@ -21,17 +21,19 @@ export default function StepTheme({ stepIndex, totalSteps }) {
   return (
     <FunnelStepShell
       title="이번 여행의 목적은 무엇인가요?"
+      subtitle="이번 여행에서 놓치고 싶지 않은 한 가지"
       stepIndex={stepIndex}
       totalSteps={totalSteps}
       onBack={prevStep}
       motionVariants={containerVariants}
     >
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
         width: '100%',
-        marginTop: '20px',
+        maxWidth: '460px',
+        margin: '25px auto 0', /* Adjusted to be closer to others */
         flex: 1
       }}>
         {/* Buttons Mapping */}
@@ -44,33 +46,34 @@ export default function StepTheme({ stepIndex, totalSteps }) {
                 key={item.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                whileHover={{ scale: 1.05, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => selectTheme(item.id)}
                 style={{
                     width: '100%',
-                    height: '100%',
-                    minHeight: '200px',
-                    padding: '30px',
+                    minHeight: '84px',
+                    padding: '16px 24px',
                     backgroundColor: themes.includes(item.id) ? '#F0F7FF' : 'white',
-                    border: themes.includes(item.id) ? '2px solid #5C94FF' : '2px solid #eee',
-                    borderRadius: '24px',
+                    border: themes.includes(item.id) ? '2px solid #5C94FF' : '1px solid #eee',
+                    borderRadius: '16px',
                     display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    alignItems: 'center', /* Row layout */
+                    justifyContent: 'flex-start',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+                    boxShadow: 'none', /* Removed shadow */
+                    textAlign: 'left'
                 }}
             >
-                <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>
+                <div style={{ fontSize: '2.4rem', marginRight: '20px', lineHeight: 1 }}>
                     {item.label.split(' ')[0]}
                 </div>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '8px', color: '#333' }}>
-                    {item.label.split(' ')[1]}
-                </h3>
-                 <p style={{ fontSize: '1rem', color: '#666', fontWeight: '500' }}>{item.desc}</p>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 4px', color: '#1a1a1a' }}>
+                      {item.label.split(' ')[1]}
+                  </h3>
+                   <p style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500', margin: 0 }}>{item.desc}</p>
+                </div>
             </motion.button>
         ))}
       </div>

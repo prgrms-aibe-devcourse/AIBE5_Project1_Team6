@@ -76,7 +76,7 @@
     border-radius: 8px;
     padding: 0.5rem 0;
     min-width: 140px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
     z-index: 10;
     margin-top: 4px;
 }
@@ -110,7 +110,7 @@
     padding: 1rem;
     border-radius: 12px;
     border: 1px solid #e0e0e0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    box-shadow: none;
 }
 
 .search-select {
@@ -170,12 +170,12 @@
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
 }
 
 .review-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
     border-color: #dbeafe;
 }
 
@@ -298,7 +298,7 @@
     font-size: 0.85rem !important;
     transition: all 0.2s ease !important;
     font-weight: 600 !important;
-    box-shadow: none !important;
+    box-shadow: none;
 }
 
 .reviews-grid .review-card .review-footer .review-actions .action-btn:hover {
@@ -336,7 +336,7 @@
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
 }
 
 .modal-header {
@@ -398,7 +398,7 @@
     overflow: hidden;
     position: relative;
     border-radius: 16px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+    box-shadow: none;
 }
 
 .close-btn {
@@ -417,7 +417,7 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
 }
 
 .close-btn:hover {
@@ -767,13 +767,13 @@
     height: 56px;
     padding: 0 24px;
     border-radius: 30px;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: #3b82f6;
     color: white;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 1rem;
-    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+    box-shadow: none;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     z-index: 100;
@@ -782,8 +782,8 @@
 
 .floating-fab:hover {
     transform: translateY(-5px) scale(1.05);
-    box-shadow: 0 12px 28px rgba(59, 130, 246, 0.5);
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    box-shadow: none;
+    background: #2563eb;
 }
 
 .wellness-chip {
@@ -800,7 +800,7 @@
     background: #3b82f6 !important;
     color: white !important;
     border-color: #3b82f6 !important;
-    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3) !important;
+    box-shadow: none;
 }
 
 /* Review Detail Modal Refinements */

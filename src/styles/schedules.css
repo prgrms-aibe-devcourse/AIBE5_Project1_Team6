@@ -8,15 +8,15 @@
     margin-bottom: 32px;
     flex-wrap: wrap;
     padding: 32px 40px;
-    background: linear-gradient(135deg, rgba(102, 187, 106, 0.12) 0%, rgba(79, 195, 247, 0.12) 100%);
+    background: rgba(92, 148, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: none;
     transition: all 0.3s ease;
 }
 
 .planlabHeader:hover {
-    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.25);
+    box-shadow: none;
     border-color: rgba(102, 187, 106, 0.3);
 }
 
@@ -24,7 +24,7 @@
     padding: 12px 24px;
     border-radius: 12px;
     border: none;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #3b82f6;
     color: #fff;
     font-size: 16px;
     font-weight: 700;
@@ -35,7 +35,7 @@
 
 .createBtn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: none;
 }
 
 .planlabActions {
@@ -88,12 +88,13 @@
     margin-top: 8px;
 }
 
+
 /* Tab Navigation */
 .tabNavigation {
     display: flex;
     gap: 8px;
     margin-bottom: 24px;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 2px solid #e0e0e0;
     padding: 0;
 }
 
@@ -102,7 +103,7 @@
     background: transparent;
     border: none;
     border-bottom: 3px solid transparent;
-    color: rgba(255, 255, 255, 0.6);
+    color: #888;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -111,18 +112,36 @@
 }
 
 .tabBtn:hover:not(:disabled) {
-    color: rgba(255, 255, 255, 0.9);
-    background: rgba(255, 255, 255, 0.05);
+    color: #5C94FF;
+    background: #f8f9fa;
 }
 
 .tabBtn.active {
-    color: #667eea;
-    border-bottom-color: #667eea;
+    color: #5C94FF;
+    border-bottom-color: #5C94FF;
 }
 
 .tabBtn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+/* Show blue when a schedule is selected (available) */
+.tabBtn.available {
+    color: #5C94FF;
+    opacity: 1;
+    visibility: visible;
+}
+
+.tabBtn.available:hover {
+    color: #4B7DDE;
+}
+
+/* Hide the detail tab initially until a schedule is selected */
+.tabBtn:not(.available):not(.active):nth-child(2) {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 /* Card Action Buttons */
@@ -151,23 +170,28 @@
 
 /* Detail View (Tab 2) */
 .detailView {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
     border-radius: 16px;
     padding: 0;
     max-width: 1000px;
     margin: 0 auto;
+    box-shadow: none;
+    /* Soft shadow */
+    color: #333;
+    /* Default dark text */
 }
 
 .detailViewHeader {
     padding: 32px 32px 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .detailTitle {
     font-size: 28px;
     font-weight: 800;
     margin: 0 0 16px;
+    color: #1a1a1a;
 }
 
 .detailMeta {
@@ -176,32 +200,36 @@
     margin-bottom: 24px;
     font-size: 15px;
     opacity: 0.8;
+    color: #555;
 }
 
 .detailDescription {
     font-size: 16px;
     line-height: 1.6;
-    opacity: 0.9;
+    color: #444;
     margin-bottom: 32px;
     padding: 16px;
-    background: rgba(255, 255, 255, 0.05);
+    background: #f8f9fa;
     border-radius: 8px;
+    border: 1px solid #e0e0e0;
 }
 
 .detailContent {
     margin-bottom: 32px;
+    padding: 32px;
 }
 
 .detailContent h4 {
     font-size: 18px;
     font-weight: 700;
     margin: 0 0 16px;
-    color: #667eea;
+    color: #5C94FF;
+    /* Keep accent color blue */
 }
 
 .scheduleDetailText {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
     border-radius: 12px;
     padding: 24px;
     font-size: 15px;
@@ -209,6 +237,7 @@
     white-space: pre-wrap;
     margin: 0;
     font-family: 'Consolas', 'Monaco', monospace;
+    color: #333;
 }
 
 .emptyText {
@@ -216,6 +245,7 @@
     padding: 40px;
     opacity: 0.5;
     font-size: 14px;
+    color: #666;
 }
 
 .detailActions {
@@ -223,7 +253,7 @@
     gap: 12px;
     justify-content: flex-end;
     padding: 20px 32px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid #f0f0f0;
 }
 
 .secondaryBtn,
@@ -237,24 +267,26 @@
 }
 
 .secondaryBtn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: #fff;
+    background: #f0f2f5;
+    border: 1px solid #e0e0e0;
+    color: #666;
 }
 
 .secondaryBtn:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: #e4e7eb;
 }
 
 .primaryBtn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #5C94FF;
     border: none;
     color: #fff;
+    box-shadow: none;
 }
 
 .primaryBtn:hover {
+    background: #4B7DDE;
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+    box-shadow: none;
 }
 
 /* Edit View (Tab 3) */
@@ -299,7 +331,7 @@
     background: rgba(255, 255, 255, 0.09);
     border-color: rgba(102, 126, 234, 0.5);
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
 }
 
 .scheduleCardImage {
@@ -332,7 +364,7 @@
     color: #667eea;
     font-size: 13px;
     font-weight: 700;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: none;
 }
 
 .scheduleCardBody {
@@ -581,13 +613,13 @@
 }
 
 .submitBtn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #3b82f6;
     color: #fff;
 }
 
 .submitBtn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: none;
 }
 
 /* Schedule Editor Drawer */
@@ -787,7 +819,7 @@
     padding: 10px 24px;
     border-radius: 10px;
     border: none;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #3b82f6;
     color: #fff;
     font-weight: 600;
     cursor: pointer;
@@ -796,7 +828,7 @@
 
 .saveBtn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: none;
 }
 
 /* Responsive */
