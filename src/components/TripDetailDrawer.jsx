@@ -76,18 +76,57 @@ export default function TripDetailDrawer({
 
         <div className="drawerContent">
             
-            {/* 2. Travel Point */}
+            {/* 2. Travel Point - Dynamic & Varied */}
             <section className="drawerSection">
                 <h3>✨ 여행 포인트</h3>
                 <p style={{ lineHeight: 1.6, color: '#444', fontSize: '0.95rem' }}>
-                   이곳은 <b>{item.title}</b>입니다. 
-                   {detailData?.overview ? (
-                       <span style={{ marginLeft: '4px' }}>
-                           {detailData.overview.replace(/<[^>]+>/g, '').slice(0, 100)}...
-                       </span>
-                   ) : (
-                       " 자연과 도심이 어우러진 멋진 명소로, 지친 일상에서 벗어나 새로운 영감을 얻기에 완벽한 장소입니다."
-                   )}
+                   {(() => {
+                       const cTypeId = Number(item.contenttypeid);
+                       // Generate Varied Text based on Type/Category
+                       let intro = "";
+                       const name = item.title;
+
+                       if (cTypeId === 39) { // Food
+                           const phrases = [
+                               `<b>${name}</b>, 이곳은 미식가들 사이에서 입소문 난 찐 맛집입니다! 😋`,
+                               `<b>${name}</b>에서 잊지 못할 인생 맛집의 추억을 만들어보세요.`,
+                               `정성스러운 맛과 분위기가 어우러진 <b>${name}</b>입니다.`
+                           ];
+                           intro = phrases[Math.floor(Math.random() * phrases.length)];
+                       } else if (cTypeId === 28) { // Leports/Activity
+                           const phrases = [
+                               `<b>${name}</b>, 에너지가 넘치는 당신을 위한 최고의 액티비티 명소입니다! 🏃`,
+                               `지루할 틈 없는 짜릿한 경험, <b>${name}</b>에서 시작해보세요.`,
+                               `활기찬 분위기와 즐거움이 가득한 <b>${name}</b>입니다.`
+                           ];
+                           intro = phrases[Math.floor(Math.random() * phrases.length)];
+                       } else if (cTypeId === 12 || cTypeId === 14) { // Tour/Culture
+                           const phrases = [
+                               `<b>${name}</b>, 자연과 도심이 조화롭게 어우러진 힐링 스팟입니다. 🌿`,
+                               `마음의 여유를 찾고 싶다면 <b>${name}</b>만큼 좋은 곳이 없죠.`,
+                               `새로운 영감을 얻고 싶으신가요? <b>${name}</b>을(를) 추천합니다.`
+                           ];
+                           intro = phrases[Math.floor(Math.random() * phrases.length)];
+                       } else {
+                           intro = `<b>${name}</b>, 특별한 시간을 보내기에 더할 나위 없는 장소입니다.`;
+                       }
+
+                       return (
+                           <>
+                               <span dangerouslySetInnerHTML={{ __html: intro }} />
+                               {detailData?.overview ? (
+                                   <>
+                                       <br/><br/>
+                                       <span style={{ color:'#666' }}>
+                                           {detailData.overview.replace(/<[^>]+>/g, '').slice(0, 120)}...
+                                       </span>
+                                   </>
+                               ) : (
+                                   " 사랑하는 사람들과 함께 방문하여 소중한 추억을 남겨보세요."
+                               )}
+                           </>
+                       );
+                   })()}
                 </p>
             </section>
 

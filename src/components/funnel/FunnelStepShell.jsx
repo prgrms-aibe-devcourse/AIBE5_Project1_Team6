@@ -50,7 +50,7 @@ export default function FunnelStepShell({
                 width: '90%',
                 maxWidth: '800px',
                 minHeight: '500px',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                boxShadow: 'none', /* Removed shadow */
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',

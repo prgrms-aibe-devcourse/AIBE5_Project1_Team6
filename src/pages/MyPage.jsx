@@ -368,7 +368,9 @@ export default function MyPage() {
 
     return (
         <div className="mypage-wrapper">
-            {activeTab === 'main' ? renderMainDashboard() : renderSubPage()}
+            <div className="mypage-container">
+                {activeTab === 'main' ? renderMainDashboard() : renderSubPage()}
+            </div>
             
             {/* Logout Modal */}
             <AnimatePresence>

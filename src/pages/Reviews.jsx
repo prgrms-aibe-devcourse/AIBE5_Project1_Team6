@@ -274,8 +274,8 @@ export default function Reviews() {
                                     setWellnessOptions(prev => ({
                                         ...prev,
                                         themes: prev.themes.includes(item.id)
-                                            ? prev.themes.filter(t => t !== item.id)
-                                            : [...prev.themes, item.id]
+                                            ? [] // 이미 선택된 경우 해제
+                                            : [item.id] // 새로운 선택 시 기존 것 교체 (하나만 선택)
                                     }));
                                 }}
                                 style={{

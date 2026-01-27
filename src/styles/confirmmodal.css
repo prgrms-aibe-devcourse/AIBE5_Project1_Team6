@@ -23,7 +23,7 @@
     padding: 32px;
     width: min(440px, 100%);
     text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
     animation: slideUp 0.3s ease;
 }
 
@@ -88,15 +88,15 @@
 }
 
 .confirmDeleteBtn {
-    background: linear-gradient(135deg, #f44336 0%, #e57373 100%);
+    background: #ef4444;
     border: none;
     color: #fff;
-    box-shadow: 0 4px 16px rgba(244, 67, 54, 0.4);
+    box-shadow: none;
 }
 
 .confirmDeleteBtn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(244, 67, 54, 0.5);
+    box-shadow: none;
 }
 
 /* Responsive */
