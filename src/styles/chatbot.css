@@ -1,19 +1,19 @@
-.chatFab{
+.chatFab {
   position: fixed;
   right: 18px;
   bottom: 18px;
   width: 56px;
   height: 56px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.10);
   color: #fff;
   font-weight: 1000;
   cursor: pointer;
   z-index: 20;
 }
 
-.chatWindow{
+.chatWindow {
   position: fixed;
   right: 18px;
   bottom: 86px;
@@ -22,31 +22,35 @@
   border-radius: 18px;
   overflow: hidden;
   background: rgba(15, 20, 40, 0.92);
-  border: 1px solid rgba(255,255,255,0.14);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(10px);
   z-index: 20;
   display: flex;
   flex-direction: column;
 }
 
-.chatHeader{
+.chatHeader {
   padding: 12px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255,255,255,0.10);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
 }
-.chatTitle{ font-weight: 1000; }
-.chatClose{
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.08);
+
+.chatTitle {
+  font-weight: 1000;
+}
+
+.chatClose {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
   padding: 6px 10px;
   border-radius: 10px;
   cursor: pointer;
 }
 
-.chatBody{
+.chatBody {
   flex: 1;
   padding: 12px;
   overflow: auto;
@@ -55,40 +59,49 @@
   gap: 10px;
 }
 
-.bubble{
+.bubble {
   max-width: 86%;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
   line-height: 1.5;
   font-size: 14px;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: break-word;
 }
-.bubble.user{ align-self: flex-end; background: rgba(255,255,255,0.14); }
-.bubble.bot{ align-self: flex-start; }
 
-.chatInputRow{
+.bubble.user {
+  align-self: flex-end;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.bubble.bot {
+  align-self: flex-start;
+}
+
+.chatInputRow {
   display: flex;
   gap: 8px;
   padding: 10px;
-  border-top: 1px solid rgba(255,255,255,0.10);
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
 }
-.chatInputRow input{
+
+.chatInputRow input {
   flex: 1;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
   color: #fff;
 }
-.chatInputRow button{
+
+.chatInputRow button {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.10);
   color: #fff;
   font-weight: 900;
   cursor: pointer;
@@ -96,7 +109,7 @@
 }
 
 .chatInputRow button:hover:not(:disabled) {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .chatInputRow button:disabled {
@@ -109,7 +122,7 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255,255,255,0.2);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   border-top: 2px solid #4285f4;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -118,7 +131,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-message {
@@ -126,8 +141,8 @@
   align-items: center;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
   line-height: 1.35;
   font-size: 14px;
   max-width: 86%;
@@ -135,5 +150,33 @@
 }
 
 .loading-text {
-  color: rgba(255,255,255,0.7);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* 일정 저장 버튼 */
+.save-itinerary-btn {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  width: 100%;
+  justify-content: center;
+}
+
+.save-itinerary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.save-itinerary-btn:active {
+  transform: translateY(0);
 }
