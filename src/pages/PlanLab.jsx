@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import ConfirmModal from "../components/ConfirmModal";
@@ -8,6 +9,7 @@ import ScheduleEditor from "../components/ScheduleEditor";
 import MoodPalette from "../components/MoodPalette";
 import InstantRouteGenerator from "../components/InstantRouteGenerator";
 import ScheduleDetailView from "../components/ScheduleDetailView";
+import ErrorBoundary from "../components/ErrorBoundary";
 import {
     loadSchedules,
     addSchedule,
@@ -19,6 +21,9 @@ import "../styles/schedules.css";
 
 export default function PlanLab() {
     const queryClient = useQueryClient();
+    const location = useLocation();
+
+    // ... existing states ...
     const [showForm, setShowForm] = useState(false);
     const [showMoodPalette, setShowMoodPalette] = useState(false);
     const [showInstantRoute, setShowInstantRoute] = useState(false);
@@ -32,6 +37,30 @@ export default function PlanLab() {
         queryKey: ["schedules"],
         queryFn: loadSchedules,
     });
+
+    const isProcessed = useRef(false);
+
+    // Handle navigation from MyPage
+    useEffect(() => {
+        if (!isProcessed.current) {
+            // 1. 상세 보기 트리거
+            if (location.state?.scheduleId && schedules.length > 0) {
+                const target = schedules.find(s => String(s.id) === String(location.state.scheduleId));
+                if (target) {
+                    setSelectedForView(target);
+                    setActiveTab(1);
+                    isProcessed.current = true;
+                }
+            }
+            // 2. 일정 생성 트리거
+            else if (location.state?.openCreate) {
+                setShowMoodPalette(true);
+                isProcessed.current = true;
+                // Clear state to prevent reopening on refresh
+                window.history.replaceState({}, document.title);
+            }
+        }
+    }, [location.state, schedules]);
 
     // Add schedule mutation
     const addMutation = useMutation({
@@ -198,6 +227,16 @@ export default function PlanLab() {
                 </>
             )}
 
+            {/* 탭 2: 세부일정 - 선택된 일정 없음 (예외 처리) */}
+            {activeTab === 1 && !selectedForView && (
+                <div className="emptyBox" style={{ marginTop: '2rem' }}>
+                    <p>선택된 일정을 불러올 수 없습니다.</p>
+                    <button className="secondaryBtn" onClick={() => setActiveTab(0)} style={{ marginTop: '1rem' }}>
+                        목록으로 돌아가기
+                    </button>
+                </div>
+            )}
+
             {/* 탭 2: 세부일정 */}
             {activeTab === 1 && (
                 selectedForView ? (
@@ -211,7 +250,9 @@ export default function PlanLab() {
                             </div>
                         </div>
 
+                    <ErrorBoundary>
                         <ScheduleDetailView schedule={selectedForView} />
+                    </ErrorBoundary>
 
                         <div className="detailActions">
                             <button className="secondaryBtn" onClick={() => setActiveTab(0)}>

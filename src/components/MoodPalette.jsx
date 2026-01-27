@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "../styles/moodpalette.css";
+import { getCityEmoji } from "../services/geminiTravelPlanner";
 
 const MOODS = [
     { id: "burnout", emoji: "😫", label: "번아웃", desc: "완벽한 쉼이 필요해요" },
@@ -32,6 +33,7 @@ export default function MoodPalette({ onComplete, onCancel }) {
     const [step, setStep] = useState(1);
     const [showCustomDestination, setShowCustomDestination] = useState(false);
     const [customDestinationText, setCustomDestinationText] = useState("");
+    const [isCheckingEmoji, setIsCheckingEmoji] = useState(false);
     const [selections, setSelections] = useState({
         mood: null,
         destination: null,
@@ -53,14 +55,24 @@ export default function MoodPalette({ onComplete, onCancel }) {
         setTimeout(() => setStep(3), 300);
     };
 
-    const handleCustomDestinationSubmit = () => {
+    const handleCustomDestinationSubmit = async () => {
         if (!customDestinationText.trim()) {
             alert("여행지를 입력해주세요.");
             return;
         }
+
+        setIsCheckingEmoji(true);
+        let emoji = "🌍";
+        try {
+            emoji = await getCityEmoji(customDestinationText.trim());
+        } catch (e) {
+            console.error("Emoji fetch error:", e);
+        }
+        setIsCheckingEmoji(false);
+
         const customDest = {
             id: "custom",
-            emoji: "🌍",
+            emoji: emoji,
             label: customDestinationText.trim(),
             type: "custom"
         };
@@ -204,8 +216,9 @@ export default function MoodPalette({ onComplete, onCancel }) {
                                     <button
                                         className="customDestSubmit"
                                         onClick={handleCustomDestinationSubmit}
+                                        disabled={isCheckingEmoji}
                                     >
-                                        확인
+                                        {isCheckingEmoji ? "이모지 찾는 중..." : "확인"}
                                     </button>
                                 </div>
                             </div>
