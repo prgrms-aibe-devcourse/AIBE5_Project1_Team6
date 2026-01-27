@@ -112,11 +112,11 @@ export default function Layout() {
 
               <button
                 className="navBtn"
-                onClick={() => nav('/reviews')}
+                onClick={() => nav('/community')}
                 style={navButtonStyle}
                 onMouseEnter={hoverStyle} onMouseLeave={unhoverStyle}
               >
-                <FiMessageSquare /> 후기
+                <FiMessageSquare /> 커뮤니티
               </button>
 
               <button

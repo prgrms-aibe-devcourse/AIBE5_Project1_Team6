@@ -176,7 +176,7 @@ export default function Walk() {
           polylines.push(polyline);
         }
       });
-      if (rankedItems[0]?.[0]) {
+      if (rankedItems?.[0]?.[0]) {
         const first = rankedItems[0][0];
         map.setCenter(new kakao.maps.LatLng(parseFloat(first.mapy), parseFloat(first.mapx)));
       }
@@ -259,7 +259,7 @@ export default function Walk() {
       type: 'course',
       title: `${courseTitle} (${mood || '산책'})`,
       subtitle: `총 ${courseItems.length}개 스팟 | 예상비용 ${totalCost.toLocaleString()}원`,
-      heroImage: courseItems[0].firstimage || courseItems[0].image,
+      heroImage: courseItems[0]?.firstimage || courseItems[0]?.image || "https://images.unsplash.com/photo-1533658280665-224492bf552f?auto=format&fit=crop&w=800&q=80",
       nights,
       people,
       items: courseItems,
@@ -340,7 +340,7 @@ export default function Walk() {
         {/* Recommendation Header */}
         <div style={{ padding: '20px 0 0' }}>
           <h3 style={{ fontSize: '1.5rem', fontWeight: '800', margin: '0 0 6px', color: '#1a1a1a' }}>
-            ✨ {user ? user.email.split('@')[0] : (guestId ? `비회원${guestId.slice(0, 4)}` : '여행러')}님을 위한 추천
+            ✨ {user?.email ? user.email.split('@')[0] : (guestId ? `비회원${guestId.slice(0, 4)}` : '여행러')}님을 위한 추천
           </h3>
           <p style={{ margin: 0, color: '#666', fontSize: '0.95rem' }}>AI가 분석한 맞춤형 여행지예요!</p>
         </div>
