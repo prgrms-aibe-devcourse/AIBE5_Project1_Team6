@@ -29,7 +29,6 @@ export default function PlanLab() {
     const [showInstantRoute, setShowInstantRoute] = useState(false);
     const [moodSelections, setMoodSelections] = useState(null);
     const [selectedSchedule, setSelectedSchedule] = useState(null);
-    const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [activeTab, setActiveTab] = useState(0); // 0: 목록, 1: 세부일정, 2: 수정
     const [selectedForView, setSelectedForView] = useState(null);
 
@@ -68,7 +67,7 @@ export default function PlanLab() {
         mutationFn: addSchedule,
         onSuccess: () => {
             queryClient.invalidateQueries(["schedules"]);
-            toast.success("일정이 생성되었습니다!");
+            // toast.success("일정이 생성되었습니다!"); // Removed as requested
             setShowForm(false);
         },
         onError: (err) => {
@@ -81,7 +80,7 @@ export default function PlanLab() {
         mutationFn: updateSchedule,
         onSuccess: () => {
             queryClient.invalidateQueries(["schedules"]);
-            toast.success("일정이 수정되었습니다!");
+            // toast.success("일정이 수정되었습니다!"); // Removed as requested
             setSelectedSchedule(null);
         },
         onError: (err) => {
@@ -150,17 +149,6 @@ export default function PlanLab() {
         deleteMutation.mutate(id);
     };
 
-    const handleClearAll = () => {
-        setShowClearConfirm(true);
-    };
-
-    const confirmClearAll = async () => {
-        setShowClearConfirm(false);
-        await clearSchedules();
-        queryClient.invalidateQueries(["schedules"]);
-        toast.success("모든 일정이 삭제되었습니다.");
-    };
-
     const handleCardClick = (schedule) => {
         setSelectedForView(schedule);
         setActiveTab(1); // 세부일정 탭으로 이동
@@ -197,9 +185,8 @@ export default function PlanLab() {
                     나의 계획 목록
                 </button>
                 <button
-                    className={activeTab === 1 ? "tabBtn active" : "tabBtn"}
+                    className={`tabBtn ${activeTab === 1 ? 'active' : ''} ${selectedForView ? 'available' : ''}`}
                     onClick={() => setActiveTab(1)}
-                    disabled={!selectedForView}
                 >
                     계획 세부일정
                 </button>
@@ -209,10 +196,8 @@ export default function PlanLab() {
             {activeTab === 0 && (
                 <>
                     {schedules.length > 0 && (
-                        <div className="planlabActions">
-                            <button className="clearBtn" onClick={handleClearAll}>
-                                전체 삭제 (Local Only)
-                            </button>
+                        <div className="planlabActions" style={{ display: 'none' }}>
+                            {/* Clear list button removed */}
                         </div>
                     )}
 
@@ -253,30 +238,44 @@ export default function PlanLab() {
             )}
 
             {/* 탭 2: 세부일정 */}
-            {activeTab === 1 && selectedForView && (
-                <div className="detailView">
-                    <div className="detailViewHeader">
-                        <div>
-                            <h3 className="detailTitle">{selectedForView.title}</h3>
-                            {selectedForView.description && (
-                                <p className="detailDescription">{selectedForView.description}</p>
-                            )}
+            {activeTab === 1 && (
+                selectedForView ? (
+                    <div className="detailView">
+                        <div className="detailViewHeader">
+                            <div>
+                                <h3 className="detailTitle">{selectedForView.title}</h3>
+                                {selectedForView.description && (
+                                    <p className="detailDescription">{selectedForView.description}</p>
+                                )}
+                            </div>
                         </div>
-                    </div>
 
                     <ErrorBoundary>
                         <ScheduleDetailView schedule={selectedForView} />
                     </ErrorBoundary>
 
-                    <div className="detailActions">
-                        <button className="secondaryBtn" onClick={() => setActiveTab(0)}>
-                            목록으로
-                        </button>
-                        <button className="primaryBtn" onClick={() => handleEditClick(selectedForView)}>
-                            ✏️ 수정하기
+                        <div className="detailActions">
+                            <button className="secondaryBtn" onClick={() => setActiveTab(0)}>
+                                목록으로
+                            </button>
+                            <button className="primaryBtn" onClick={() => handleEditClick(selectedForView)}>
+                                ✏️ 수정하기
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    /* Placeholder for when no plan is selected */
+                    <div className="emptyBox">
+                        <div className="emptyIcon">👆</div>
+                        <p>선택된 일정이 없습니다.</p>
+                        <p className="emptySubtext">
+                            "나의 계획 목록"에서 일정을 선택하면 세부 내용을 볼 수 있습니다.
+                        </p>
+                        <button className="secondaryBtn" style={{ marginTop: '20px' }} onClick={() => setActiveTab(0)}>
+                            목록으로 이동
                         </button>
                     </div>
-                </div>
+                )
             )}
 
             {/* Schedule Editor Modal */}
@@ -322,20 +321,6 @@ export default function PlanLab() {
                     onCancel={() => setShowForm(false)}
                 />
             )}
-
-            <ConfirmModal
-                open={showClearConfirm}
-                title="전체 삭제"
-                message={`정말 모든 일정을 삭제하시겠습니까?
-
-이 작업은 되돌릴 수 없습니다.
-(로컬 저장소만 지원)`}
-                confirmText="삭제"
-                cancelText="취소"
-                variant="danger"
-                onConfirm={confirmClearAll}
-                onCancel={() => setShowClearConfirm(false)}
-            />
         </div>
     );
 }

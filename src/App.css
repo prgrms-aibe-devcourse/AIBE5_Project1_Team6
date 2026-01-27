@@ -1,10 +1,17 @@
 /* ===== Global Background ===== */
-.page {
+body {
+  background-color: #ffffff !important;
+  margin: 0;
+}
+
+.page,
+.appShell {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(circle at bottom, #1c1c1c 0%, #000 70%);
+  display: flex;
+  /* Changed from grid to flex column to allow scroll */
+  flex-direction: column;
+  background-color: #ffffff !important;
+  color: #333;
 }
 
 .centerPage {
@@ -65,7 +72,7 @@
   justify-content: center;
   align-items: center;
   transition: 0.25s ease;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: none;
 }
 
 .selectionCard:hover {

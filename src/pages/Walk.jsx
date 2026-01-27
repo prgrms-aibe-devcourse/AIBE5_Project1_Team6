@@ -4,19 +4,19 @@ import { useLocationBasedTour } from "../hooks/queries/useTourQueries";
 import { useGeolocation } from "../hooks/useGeolocation";
 import { useTripStore } from "../stores/tripStore";
 import toast from "react-hot-toast";
-import DestinationCard from "../components/DestinationCard";
+import RecommendationCard from "../components/RecommendationCard";
 import TripDetailDrawer from "../components/TripDetailDrawer";
-import WeatherWidget from "../components/WeatherWidget"; // Added
+import WeatherWidget from "../components/WeatherWidget"; 
 import "../styles/cards.css";
 import "./Walk.css";
+import LoadingOverlay from "../components/LoadingOverlay";
 import { addPlan } from "../services/plansStorage";
 import { improvePlanText } from "../services/aiPlanner";
 import { simpleDiff } from "../services/diff";
 import { rankTourItems } from "../services/recommend/rankTourItems";
 import { sequenceRoute } from "../services/recommend/sequenceRoute";
 import { estimateBudgetLevel, estimateItemCost } from "../services/recommend/estimateBudget";
-import { haversineKm } from "../utils/geo"; // Added import
-
+import { haversineKm, KOREA_CITY_COORDS } from "../utils/geo"; 
 import { useAuthStore } from "../stores/authStore";
 import { GUEST_KEY } from "../utils/guestUtils";
 
@@ -27,10 +27,10 @@ export default function Walk() {
   const guestId = localStorage.getItem(GUEST_KEY);
 
   // ✅ Smart Recommendation Engine Logic
-  const { themes = [], priority = '', budget = null, duration = null, mood, destination, budgetAmount } = useTripStore();
+  const { themes = [], priority = '', budget = null, duration = null, mood, destination, budgetAmount, companion } = useTripStore();
   const { location, error: geoError, isLoading: geoLoading, requestLocation } = useGeolocation();
 
-  // Calculate greeting
+  // Calculate greeting (Memoized)
   const greeting = useMemo(() => {
     let prefix = "";
     if (mood === 'burnout') prefix = "지친 당신을 위한 힐링 코스, ";
@@ -43,13 +43,19 @@ export default function Walk() {
     return `${prefix}내 주변 맞춤 산책 코스를 추천해드립니다.`;
   }, [user, guestId, mood]);
 
+  // ✅ Category State (Defaults to Store Theme, but can be switched)
+  const [activeCategory, setActiveCategory] = useState(() => {
+      if (themes.includes('food')) return 'food';
+      if (themes.includes('activity')) return 'activity';
+      return 'healing';
+  });
+
   // Map Themes to ContentType
   const contentTypeId = useMemo(() => {
-     if (!themes || !Array.isArray(themes)) return 12;
-     if (themes.includes('food')) return 39;
-     if (themes.includes('activity')) return 28;
+     if (activeCategory === 'food') return 39;
+     if (activeCategory === 'activity') return 28;
      return 12; // Default Healing/Spot
-  }, [themes]);
+  }, [activeCategory]);
 
   // Radius & Sorting based on Priority
   const searchOptions = useMemo(() => {
@@ -90,11 +96,12 @@ export default function Walk() {
   const isLoading = geoLoading || apiLoading;
 
   const rankedItems = useMemo(() => {
-    // 1. Rank items
-    const ranked = rankTourItems(tourItems, { priority, budget, duration, themes });
+    // 1. Rank items (Override theme with activeCategory)
+    const currentThemes = [activeCategory];
+    const ranked = rankTourItems(tourItems, { priority, budget, duration, themes: currentThemes });
     
     // 2. Sequence logic
-    const sequenced = sequenceRoute(ranked, themes);
+    const sequenced = sequenceRoute(ranked, currentThemes);
 
     // 3. Create Courses
     const MAX_PER_COURSE = 4;
@@ -105,26 +112,34 @@ export default function Walk() {
     ].filter(course => course.length > 0);
 
     // 4. Budget Filtering - Relaxed
-    // Return all generated courses to ensure variety (3 courses)
-    // Budget compliance will be checked visually/contextually in the Drawer.
-    
     return rawCourses;
-  }, [tourItems, priority, budget, duration, themes, budgetAmount]);
+  }, [tourItems, priority, budget, duration, activeCategory, budgetAmount]);
 
   // Update map center
   useEffect(() => {
     if (!map || !kakao?.maps) return;
     if (customCenter) return; 
-
+    
     const target = activeLocation;
     map.setCenter(new kakao.maps.LatLng(target.lat, target.lng));
     map.setLevel(location || destination ? 5 : 7);
   }, [map, kakao, activeLocation, customCenter, location, destination]);
 
+  // ✅ State for Markers & Detail Drawer (Restored!)
+  // ✅ State for Markers & Detail Drawer (Restored!)
   const [selected, setSelected] = useState(null);
   const [keyword, setKeyword] = useState("");
   const [nights, setNights] = useState(1);
-  const [people, setPeople] = useState(2);
+  
+  // ✅ People State: Synced with Companion Store
+  const [people, setPeople] = useState(2); 
+
+  useEffect(() => {
+    if (companion === 'solo') setPeople(1);
+    else if (companion === 'family') setPeople(4);
+    else setPeople(2);
+  }, [companion]);
+
   const [planText, setPlanText] = useState("");
   const [diffResult, setDiffResult] = useState(null);
 
@@ -154,7 +169,7 @@ export default function Walk() {
                 width: 28px; height: 28px;
                 background-color: ${style.color}; color: white; border-radius: 50%;
                 display: flex; align-items: center; justify-content: center;
-                font-weight: bold; font-size: 14px; box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+                font-weight: bold; font-size: 14px; box-shadow: none;
                 cursor: pointer; border: 2px solid white;
             `;
             const overlay = new kakao.maps.CustomOverlay({ position, content, yAnchor: 1.1 });
@@ -193,9 +208,9 @@ export default function Walk() {
             map.setCenter(moveLatLon);
             map.setLevel(4);
             setCustomCenter({ lat: parseFloat(place.y), lng: parseFloat(place.x) });
-            toast.success("검색 지역을 중심으로 새로운 코스를 생성합니다!");
+            // toast.success("검색 지역을 중심으로 새로운 코스를 생성합니다!"); // Removed as requested
         } else {
-            toast.error("장소를 찾을 수 없습니다.");
+            // toast.error("장소를 찾을 수 없습니다."); // Removed as requested
         }
     });
   };
@@ -205,7 +220,11 @@ export default function Walk() {
   const openDetail = (item) => {
     setSelected(item);
     setNights(1);
-    setPeople(2);
+    // ✅ Reset people based on companion
+    if (companion === 'solo') setPeople(1);
+    else if (companion === 'family') setPeople(4);
+    else setPeople(2);
+    
     setPlanText("");
     setDiffResult(null);
     if (map && kakao && item.mapy && item.mapx) {
@@ -260,11 +279,11 @@ export default function Walk() {
           people,
           items: courseItems, 
           totalCost,
-          // ✅ Wellness Data (Simulated or Calculated)
+          // ✅ Wellness Data
           wellness: {
-              noise: Math.floor(Math.random() * 40 + 30), // 30-70 dB
-              light: Math.floor(Math.random() * 1000 + 100), // lux
-              crowd: ['여유', '보통', '약간 혼잡'][Math.floor(Math.random() * 3)] // Text or Level
+              noise: Math.floor(Math.random() * 40 + 30),
+              light: Math.floor(Math.random() * 1000 + 100),
+              crowd: ['여유', '보통', '약간 혼잡'][Math.floor(Math.random() * 3)]
           },
           planText: courseItems.map((it, i) => `${i+1}. ${it.title} (${estimateBudgetLevel(it).label})`).join('\n')
       };
@@ -278,120 +297,205 @@ export default function Walk() {
       }
   };
 
+  // ✅ Reset Search on Mount
+  useEffect(() => {
+    setKeyword("");
+    setCustomCenter(null);
+  }, []);
+
   return (
     <div className="pageWrap">
-      <h2 className="pageTitle">Walk · 동네 산책 지도</h2>
-      <div className="pageDesc" style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-         {geoLoading ? <span>📡 GPS 수신 중... (기본: 서울)</span> : 
-          geoError ? (
+      {/* Global Loading Overlay */}
+      {isLoading && <LoadingOverlay message="열심히 산책 코스를 찾는 중이에요!" icon="🏃" />}
+      {/* Page Description */}
+      <div className="pageDesc" style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', minHeight: '0' }}>
+         {/* {geoLoading && <span style={{color:'#666'}}>📡 GPS 수신 중... (기본: 서울)</span>} Removed as requested */}
+         {geoError && (
             <>
-               <span>⚠️ 위치 권한 필요 (현재: 서울 기준).</span>
-               <button onClick={requestLocation} style={{ padding: '4px 8px', borderRadius: '4px', background: '#444', color: '#fff' }}>
+               <span style={{color:'#d9534f'}}>⚠️ 위치 권한 필요 (현재: 서울 기준).</span>
+               <button onClick={requestLocation} style={{ padding: '4px 8px', borderRadius: '4px', background: '#333', color: '#fff' }}>
                   권한 요청
                </button>
             </>
-          ) : greeting}
+         )}
       </div>
 
-      {budgetAmount && (
-          <div style={{ textAlign: 'center', marginBottom: '16px', color: '#ccc', fontSize: '0.9rem' }}>
-              💰 설정 예산: <b>{budgetAmount.toLocaleString()}원</b> 이내 ({people}인/코스 기준)
-          </div>
-      )}
+      {/* ✅ Category Tabs */}
+      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '12px', marginBottom: '24px' }}>
+          {['activity', 'food', 'healing'].map((cat) => {
+             const activeColor = cat === 'food' ? '#ef4444' : (cat === 'healing' ? '#10b981' : '#3b82f6');
+             return (
+              <button
+                 key={cat}
+                 onClick={() => setActiveCategory(cat)}
+                 style={{
+                     padding: '10px 24px',
+                     borderRadius: '50px',
+                     border: activeCategory === cat ? 'none' : '1px solid #e0e0e0',
+                     background: activeCategory === cat ? activeColor : '#fff',
+                     color: activeCategory === cat ? '#ffffff' : '#555',
+                     fontWeight: 'bold',
+                     cursor: 'pointer',
+                     fontSize: '0.95rem',
+                     boxShadow: 'none',
+                     transition: 'all 0.2s',
+                     display: 'flex',
+                     alignItems: 'center',
+                     gap: '6px'
+                 }}
+              >
+                 {cat === 'activity' ? '🪂 액티비티' : cat === 'food' ? '🍽️ 맛집' : '🌿 힐링'}
+              </button>
+             );
+          })}
+      </div>
+
+      <div style={{ position: 'relative', marginBottom: '24px' }}>
+          <div id="map" ref={mapRef} className="mapContainer"></div>
+          {/* ✅ Weather Widget (Floating) */}
+          <WeatherWidget lat={searchCenter.lat} lon={searchCenter.lng} absolute={true} />
+      </div>
 
       <div className="searchContainer">
-         <input type="text" placeholder="지역이나 장소를 검색하세요" value={keyword} onChange={(e) => setKeyword(e.target.value)} onKeyDown={handleKeyDown} className="searchInput" />
-         <button onClick={handleSearch} className="searchBtn">검색</button>
+         <input 
+            type="text" 
+            placeholder={
+                activeCategory === 'activity' ? "어떤 지역의 액티비티를 찾으시나요?" :
+                activeCategory === 'food' ? "어떤 지역의 맛집을 찾으시나요?" :
+                "어디서 힐링하고 싶으신가요?"
+            }
+            value={keyword} onChange={(e) => setKeyword(e.target.value)} onKeyDown={handleKeyDown} className="searchInput" 
+         />
+         <button onClick={handleSearch} className="searchBtn" style={{ background: '#3b82f6' }}>검색</button>
       </div>
 
-      <div id="map" ref={mapRef} className="mapContainer"></div>
+      <div className="coursesContainer" style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+        
+        {/* Recommendation Header Removed */ /*
+        <div style={{ padding: '20px 0 0' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '800', margin: '0 0 6px', color: '#1a1a1a' }}>
+               ✨ {user ? user.email.split('@')[0] : (guestId ? `비회원${guestId.slice(0,4)}` : '여행러')}님을 위한 추천
+            </h3>
+            <p style={{ margin: 0, color: '#666', fontSize: '0.95rem' }}>AI가 분석한 맞춤형 여행지예요!</p>
+        </div>
+        */ }
 
-      {/* ✅ Weather Widget */}
-      <WeatherWidget lat={searchCenter.lat} lon={searchCenter.lng} />
+        {/* Divider Removed <div style={{ width: '100%', height: '1px', background: '#eee' }}></div> */}
 
-      <div className="coursesContainer" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-        {(rankedItems && Array.isArray(rankedItems) && rankedItems.length > 0) ? rankedItems.map((courseItems, courseIdx) => {
-            const courseColor = ['#DC3232', '#1E64F0', '#14A050'][courseIdx % 3];
-            const badgeColor = ['red', 'blue', 'green'][courseIdx % 3];
-            const courseTitle = [`1️⃣ 추천 코스`, `2️⃣ 대안 코스`, `3️⃣ 숨은 명소`][courseIdx];
-            const estimatedCost = getCourseCost(courseItems);
-            
-            // 🔥 Health Stats Calculation (Real Distance)
-            const calculateCourseStats = (items) => {
-                let totalDist = 0;
-                for(let i=0; i<items.length-1; i++) {
-                    const from = { lat: parseFloat(items[i].mapy), lng: parseFloat(items[i].mapx) };
-                    const to = { lat: parseFloat(items[i+1].mapy), lng: parseFloat(items[i+1].mapx) };
-                    totalDist += haversineKm(from, to);
+        {/* Personalized Tagline - Show only once at the top */}
+        {(rankedItems && Array.isArray(rankedItems) && rankedItems.length > 0) && (() => {
+            // Personalized Tagline Generator
+            const getBudgetText = () => {
+                if (budgetAmount) {
+                    if (budgetAmount <= 300000) return '가성비';
+                    if (budgetAmount <= 500000) return '적당히';
+                    return '럭셔리';
                 }
-                // Add return to start or extra wandering buffer (x1.5)
-                const walkDist = totalDist * 1.5; 
-                return {
-                    dist: walkDist.toFixed(1),
-                    steps: Math.floor(walkDist * 1400),
-                    kcal: Math.floor(walkDist * 65)
-                };
+                if (budget === 'low') return '가성비';
+                if (budget === 'mid') return '적당히';
+                if (budget === 'high') return '럭셔리';
+                return '맞춤';
+            };
+            const getCompanionText = () => {
+                if (companion === 'solo') return '혼자';
+                if (companion === 'couple') return '연인과';
+                if (companion === 'friends') return '친구들과';
+                if (companion === 'family') return '가족과';
+                return '함께';
+            };
+            const getActivityText = () => {
+                if (activeCategory === 'food') return '맛집 탐방';
+                if (activeCategory === 'activity') return '액티비티';
+                return '힐링 산책';
             };
             
-            const stats = calculateCourseStats(courseItems);
+            const getActivityColor = () => {
+                if (activeCategory === 'food') return '#EF4444'; // Red for Food
+                if (activeCategory === 'activity') return '#3B82F6'; // Blue for Activity
+                return '#10B981'; // Green for Healing
+            };
+            
+            const isSolo = companion === 'solo';
 
             return (
-                <div key={`course-${courseIdx}`} className="courseSection">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderLeft: `4px solid ${courseColor}`, paddingLeft: '12px' }}>
-                        <div>
-                            <h4 style={{ fontSize: '1.2rem', color: courseColor, margin: 0 }}>
-                                {courseTitle} <span style={{fontSize: '0.9rem', color: '#ccc', fontWeight: 'normal'}}>({people}인 기준 약 {estimatedCost.toLocaleString()}원)</span>
-                            </h4>
-                            {/* Health Badge */}
-                            <div style={{ marginTop: '4px', fontSize: '0.85rem', color: '#aaa', display: 'flex', gap: '8px' }}>
-                                <span style={{ color: '#ff6b6b' }}>🔥 약 {stats.kcal}kcal 소모</span>
-                                <span>|</span>
-                                <span style={{ color: '#4caf50' }}>👣 {stats.steps.toLocaleString()}보 걷기 ({stats.dist}km)</span>
-                            </div>
+                <div style={{ 
+                    marginTop: '10px',
+                    marginBottom: '2px', 
+                    paddingBottom: '4px', 
+                    borderBottom: '2px solid #e0e0e0' 
+                }}>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#333', margin: 0 }}>
+                        <span style={{ color: '#5C94FF', fontWeight: '700' }}>{getBudgetText()}</span> 예산에 맞는{' '}
+                        <span style={{ color: '#5C94FF', fontWeight: '700' }}>{getCompanionText()}</span>{isSolo ? '하는' : ' 함께하는'}{' '}
+                        <span style={{ color: getActivityColor(), fontWeight: '700' }}>{getActivityText()}</span> 코스에요 ✨
+                    </h3>
+                </div>
+            );
+        })()}
+
+        {(rankedItems && Array.isArray(rankedItems) && rankedItems.length > 0) ? rankedItems.map((courseItems, courseIdx) => {
+            const courseColor = ['#DC3232', '#1E64F0', '#14A050'][courseIdx % 3];
+            const estimatedCost = getCourseCost(courseItems);
+            
+            return (
+                <div key={`course-${courseIdx}`} className="courseSection" style={{ marginTop: courseIdx === 0 ? '13px' : '40px' }}>
+                    <div style={{ marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.95rem' }}>
+                            <span style={{ fontWeight: '700', color: courseColor }}>
+                                추천 경로 {courseIdx + 1}
+                            </span>
                         </div>
-                        <button 
-                            onClick={() => handleSaveCourse(courseItems, courseTitle)}
-                            style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                border: `1px solid ${courseColor}`,
-                                background: 'transparent',
-                                color: courseColor,
-                                fontSize: '0.85rem',
-                                cursor: 'pointer',
-                                fontWeight: 'bold'
-                            }}
-                            onMouseOver={e => { e.currentTarget.style.background = courseColor; e.currentTarget.style.color = '#fff'; }}
-                            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = courseColor; }}
-                        >
-                            📂 이 코스 전체 저장
-                        </button>
                     </div>
+
                     <div className="grid">
                         {courseItems.map((it, index) => {
-                            const bLevel = estimateBudgetLevel(it);
-                            const itemCost = estimateItemCost(it, people, nights);
+                            const matchScore = 90 + Math.floor((Math.random() * 10) - (index * 2));
                             return (
                                 <div key={it.contentid} onClick={() => openDetail(it)} style={{ cursor: "pointer" }}>
-                                    <DestinationCard 
+                                    <RecommendationCard 
                                         title={it.title} 
-                                        subtitle={it.addr1} 
+                                        country={it.addr1 ? it.addr1.split(" ")[0] : "대한민국"}
+                                        tag={activeCategory === 'activity' ? '액티비티' : activeCategory === 'food' ? '맛집' : '힐링'}
+                                        desc={it.addr1 || "AI가 추천하는 최고의 장소입니다."}
                                         image={it.firstimage || "https://images.unsplash.com/photo-1533658280665-224492bf552f?auto=format&fit=crop&w=800&q=80"} 
-                                        rateText={"⭐ 4.5"} 
-                                        badgeLeftTop={`${index + 1}`} 
-                                        badgeColor={badgeColor} 
+                                        matchScore={matchScore}
+                                        routeBadge={{ color: courseColor, number: index + 1 }}
                                     />
                                 </div>
                             );
                         })}
                     </div>
+                    
+                    <button 
+                        onClick={() => handleSaveCourse(courseItems, `코스 ${courseIdx+1}`)}
+                        style={{
+                            marginTop: '35px', /* Adjusted to 35px */
+                            width: '100%',
+                            padding: '14px',
+                            borderRadius: '12px',
+                            border: `1px solid ${courseColor}`,
+                            background: 'white',
+                            color: courseColor,
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseOver={e => { e.currentTarget.style.background = courseColor; e.currentTarget.style.color = '#fff'; }}
+                        onMouseOut={e => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = courseColor; }}
+                    >
+                        📂 이 코스 전체 저장하기
+                    </button>
                 </div>
             );
         }) : (
             !isLoading && (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#aaa' }}>
-                    <p>조건에 맞는 코스를 찾지 못했어요 😢</p>
-                    {budgetAmount && <p>예산을 조금 더 늘려보시겠어요?</p>}
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#aaa' }}>
+                    <p style={{ fontSize: '1.1rem' }}>조건에 맞는 코스를 찾지 못했어요 😢</p>
+                    {budgetAmount && <p style={{ marginTop: '8px' }}>예산이나 조건을 조금 변경해보세요!</p>}
                 </div>
             )
         )}

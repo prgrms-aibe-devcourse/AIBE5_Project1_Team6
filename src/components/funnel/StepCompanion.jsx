@@ -3,7 +3,7 @@ import { useTripStore } from '../../stores/tripStore';
 import FunnelStepShell from './FunnelStepShell';
 import { containerVariants, itemVariants } from '../../utils/animationVariants';
 
-export default function StepCompanion({ progressText = "3/4" }) {
+export default function StepCompanion({ stepIndex, totalSteps }) {
   const { setCompanion, nextStep, prevStep } = useTripStore();
 
   const handleSelect = (companion) => {
@@ -21,23 +21,53 @@ export default function StepCompanion({ progressText = "3/4" }) {
   return (
     <FunnelStepShell
       title="누구와 함께 하시나요?"
-      subtitle="동행자에 맞춰 코스를 추천해드려요."
+      subtitle="함께하는 사람에 따라 코스가 달라지니까요"
       onBack={prevStep}
-      progressText={progressText}
+      stepIndex={stepIndex}
+      totalSteps={totalSteps}
       motionVariants={containerVariants}
     >
-      <div className="selectionGrid col-2">
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '12px', 
+        width: '100%',
+        maxWidth: '460px',
+        margin: '20px auto 0'
+      }}>
          {companions.map((option) => (
           <motion.button
             key={option.id}
-            className="selectionCard"
             variants={itemVariants}
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.02, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleSelect(option.id)}
+            style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                padding: '16px 24px',
+                backgroundColor: 'white',
+                border: '1px solid #eee',
+                borderRadius: '16px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: 'none', /* Removed shadow */
+                minHeight: '84px',
+                textAlign: 'left'
+            }}
           >
-             <h3 className="cardTitle" style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{option.label}</h3>
-             <p className="cardDesc" style={{ fontSize: '0.9rem', color: '#666' }}>{option.desc}</p>
+             {/* Increase font sizes */}
+             <div style={{ fontSize: '2.4rem', marginRight: '20px', lineHeight: 1 }}>
+                 {option.label.split(' ')[0]} {/* Emoji only */}
+             </div>
+             <div>
+                 <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 4px', color: '#1a1a1a' }}>
+                     {option.label.split(' ')[1]} {/* Text only */}
+                 </h3>
+                 <p style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500', margin: 0, wordBreak: 'keep-all' }}>{option.desc}</p>
+             </div>
           </motion.button>
         ))}
       </div>
