@@ -1,49 +1,111 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTripStore } from '../../stores/tripStore';
 import { motion } from 'framer-motion';
+import FunnelStepShell from './FunnelStepShell';
+import { containerVariants } from '../../utils/animationVariants';
 
 export default function StepLoading() {
-  const { nextStep } = useTripStore();
+  const { nextStep, transport } = useTripStore();
+  const DURATION = 2.5; // seconds
+  
+  const loadingText = transport === 'Airplane' 
+    ? "전 세계 여행지 데이터를 검토 중이에요 🌏" 
+    : "국내 여행지를 검토중이에요";
+
+  const [percent, setPercent] = useState(0);
 
   useEffect(() => {
-    // Artificial delay for "AI generation" effect
-    const timer = setTimeout(() => {
+    // 1. Navigation Timer
+    const navTimer = setTimeout(() => {
       nextStep();
-    }, 2000);
+    }, DURATION * 1000);
 
-    return () => clearTimeout(timer);
+    // 2. Percentage Animation Timer
+    const interval = setInterval(() => {
+      setPercent((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return prev + 1;
+      });
+    }, (DURATION * 1000) / 100);
+
+    return () => {
+      clearTimeout(navTimer);
+      clearInterval(interval);
+    };
   }, [nextStep]);
 
   return (
-    <div className="funnelStep" style={{ textAlign: 'center', marginTop: '30vh' }}>
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-        style={{ 
-          width: '50px', 
-          height: '50px', 
-          border: '4px solid rgba(255,255,255,0.1)', 
-          borderTop: '4px solid #fff', 
-          borderRadius: '50%', 
-          margin: '0 auto 20px' 
-        }}
-      />
-      <motion.h2
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="heroTitle"
-      >
-        AI가 맞춤 코스를 생성중입니다...
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        style={{ color: '#aaa' }}
-      >
-        잠시만 기다려주세요, 특별한 경험을 준비하고 있어요.
-      </motion.p>
-    </div>
+    <FunnelStepShell
+        title=""
+        subtitle=""
+        showBack={false}
+        progressText={null}
+        motionVariants={containerVariants}
+    >
+        <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            width: '100%',
+            padding: '40px 0' 
+        }}>
+            
+            {/* Blue Circle Icon */}
+            <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                style={{
+                    width: '100px',
+                    height: '100px',
+                    borderRadius: '50%',
+                    background: '#5C94FF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '32px',
+                    boxShadow: '0 10px 20px rgba(92, 148, 255, 0.3)'
+                }}
+            >
+                <div style={{ fontSize: '3rem', color: 'white' }}>✨</div>
+            </motion.div>
+
+            {/* Main Text */}
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#111', marginBottom: '32px' }}>
+                {loadingText}
+            </h2>
+
+            {/* Progress Bar Container */}
+            <div style={{ 
+                width: '80%', 
+                height: '12px', 
+                background: '#f0f2f5', 
+                borderRadius: '6px', 
+                overflow: 'hidden',
+                position: 'relative' 
+            }}>
+                {/* Progress Bar Fill */}
+                <motion.div
+                    initial={{ width: '0%' }}
+                    animate={{ width: '100%' }}
+                    transition={{ duration: DURATION, ease: "linear" }}
+                    style={{
+                        height: '100%',
+                        background: '#5C94FF',
+                        borderRadius: '6px'
+                    }}
+                />
+            </div>
+
+            <div style={{ marginTop: '12px', color: '#888', fontSize: '0.9rem', fontWeight: '500' }}>
+                {percent}%
+            </div>
+
+        </div>
+    </FunnelStepShell>
   );
 }
