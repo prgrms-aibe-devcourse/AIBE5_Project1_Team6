@@ -21,49 +21,53 @@ export default function StepCompanion({ stepIndex, totalSteps }) {
   return (
     <FunnelStepShell
       title="누구와 함께 하시나요?"
-      subtitle="동행자에 맞춰 코스를 추천해드려요."
+      subtitle="함께하는 사람에 따라 코스가 달라지니까요"
       onBack={prevStep}
       stepIndex={stepIndex}
       totalSteps={totalSteps}
       motionVariants={containerVariants}
     >
       <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(4, 1fr)', 
-        gap: '20px', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '12px', 
         width: '100%',
-        marginTop: '20px'
+        maxWidth: '460px',
+        margin: '20px auto 0'
       }}>
          {companions.map((option) => (
           <motion.button
             key={option.id}
             variants={itemVariants}
-            whileHover={{ scale: 1.05, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => handleSelect(option.id)}
             style={{
                 display: 'flex',
-                flexDirection: 'column',
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
-                padding: '30px 20px', // More padding
+                justifyContent: 'flex-start',
+                padding: '16px 24px',
                 backgroundColor: 'white',
-                border: '2px solid #eee',
-                borderRadius: '20px',
+                border: '1px solid #eee',
+                borderRadius: '16px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
-                height: '100%'
+                boxShadow: 'none', /* Removed shadow */
+                minHeight: '84px',
+                textAlign: 'left'
             }}
           >
              {/* Increase font sizes */}
-             <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>
+             <div style={{ fontSize: '2.4rem', marginRight: '20px', lineHeight: 1 }}>
                  {option.label.split(' ')[0]} {/* Emoji only */}
              </div>
-             <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
-                 {option.label.split(' ')[1]} {/* Text only */}
-             </h3>
-             <p style={{ fontSize: '0.9rem', color: '#888', wordBreak: 'keep-all' }}>{option.desc}</p>
+             <div>
+                 <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 4px', color: '#1a1a1a' }}>
+                     {option.label.split(' ')[1]} {/* Text only */}
+                 </h3>
+                 <p style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500', margin: 0, wordBreak: 'keep-all' }}>{option.desc}</p>
+             </div>
           </motion.button>
         ))}
       </div>

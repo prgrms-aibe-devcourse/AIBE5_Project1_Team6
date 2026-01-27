@@ -97,7 +97,7 @@ export default function TravelBiorhythm({ plans = [] }) {
             </div>
 
             {/* Insight Card */}
-            <div className="feature-card" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1))' }}>
+            <div className="feature-card" style={{ padding: '1.5rem', background: 'rgba(92, 148, 255, 0.1)' }}>
                 <h3 className="card-title">💡 웰니스 인사이트</h3>
                 <p style={{ marginTop: '1rem', lineHeight: '1.6', color: '#e2e8f0' }}>
                     지난 여행들의 패턴을 보면, 주로 <strong>{stats.primaryMood.label}</strong>을 추구하는 경향이 있습니다.

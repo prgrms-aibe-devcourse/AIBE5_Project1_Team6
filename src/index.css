@@ -19,13 +19,11 @@
   --text-muted: #9ca3af;
   --white: #ffffff;
 
-  /* 🌑 Shadows (Blue-tinted, Soft) */
-  --shadow-sm: 0 2px 8px rgba(59, 130, 246, 0.05);
-  --shadow-md: 0 8px 24px rgba(59, 130, 246, 0.08);
-  /* Main Card Shadow */
-  --shadow-lg: 0 16px 48px rgba(59, 130, 246, 0.12);
-  /* Floating/Hover Shadow */
-  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  /* 🌑 Shadows (Removed) */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-inner: none;
 
   /* 💎 Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.7);
@@ -99,12 +97,12 @@ button {
   color: var(--text-main);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 button:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
 }
 
 button:focus,

@@ -13,57 +13,59 @@ export default function StepTransport() {
   
   const options = [
     { id: 'Walk', label: '👟 Walk', desc: '이색적인 골목 여행' },
-    { id: 'Traffic', label: '🚌 Traffic', desc: '편리한 대중교통' },
+    { id: 'Traffic', label: '🚗 Drive', desc: '낭만있는 자동차 여행' },
     { id: 'Airplane', label: '✈️ Airplane', desc: '설레는 장거리 여행' },
   ];
 
   return (
     <FunnelStepShell
       title="이번 여행의 이동 수단은?"
-      subtitle="원하시는 여행 스타일에 맞춰 추천해드릴게요."
+      subtitle="가장 나다운 여행 방식을 골라보세요"
       stepIndex={0}
       totalSteps={0}
       motionVariants={containerVariants}
     >
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
         width: '100%',
-        marginTop: '20px',
+        maxWidth: '460px', /* Centered constrained width */
+        margin: '20px auto 0',
         flex: 1
       }}>
          {options.map((option) => (
           <motion.button
             key={option.id}
             variants={itemVariants}
-            whileHover={{ scale: 1.05, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => handleSelect(option.id)}
             style={{
                 width: '100%',
-                height: '100%',
-                minHeight: '200px',
-                padding: '30px',
+                minHeight: '84px',
+                padding: '16px 24px',
                 backgroundColor: 'white',
-                border: '2px solid #eee',
-                borderRadius: '24px',
+                border: '1px solid #eee',
+                borderRadius: '16px',
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
+                alignItems: 'center', /* Row layout */
+                justifyContent: 'flex-start',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+                boxShadow: 'none', /* Removed shadow */
+                textAlign: 'left'
             }}
           >
-             <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>
+             <div style={{ fontSize: '2.4rem', marginRight: '20px', lineHeight: 1 }}>
                  {option.label.split(' ')[0]}
              </div>
-             <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '8px', color: '#333' }}>
-                 {option.label.split(' ')[1]}
-             </h3>
-             <p style={{ fontSize: '1rem', color: '#666', fontWeight: '500' }}>{option.desc}</p>
+             <div>
+               <h3 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 4px', color: '#1a1a1a' }}>
+                   {option.label.split(' ')[1]}
+               </h3>
+               <p style={{ fontSize: '0.9rem', color: '#666', fontWeight: '500', margin: 0 }}>{option.desc}</p>
+             </div>
           </motion.button>
         ))}
       </div>

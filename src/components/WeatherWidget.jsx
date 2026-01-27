@@ -22,7 +22,7 @@ export default function WeatherWidget({ lat, lon, absolute = false, comparisonTe
 
     if (!lat || !lon) return null;
 
-    if (loading) return null; // Loading state hidden for cleaner UI in compact mode
+    if (loading) return null;
     if (!weather) return null;
 
     const tip = clothingTip(weather.temp, weather.code);
@@ -45,7 +45,7 @@ export default function WeatherWidget({ lat, lon, absolute = false, comparisonTe
         >
             {/* Compact Header (Always Visible) */}
             <div style={{
-                background: 'rgba(255, 255, 255, 0.65)', // Frosted Glass
+                background: 'rgba(255, 255, 255, 0.65)',
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
                 borderRadius: '50px',
@@ -53,7 +53,7 @@ export default function WeatherWidget({ lat, lon, absolute = false, comparisonTe
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: '0 8px 32px rgba(31, 38, 135, 0.15)', // Blue-ish glass shadow
+                boxShadow: '0 8px 32px rgba(31, 38, 135, 0.15)',
                 cursor: 'pointer',
                 border: '1px solid rgba(255, 255, 255, 0.6)',
                 transition: 'all 0.2s',
@@ -96,7 +96,6 @@ export default function WeatherWidget({ lat, lon, absolute = false, comparisonTe
                      }}>
                         💡 {tip}
                      </div>
-                     {/* Comparison Text added */}
                      {comparisonText && (
                         <div style={{ 
                             marginTop: '8px', 
@@ -125,8 +124,8 @@ export default function WeatherWidget({ lat, lon, absolute = false, comparisonTe
                         {weather.daily.time.slice(0, 5).map((date, idx) => {
                             const dayLabel = new Date(date).toLocaleDateString('ko-KR', { weekday: 'short' });
                             const code = weather.daily.code[idx];
-                            const label = getWeatherLabel(code);
-                            const icon = label.includes('맑음') ? '☀️' : label.includes('비') ? '☔' : label.includes('눈') ? '☃️' : '☁️';
+                            const lbl = getWeatherLabel(code);
+                            const icon = lbl.includes('맑음') ? '☀️' : lbl.includes('비') ? '☔' : lbl.includes('눈') ? '☃️' : '☁️';
                             
                             return (
                                <div key={idx} style={{ textAlign: 'center', fontSize: '0.7rem' }}>
@@ -142,3 +141,4 @@ export default function WeatherWidget({ lat, lon, absolute = false, comparisonTe
         </div>
     );
 }
+

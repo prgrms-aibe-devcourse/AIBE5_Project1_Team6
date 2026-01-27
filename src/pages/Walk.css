@@ -22,15 +22,15 @@
 .searchContainer {
     margin: 0 auto 30px;
     /* Center & Spacing */
-    max-width: 500px;
+    width: 100%;
+    /* Forced full width */
+    /* Widened to match map width */
     display: flex;
     gap: 10px;
     background: #f8f9fa;
     /* Light gray pill container background? Or just inputs */
     padding: 6px;
     border-radius: 50px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    /* Soft shadow */
     border: 1px solid #eee;
 }
 
@@ -69,12 +69,13 @@
 
 .mapContainer {
     width: 100%;
-    height: 280px;
+    height: 450px;
+    /* Increased from 280px */
     border-radius: 24px;
     /* Nice rounded corners */
     margin-bottom: 24px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-    /* Float effect */
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    /* Added subtle border instead of shadow */
     overflow: hidden;
 }
 
