@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import '../styles/mypage.css';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { loadPlans, removePlan } from '../services/plansStorage';
+import { getMemories, getNotifications, getUserBadges, initializeUserBadgesIfEmpty, markNotificationAsRead } from '../services/mypageService';
 import TravelBiorhythm from '../components/TravelBiorhythm';
 
 // ✅ Helpers for Human-Readable Wellness
@@ -79,11 +80,35 @@ export default function MyPage() {
         queryFn: loadPlans
     });
 
+    // ✅ Fetch Memories
+    const { data: memories = [] } = useQuery({
+        queryKey: ['memories', user?.id],
+        queryFn: getMemories,
+        enabled: !!user
+    });
+
+    // ✅ Fetch Notifications
+    const { data: notifications = [] } = useQuery({
+        queryKey: ['notifications', user?.id],
+        queryFn: getNotifications,
+        enabled: !!user
+    });
+
+    // ✅ Fetch Badges
+    const { data: badges = [] } = useQuery({
+        queryKey: ['badges', user?.id],
+        queryFn: () => getUserBadges(user?.id),
+        enabled: !!user
+    });
+
     useEffect(() => {
         if (user) {
             setProfileName(user.user_metadata?.full_name || user.email?.split('@')[0] || "");
             setProfileDesc(user.user_metadata?.bio || "");
             setPreviewImage(user.user_metadata?.avatar_url || null);
+
+            // Initialize badges for demo purposes if empty
+            initializeUserBadgesIfEmpty(user.id);
         }
     }, [user]);
 
@@ -104,13 +129,8 @@ export default function MyPage() {
     const handleSaveProfile = async () => {
         if (!user) return;
         setSaving(true);
-
         try {
-            // Update Supabase User Metadata
-            // Note: In a real app, upload 'profileImage' to storage first, get URL, then save here.
-            // verifying we are just using the preview data URL or existing URL for now to suffice "change picture" requirement without backend storage
             const avatarUrlToSave = previewImage || user.user_metadata?.avatar_url;
-
             const { data, error } = await supabase.auth.updateUser({
                 data: {
                     full_name: profileName,
@@ -118,10 +138,7 @@ export default function MyPage() {
                     avatar_url: avatarUrlToSave
                 }
             });
-
             if (error) throw error;
-
-            // Update Local Store
             setUser(data.user);
             toast.success("프로필이 저장되었습니다.");
         } catch (error) {
@@ -132,12 +149,14 @@ export default function MyPage() {
         }
     };
 
-    // Placeholder data
-    const mockSchedules = [
-        { id: 1, title: '파리 여름 여행', date: '2025.07.10 - 07.15', days: '6일', participants: 4, cover: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=2073&auto=format&fit=crop' },
-        { id: 2, title: '도쿄 맛집 투어', date: '2025.09.20 - 09.24', days: '5일', participants: 2, cover: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?q=80&w=2094&auto=format&fit=crop' },
-        { id: 3, title: '제주도 힐링 여행', date: '2025.10.02 - 10.05', days: '4일', participants: 3, cover: 'https://images.unsplash.com/photo-1544256718-3bcf237f3974?q=80&w=2071&auto=format&fit=crop' },
-    ];
+    const handleNotificationRead = async (id) => {
+        try {
+            await markNotificationAsRead(id);
+            // Invalidate query to refresh UI if needed, or optimistically update
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     const mockWishlist = [
         { id: 1, title: '교토 전통 료칸', category: '숙소', rating: 4.8, cover: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=2070&auto=format&fit=crop' },
@@ -149,18 +168,11 @@ export default function MyPage() {
         { id: 2, title: '주말 부산 여행', date: '2024.11.15', rating: 4, content: '음식은 훌륭했지만 교통이 좀 막혔어요.', thumb: 'https://images.unsplash.com/photo-1551918120-9739cb430c6d?q=80&w=1800&auto=format&fit=crop' },
     ];
 
-    const mockPersona = {
-        title: "여유로운 힐링 마스터",
-        icon: "🌿",
-        tags: ["#자연친화", "#호캉스", "#맛집탐방", "#힐링여행"],
-        desc: "당신은 도심을 떠나 자연 속에서 진정한 휴식을 찾는 여행가입니다. 빡빡한 일정보다는 여유로운 시간을 선호하며, 맛있는 음식과 편안한 잠자리를 중요하게 생각합니다.",
-        answers: [
-            { step: "Step 2. 이동의 취향", question: "목적지까지 가는 시간, 당신의 텐션은?", answer: "비행기 표만 봐도 설레는 해외파 ✈️", icon: "✈️" },
-            { step: "Step 3. 일정의 밀도", question: "여행지에서의 아침 9시, 당신은 무엇을 하고 있나?", answer: "암막 커튼 치고 꿀잠 중 🛌", icon: "🛌" },
-            { step: "Step 4. 의외의 취향", question: "카페를 고를 때 당신의 최우선 기준은?", answer: "무조건 뷰! 바다나 산이 보여야 함 🌊", icon: "🌊" },
-            { step: "Step 5. 소비의 가치", question: "이번 여행에서 돈을 '펑펑' 쓰고 싶은 곳은?", answer: "잠자리가 제일 중요해! 숙소에 몰빵 🛌", icon: "🏨" }
-        ]
-    };
+    // Gamification Logic with Real Data
+    const totalXp = badges.filter(b => b.earned).reduce((acc, curr) => acc + curr.xp, 0);
+    const currentLevel = Math.max(1, Math.floor(totalXp / 100) + 1);
+    const nextLevelXp = currentLevel * 100;
+    const progressToNextLevel = totalXp % 100;
 
     const mockBadges = [
         { id: 1, title: "첫 여권의 설렘", desc: "첫 해외여행을 완료했습니다.", icon: "✈️", unlocked: true, date: "2023.05.10" },
@@ -196,12 +208,12 @@ export default function MyPage() {
                         </div>
                         <div className="content-grid">
                             {myPlans.length > 0 ? myPlans.map(item => (
-                                <div key={item.id} className="feature-card" onClick={() => nav('/plans')} style={{cursor: 'pointer', position: 'relative'}}>
+                                <div key={item.id} className="feature-card" onClick={() => nav('/plans')} style={{ cursor: 'pointer' }}>
                                     <div className="card-img-wrapper">
                                         <img src={item.heroImage || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80"} alt={item.title} className="card-img" />
                                         <span className="card-badge">{item.mood ? '#' + item.mood.toUpperCase() : '#TRIP'}</span>
                                         {/* Delete Button */}
-                                        <button 
+                                        <button
                                             onClick={(e) => handleDelete(e, item.id)}
                                             style={{
                                                 position: 'absolute', top: '10px', right: '10px',
@@ -219,15 +231,15 @@ export default function MyPage() {
                                         <div className="card-meta">
                                             <span>📅 {new Date(item.createdAt).toLocaleDateString()}</span>
                                             <span>👥 {item.people}명</span>
-                                            {item.totalCost > 0 && <span>💰 {Math.round(item.totalCost/10000)}만원</span>}
+                                            {item.totalCost > 0 && <span>💰 {Math.round(item.totalCost / 10000)}만원</span>}
                                         </div>
                                         {/* Wellness Info */}
                                         {item.wellness && (
                                             <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#666', display: 'flex', gap: '8px', background: '#f8f9fa', padding: '6px 10px', borderRadius: '6px' }}>
                                                 <span>🔊 {formatNoise(item.wellness.noise)}</span>
-                                                <span style={{color: '#ddd'}}>|</span>
+                                                <span style={{ color: '#ddd' }}>|</span>
                                                 <span>💡 {formatLight(item.wellness.light)}</span>
-                                                <span style={{color: '#ddd'}}>|</span>
+                                                <span style={{ color: '#ddd' }}>|</span>
                                                 <span>👥 {item.wellness.crowd}</span>
                                             </div>
                                         )}
@@ -366,72 +378,52 @@ export default function MyPage() {
                             </div>
                         </div>
 
-                        {/* 1. On This Day / Year in Travel Hero */}
+                        {/* 1. System/Hero Area (For now static, can be dynamic later) */}
                         <div className="memories-hero">
                             <div className="memories-content">
                                 <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.3rem 0.8rem', borderRadius: '1rem', fontSize: '0.8rem', marginBottom: '0.5rem', display: 'inline-block' }}>
-                                    ✨ 2024 Year in Travel
+                                    ✨ My Travel History
                                 </span>
-                                <h2 className="memories-title">2024년, 3개국 8도시의 여정</h2>
+                                <h2 className="memories-title">나의 여행, 그 특별한 순간들</h2>
                                 <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>
-                                    총 이동 거리 12,345km • 지구 0.3바퀴 <br />
-                                    가장 행복했던 순간: 스위스 인터라켄 패러글라이딩
+                                    기록된 여행 추억: {memories.length}개
                                 </p>
-                                <button className="memories-play-btn" onClick={() => alert('타임랩스 영상이 재생됩니다 (구현 예정)')}>
-                                    <span>▶</span> 2024 하이라이트 재생
-                                </button>
                             </div>
                         </div>
 
-                        {/* 2. On This Day */}
-                        <div className="settings-section" style={{ background: 'linear-gradient(to right, rgba(59, 130, 246, 0.1), transparent)' }}>
-                            <h3 className="settings-title">📅 1년 전 오늘</h3>
-                            <div className="timeline-card" style={{ border: 'none', background: 'transparent', padding: 0 }}>
-                                <img
-                                    src="https://images.unsplash.com/photo-1499856871940-b625a4aa4e53?q=80&w=2070&auto=format&fit=crop"
-                                    alt="Memory"
-                                    style={{ width: '120px', height: '120px', borderRadius: '1rem', objectFit: 'cover' }}
-                                />
-                                <div>
-                                    <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>파리, 에펠탑 아래에서의 피크닉</h4>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                                        "날씨가 너무 좋아서 바게트랑 와인 사들고 공원에 앉아있었다. 이게 행복이지!"
-                                    </p>
-                                    <span style={{ fontSize: '0.8rem', color: '#fbbf24' }}>★ 5.0</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 3. Timeline & PDF */}
+                        {/* Real Memories Data */}
                         <div className="timeline-section">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                <h3 className="settings-title" style={{ margin: 0, border: 'none' }}>내 여행 히스토리북</h3>
-                                <button className="action-btn" onClick={() => alert('PDF 다운로드가 시작됩니다.')}>
-                                    📄 PDF 내보내기
-                                </button>
+                                <h3 className="settings-title" style={{ margin: 0, border: 'none' }}>기록된 추억들</h3>
                             </div>
 
-                            <div className="timeline-card">
-                                <div className="timeline-date">2024.12</div>
-                                <div>
-                                    <h4 style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>겨울 홋카이도 설국 여행</h4>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>삿포로 - 오타루 - 비에이</p>
+                            {memories.length > 0 ? memories.map(mem => (
+                                <div key={mem.id} className="timeline-card">
+                                    {mem.image_url && (
+                                        <img
+                                            src={mem.image_url}
+                                            alt={mem.title}
+                                            style={{ width: '120px', height: '120px', borderRadius: '1rem', objectFit: 'cover' }}
+                                        />
+                                    )}
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{mem.title}</h4>
+                                            <span style={{ fontSize: '0.8rem', background: 'rgba(59, 130, 246, 0.1)', padding: '2px 8px', borderRadius: '12px', color: '#3b82f6' }}>
+                                                {mem.travel_date ? new Date(mem.travel_date).toLocaleDateString() : ''}
+                                            </span>
+                                        </div>
+                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                                            {mem.description}
+                                        </p>
+                                        <span style={{ fontSize: '0.8rem', color: '#fbbf24' }}>{'★'.repeat(mem.rating)}</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="timeline-card">
-                                <div className="timeline-date">2024.08</div>
-                                <div>
-                                    <h4 style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>뜨거운 여름, 발리 한 달 살기</h4>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>우붓 - 짱구 - 스미냑</p>
+                            )) : (
+                                <div className="empty-state">
+                                    <p>아직 기록된 추억이 없습니다.</p>
                                 </div>
-                            </div>
-                            <div className="timeline-card">
-                                <div className="timeline-date">2023.05</div>
-                                <div>
-                                    <h4 style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>런던 & 파리 유럽 감성 여행</h4>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>런던 아이 - 루브르 박물관</p>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     </>
                 );
@@ -456,6 +448,101 @@ export default function MyPage() {
                                         <p className="card-meta">{item.date}</p>
                                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{item.content}</p>
                                     </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                );
+            case 'notifications':
+                return (
+                    <>
+                        <div className="content-header">
+                            <div>
+                                <h1 className="page-title">알림</h1>
+                                <p className="page-subtitle">내 활동에 대한 새 소식을 확인하세요.</p>
+                            </div>
+                        </div>
+                        <div className="notifications-list">
+                            {notifications.length > 0 ? (
+                                notifications.map(item => (
+                                    <div key={item.id}
+                                        onClick={() => handleNotificationRead(item.id)}
+                                        className={`notification-item ${!item.is_read ? 'unread' : ''}`} style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            padding: '1rem',
+                                            background: 'rgba(255, 255, 255, 0.05)',
+                                            borderRadius: '1rem',
+                                            marginBottom: '0.8rem',
+                                            borderLeft: item.is_read ? '3px solid transparent' : '3px solid #3b82f6',
+                                            cursor: 'pointer'
+                                        }}>
+                                        <div className="notification-icon" style={{
+                                            width: '40px',
+                                            height: '40px',
+                                            borderRadius: '50%',
+                                            background: item.type === 'like' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                                            color: item.type === 'like' ? '#ef4444' : '#3b82f6',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            marginRight: '1rem',
+                                            fontSize: '1.2rem'
+                                        }}>
+                                            {item.type === 'like' ? '❤️' : '💬'}
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <p style={{ margin: 0, fontSize: '0.95rem' }}>
+                                                <span style={{ fontWeight: 'bold' }}>{item.related_user_name}</span>
+                                                {item.message}
+                                            </p>
+                                            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{new Date(item.created_at).toLocaleString()}</span>
+                                        </div>
+                                        {!item.is_read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></div>}
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="empty-state">
+                                    <p>새로운 알림이 없습니다.</p>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                );
+            case 'badges':
+                return (
+                    <>
+                        <div className="content-header">
+                            <div>
+                                <h1 className="page-title">나의 여행 뱃지</h1>
+                                <p className="page-subtitle">여행의 즐거움을 더해주는 특별한 업적들입니다.</p>
+                            </div>
+                            <div className="badge-summary">
+                                <span>총 획득 XP: <strong>{totalXp}</strong></span>
+                            </div>
+                        </div>
+
+                        <div className="badge-grid">
+                            {badges.map(badge => (
+                                <div key={badge.id} className={`badge-card ${badge.earned ? 'earned' : 'locked'}`}>
+                                    <div className="badge-icon-wrapper">
+                                        <span className="badge-icon">{badge.icon}</span>
+                                        {badge.earned && <span className="badge-check">✓</span>}
+                                    </div>
+                                    <h3 className="badge-title">{badge.title}</h3>
+                                    <p className="badge-desc">{badge.desc}</p>
+                                    {!badge.earned && badge.progress && (
+                                        <div className="badge-progress-container">
+                                            <div className="badge-progress-text">진행도 {badge.progress}</div>
+                                            <div className="badge-progress-bar">
+                                                <div
+                                                    className="badge-progress-fill"
+                                                    style={{ width: `${(badge.rawProgress / badge.rawGoal) * 100}%` }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {badge.earned && <p className="badge-date">획득일: {badge.date}</p>}
                                 </div>
                             ))}
                         </div>
@@ -549,6 +636,13 @@ export default function MyPage() {
                             "{user.user_metadata.bio}"
                         </p>
                     )}
+                    <div className="profile-level-container">
+                        <div className="level-badge">Lv.{currentLevel} 여행 탐험가</div>
+                        <div className="level-progress-bar">
+                            <div className="level-progress-fill" style={{ width: `${progressToNextLevel}%` }}></div>
+                        </div>
+                        <p className="level-text">{totalXp} XP / {nextLevelXp} XP</p>
+                    </div>
 
 
                 </div>
@@ -574,9 +668,9 @@ export default function MyPage() {
                     </div>
                     <div className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>
                         <span className="nav-icon">🔔</span> 알림
-                        {mockNotifications.filter(n => !n.read).length > 0 && (
-                            <span className="nav-badge">{mockNotifications.filter(n => !n.read).length}</span>
-                        )}
+                    </div>
+                    <div className={`nav-item ${activeTab === 'badges' ? 'active' : ''}`} onClick={() => setActiveTab('badges')}>
+                        <span className="nav-icon">🏆</span> 뱃지/업적
                     </div>
 
                     <div className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
