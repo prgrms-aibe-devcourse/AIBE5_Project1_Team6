@@ -16,7 +16,7 @@ export default function AuthModal({ onClose, onSuccess }) {
 
   const translateError = (msg) => {
     if (!msg) return "알 수 없는 오류가 발생했습니다.";
-    if (msg.includes("Invalid login credentials")) return "아이디 또는 비밀번호가 잘못되었습니다.";
+    if (msg.includes("Invalid login credentials")) return "아이디/비밀번호가 틀렸습니다.";
     if (msg.includes("User already registered")) return "이미 가입된 이메일입니다.";
     if (msg.includes("Password should be")) return "비밀번호는 최소 6자 이상이어야 합니다.";
     if (msg.includes("Email not confirmed")) return "이메일 인증이 필요합니다. 메일함을 확인해주세요.";
@@ -32,7 +32,7 @@ export default function AuthModal({ onClose, onSuccess }) {
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success("로그인 성공!");
+
         if (onSuccess) onSuccess(data.user);
         onClose();
       } else {
@@ -43,7 +43,7 @@ export default function AuthModal({ onClose, onSuccess }) {
         if (data.user && !data.session) {
             toast("가입 인증 메일을 보냈습니다! 메일함을 확인해주세요.", { icon: "📧", duration: 5000 });
         } else {
-            toast.success("가입이 완료되었습니다!");
+
             if (onSuccess) onSuccess(data.user);
             onClose();
         }
@@ -80,7 +80,7 @@ export default function AuthModal({ onClose, onSuccess }) {
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.2 }}
       >
-        <button className="closeBtn" onClick={onClose}><IoClose /></button>
+        <button className="closeBtn" onClick={onClose} style={{ color: '#000' }}><IoClose size={24} /></button>
         
         <div className="authHeader">
           <motion.h2 
@@ -89,7 +89,7 @@ export default function AuthModal({ onClose, onSuccess }) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            {isLogin ? "Welcome Back" : "Create Account"}
+            {isLogin ? "Welcome." : "Create Account"}
           </motion.h2>
           <p className="authSubtitle">
             {isLogin ? "여행 계획을 위해 로그인해주세요." : "나만의 여행 플랜을 시작해보세요."}

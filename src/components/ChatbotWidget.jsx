@@ -6,6 +6,7 @@ import { useAuthStore } from "../stores/authStore";
 import { supabase } from "../services/supabase";
 import { addSchedule } from "../services/schedulesStorage";
 import "../styles/chatbot.css";
+import { FiMessageSquare, FiX } from "react-icons/fi";
 
 export default function ChatbotWidget() {
   const [open, setOpen] = useState(false);
@@ -417,14 +418,46 @@ ${history}
 
   return (
     <>
-      <button className="chatFab" onClick={() => setOpen((v) => !v)}>
-        {open ? "×" : "AI"}
+      <button 
+        onClick={() => setOpen((v) => !v)}
+        style={{
+            position: 'fixed',
+            bottom: '30px',
+            right: '30px',
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            background: '#ffffff', 
+            color: '#2563eb',
+            border: '2px solid #2563eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: 'none',
+            zIndex: 9999,
+            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+            fontSize: '26px',
+            outline: 'none'
+        }}
+        onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.backgroundColor = '#2563eb';
+            e.currentTarget.style.color = '#fff';
+        }}
+        onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.backgroundColor = '#ffffff';
+            e.currentTarget.style.color = '#2563eb';
+        }}
+      >
+        {open ? <FiX /> : <FiMessageSquare />}
       </button>
 
       {open && (
         <div className="chatWindow">
           <div className="chatHeader">
-            <div className="chatTitle">Trip AI</div>
+            <img src="/title.jpg" alt="Walk2Fly" style={{ height: '36px', objectFit: 'contain' }} />
             <button className="chatClose" onClick={() => setOpen(false)}>닫기</button>
           </div>
 

@@ -1,97 +1,93 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useTripStore } from '../../stores/tripStore';
 import FunnelStepShell from './FunnelStepShell';
 import { containerVariants } from '../../utils/animationVariants';
+import { motion } from 'framer-motion';
 
-export default function StepBudget({ progressText = "3/5" }) {
-  const { setBudgetAmount, nextStep, prevStep, transport } = useTripStore(); // Get transport
+export default function StepBudget({ stepIndex, totalSteps }) {
+  const { setBudgetAmount, nextStep, prevStep, transport } = useTripStore();
   
   const isAirplane = transport === 'Airplane';
-  const basePresets = [100000, 300000, 500000, 1000000];
-  const presets = isAirplane ? basePresets.map(p => p * 10) : basePresets;
   
-  const [value, setValue] = useState(isAirplane ? 3000000 : 300000);
+  // Base presets
+  const budgetOptions = [
+    { 
+      label: '가성비', 
+      subLabel: '합리적으로', 
+      value: isAirplane ? 1000000 : 300000, 
+      icon: '💰' 
+    },
+    { 
+      label: '적당히', 
+      subLabel: '밸런스 있게', 
+      value: isAirplane ? 3000000 : 500000, 
+      icon: '💎' 
+    },
+    { 
+      label: '럭셔리', 
+      subLabel: '여유있게', 
+      value: isAirplane ? 10000000 : 1000000, 
+      icon: '✨' 
+    },
+  ];
 
-  const handleNext = () => {
-    setBudgetAmount(value);
-    nextStep();
+  const [selectedValue, setSelectedValue] = useState(null);
+
+  const handleSelect = (value) => {
+      setSelectedValue(value);
+      setBudgetAmount(value);
+      // Small delay for visual feedback if needed, but direct next is requested
+      setTimeout(() => {
+          nextStep();
+      }, 150);
   };
 
   return (
     <FunnelStepShell
       title="예산은 어느 정도 생각하시나요?"
-      subtitle="교통비, 식비 등을 포함한 대략적인 금액을 알려주세요."
-      progressText={progressText}
+      subtitle="편안하게 즐길 수 있는 정도면 충분해요"
+      stepIndex={stepIndex}
+      totalSteps={totalSteps}
       onBack={prevStep}
-      onNext={handleNext}
       motionVariants={containerVariants}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '400px', margin: '0 auto' }}>
-        
-        {/* Preset Buttons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            {presets.map(amount => (
-                <button
-                    key={amount}
-                    onClick={() => setValue(amount)}
+      <div style={{ width: '100%', maxWidth: '460px', margin: '20px auto 0', flex: 1 }}>
+        <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '12px',
+            width: '100%' 
+        }}>
+            {budgetOptions.map((option) => (
+                <motion.div
+                    key={option.label}
+                    onClick={() => handleSelect(option.value)}
+                    whileHover={{ scale: 1.02, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
+                    whileTap={{ scale: 0.98 }}
                     style={{
-                        padding: '12px',
-                        borderRadius: '12px',
-                        backgroundColor: value === amount ? '#d59563' : '#333',
-                        color: 'white',
-                        border: '1px solid #444',
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center', /* Row layout */
+                        justifyContent: 'flex-start',
+                        padding: '16px 24px',
+                        borderRadius: '16px',
+                        backgroundColor: selectedValue === option.value ? '#F0F7FF' : 'white',
+                        border: selectedValue === option.value ? '2px solid #5C94FF' : '1px solid #eee',
                         cursor: 'pointer',
-                        fontWeight: 'bold'
+                        transition: 'all 0.2s ease',
+                        boxShadow: 'none', /* Removed shadow */
+                        minHeight: '84px',
+                        textAlign: 'left'
                     }}
                 >
-                    {amount.toLocaleString()}원
-                </button>
+                    <div style={{ fontSize: '2.4rem', marginRight: '20px', lineHeight: 1 }}>{option.icon}</div>
+                    <div>
+                        <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: '700', marginBottom: '4px', color: '#333' }}>{option.label}</span>
+                        <span style={{ display: 'block', fontSize: '0.9rem', color: '#666', fontWeight: '500' }}>{option.subLabel}</span>
+                    </div>
+                </motion.div>
             ))}
         </div>
-
-        {/* Manual Input */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ color: '#aaa', fontSize: '0.9rem' }}>직접 입력 (원)</label>
-            <input 
-                type="number"
-                value={value}
-                onChange={(e) => setValue(Number(e.target.value))}
-                style={{
-                    padding: '16px',
-                    borderRadius: '12px',
-                    border: '1px solid #555',
-                    background: '#222',
-                    color: 'white',
-                    fontSize: '1.2rem',
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    outline: 'none'
-                }}
-            />
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: '10px', color: '#888' }}>
-            * AI가 이 금액 내에서 최적의 코스를 짜드립니다.
-        </div>
-
-        <button 
-            onClick={handleNext}
-            style={{
-                marginTop: '16px',
-                width: '100%',
-                padding: '16px',
-                borderRadius: '12px',
-                border: 'none',
-                background: '#d59563',
-                color: 'white',
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-            }}
-        >
-            다음으로
-        </button>
       </div>
     </FunnelStepShell>
   );

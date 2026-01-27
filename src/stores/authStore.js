@@ -4,7 +4,10 @@ export const useAuthStore = create((set) => ({
   user: null,
   session: null,
   loading: true,
-  setUser: (user) => set({ user }),
+  isGuest: false,
+  guestId: null,
+  setUser: (user) => set({ user, isGuest: false, guestId: null }), // Clear guest mode on login
   setSession: (session) => set({ session, loading: false }),
-  signOut: () => set({ user: null, session: null }),
+  setGuest: (isGuest) => set({ isGuest, guestId: isGuest ? Math.random().toString(36).substring(2, 6).toUpperCase() : null }),
+  signOut: () => set({ user: null, session: null, isGuest: false, guestId: null }),
 }));

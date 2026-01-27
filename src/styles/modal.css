@@ -6,7 +6,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.75);
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -26,11 +26,11 @@
 }
 
 .confirmModalCard {
-    background: linear-gradient(135deg, #1e2438 0%, #151824 100%);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
     border-radius: 20px;
     width: min(440px, calc(100% - 40px));
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
     animation: slideUp 0.3s ease;
     overflow: hidden;
 }
@@ -49,14 +49,14 @@
 
 .confirmModalHeader {
     padding: 24px 24px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .confirmModalTitle {
     margin: 0;
     font-size: 20px;
     font-weight: 700;
-    color: #fff;
+    color: #1a1a1a;
 }
 
 .confirmModalBody {
@@ -67,7 +67,7 @@
     margin: 0;
     font-size: 15px;
     line-height: 1.6;
-    color: rgba(255, 255, 255, 0.85);
+    color: #444;
     white-space: pre-line;
 }
 
@@ -92,32 +92,36 @@
 }
 
 .confirmModalBtnCancel {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: #f0f2f5;
+    color: #666;
+    border: 1px solid #e0e0e0;
 }
 
 .confirmModalBtnCancel:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: #e4e7eb;
 }
 
 .confirmModalBtnConfirm {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #5C94FF;
     color: #fff;
+    box-shadow: none;
 }
 
 .confirmModalBtnConfirm:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+    box-shadow: none;
 }
 
 .confirmModalBtnDanger {
-    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-    color: #fff;
+    background: #fff;
+    color: #ff5252;
+    border: 1px solid #ff5252;
 }
 
 .confirmModalBtnDanger:hover {
+    background: #fff5f5;
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(245, 101, 101, 0.4);
+    box-shadow: none;
 }
 
 /* Make sure modals appear above everything */
