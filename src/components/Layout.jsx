@@ -17,7 +17,7 @@ function HamburgerMenu({ user, nav, handleLogout, setShowAuth }) {
 
     const menuItems = [
         { icon: <FiUser />, label: '마이페이지', onClick: () => { nav('/mypage'); setIsOpen(false); } },
-        { icon: <FiMessageSquare />, label: '후기', onClick: () => { nav('/reviews'); setIsOpen(false); } },
+        { icon: <FiMessageSquare />, label: '커뮤니티', onClick: () => { nav('/community'); setIsOpen(false); } },
         { icon: <FiEdit />, label: '일정관리', onClick: () => { nav('/planlab'); setIsOpen(false); } },
     ];
 
@@ -157,6 +157,7 @@ export default function Layout() {
   const [showAuth, setShowAuth] = useState(false);
 
   const isHome = location.pathname === '/';
+  const isCommunity = location.pathname.startsWith('/community');
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -281,7 +282,7 @@ export default function Layout() {
       </main>
 
       {/* ✅ 어디 페이지든 오른쪽 아래 고정 (홈 제외) */}
-      {!isHome && <ChatbotWidget />}
+      {!isHome && !isCommunity && <ChatbotWidget />}
 
       <Toaster position="top-center" />
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
