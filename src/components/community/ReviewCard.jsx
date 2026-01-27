@@ -57,25 +57,34 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
                         <FaStar key={i} color={i < review.rating ? "#fbbf24" : "#4b5563"} />
                     ))}
                 </div>
-                <div className="wellness-tags" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', margin: '8px 0' }}>
+                {/* 제목 추가 */}
+                {review.title && (
+                    <h3 className="review-title" style={{
+                        fontSize: '1.1rem',
+                        fontWeight: '700',
+                        color: '#1f2937',
+                        margin: '8px 0 4px 0',
+                        lineHeight: '1.4'
+                    }}>
+                        {review.title}
+                    </h3>
+                )}
+                <div className="wellness-tags" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', margin: '8px 0' }}>
                     {review.mood && (
-                        <span className="wellness-tag mood" style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#eee', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                        <span className="wellness-tag mood" style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: '0.75rem', padding: '4px 10px', borderRadius: '12px', fontWeight: '500' }}>
                             {review.mood === 'romantic' ? '🌹 낭만' :
                                 review.mood === 'refresh' ? '🌈 리프레시' :
-                                    review.mood === 'active' ? '👟 에너지' : '🤫 고요함'}
+                                    review.mood === 'active' ? '👟 에너지 충전' : '🤫 고요한 휴식'}
                         </span>
                     )}
-                    {review.mood && review.themes?.length > 0 && (
-                        <span style={{ color: '#4b5563', fontSize: '0.8rem', margin: '0 2px' }}>•</span>
-                    )}
                     {review.themes?.map(theme => (
-                        <span key={theme} className="wellness-tag theme" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#bbb', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                        <span key={theme} className="wellness-tag theme" style={{ background: '#d1fae5', color: '#047857', fontSize: '0.75rem', padding: '4px 10px', borderRadius: '12px', fontWeight: '500' }}>
                             {theme === 'activity' ? '🪂 액티비티' :
-                                theme === 'food' ? '🍱 맛집' : '🌿 힐링'}
+                                theme === 'food' ? '🍱 맛집 탐방' : '🌿 힐링/휴식'}
                         </span>
                     ))}
                 </div>
-                <p className="review-text">{review.content}</p>
+                <p className="review-text">{review.content || review.body}</p>
             </div>
 
             <div className="review-footer" onClick={(e) => e.stopPropagation()}>
@@ -91,7 +100,7 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
                 </div>
 
                 {/* 본인 글일 경우 수정/삭제 버튼 */}
-                {currentUser && (currentUser.id === review.user_id || review.user_id.startsWith('mock-')) && (
+                {currentUser && currentUser.id === review.user_id && (
                     <div className="review-actions">
                         <button className="action-btn" onClick={() => onEdit(review)}>
                             <FaEdit />
