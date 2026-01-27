@@ -7,6 +7,9 @@ import TravelTips from "./TravelTips";
 import "../styles/scheduledetail.css";
 
 export default function ScheduleDetailView({ schedule }) {
+    if (!schedule) {
+        return <div style={{ padding: '2rem', textAlign: 'center' }}>일정 정보를 불러올 수 없습니다.</div>;
+    }
     const [activeDay, setActiveDay] = useState(1);
     const [expandedItems, setExpandedItems] = useState({});
     const [activeSection, setActiveSection] = useState("timeline"); // timeline, checklist, tips
@@ -14,56 +17,64 @@ export default function ScheduleDetailView({ schedule }) {
 
     // Parse schedule text into day-separated data
     const parseDailySchedule = (text) => {
-        if (!text) return [];
+        if (!text || typeof text !== 'string') {
+            // console.warn('Invalid schedule text:', text); // 디버깅용
+            return [];
+        }
 
-        const days = [];
-        const dayBlocks = text.split(/\[Day \d+\]/g).filter(block => block.trim());
+        try {
+            const days = [];
+            const dayBlocks = text.split(/\[Day \d+\]/g).filter(block => block.trim());
 
-        dayBlocks.forEach((block, dayIndex) => {
-            const lines = block.split("\n").filter(line => line.trim());
-            const items = [];
+            dayBlocks.forEach((block, dayIndex) => {
+                const lines = block.split("\n").filter(line => line.trim());
+                const items = [];
 
-            let currentItem = null;
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
+                let currentItem = null;
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
 
-                // Check if line starts with time (e.g., "09:00 - 🌅 섭지코지")
-                const timeMatch = line.match(/^(\d{2}:\d{2})\s*[-–]\s*(.+)/);
+                    // Check if line starts with time (e.g., "09:00 - 🌅 섭지코지")
+                    const timeMatch = line.match(/^(\d{2}:\d{2})\s*[-–]\s*(.+)/);
 
-                if (timeMatch) {
-                    if (currentItem) {
-                        items.push(currentItem);
+                    if (timeMatch) {
+                        if (currentItem) {
+                            items.push(currentItem);
+                        }
+
+                        const [_, time, content] = timeMatch;
+                        const emojiMatch = content.match(/^([^\s]+)\s+(.+)/);
+
+                        currentItem = {
+                            time,
+                            emoji: emojiMatch ? emojiMatch[1] : "📍",
+                            title: emojiMatch ? emojiMatch[2] : content,
+                            description: "",
+                            category: getCategoryFromEmoji(emojiMatch ? emojiMatch[1] : "📍"),
+                        };
+                    } else if (currentItem && line) {
+                        // This is a description line
+                        currentItem.description += (currentItem.description ? " " : "") + line;
                     }
-
-                    const [_, time, content] = timeMatch;
-                    const emojiMatch = content.match(/^([^\s]+)\s+(.+)/);
-
-                    currentItem = {
-                        time,
-                        emoji: emojiMatch ? emojiMatch[1] : "📍",
-                        title: emojiMatch ? emojiMatch[2] : content,
-                        description: "",
-                        category: getCategoryFromEmoji(emojiMatch ? emojiMatch[1] : "📍"),
-                    };
-                } else if (currentItem && line) {
-                    // This is a description line
-                    currentItem.description += (currentItem.description ? " " : "") + line;
                 }
-            }
 
-            if (currentItem) {
-                items.push(currentItem);
-            }
+                if (currentItem) {
+                    items.push(currentItem);
+                }
 
-            if (items.length > 0) {
-                days.push({
-                    day: dayIndex + 1,
-                    items,
-                });
-            }
-        });
+                if (items.length > 0) {
+                    days.push({
+                        day: dayIndex + 1,
+                        items,
+                    });
+                }
+            });
 
-        return days;
+            return days;
+        } catch (error) {
+            console.error("Schedule parsing error:", error);
+            return [];
+        }
     };
 
     const getCategoryFromEmoji = (emoji) => {

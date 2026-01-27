@@ -239,3 +239,44 @@ export async function generateAllTravelPlans(selections) {
         return null;
     }
 }
+
+/**
+ * 도시 이름에 어울리는 이모지 추천
+ * @param {string} cityName - 도시/국가 이름
+ * @returns {Promise<string>} 이모지 문자열
+ */
+export async function getCityEmoji(cityName) {
+    if (!GEMINI_API_KEY || !genAI) return "🌍";
+
+    const prompt = `Give me a single emoji that best represents the city or country "${cityName}". 
+    IMPORTANT: Do NOT return flag emojis (e.g. 🇮🇹, 🇰🇷), as they are not supported on Windows.
+    PRIORITY:
+    1. Famous Landmark (e.g. 🗼, 🗽, 🏯, 🗿)
+    2. Scenery / Nature (e.g. 🌋, 🏜️, 🏔️, 🌴)
+    3. Representative Item/Vibe (e.g. 🎭, 💃, 🤠)
+    Avoid food unless there is absolutely no landmark (e.g. 🍕).
+    Return ONLY the emoji character.`;
+
+    try {
+        const result = await genAI.models.generateContent({
+            model: MODEL_ID,
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 10,
+            },
+        });
+
+        let text = "";
+        if (result.response && typeof result.response.text === 'function') {
+            text = result.response.text();
+        } else {
+            text = result.candidates?.[0]?.content?.parts?.[0]?.text || "🌍";
+        }
+
+        return text.trim() || "🌍";
+    } catch (err) {
+        console.error("[GeminiTravelPlanner] Emoji generation failed:", err);
+        return "🌍";
+    }
+}

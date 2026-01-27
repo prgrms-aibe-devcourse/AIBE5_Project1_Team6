@@ -800,6 +800,14 @@
     transform: translateX(5px);
 }
 
+/* Schedule List Style (PlanLab Style) */
+.schedule-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 1000px;
+}
+
 .notification-item.unread {
     background: rgba(59, 130, 246, 0.1);
     border-left: 4px solid var(--accent-color);
