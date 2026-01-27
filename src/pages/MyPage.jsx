@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
@@ -7,7 +7,8 @@ import '../styles/mypage.css';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { loadPlans, removePlan } from '../services/plansStorage';
 import { loadSchedules } from '../services/schedulesStorage';
-import { getMemories, getNotifications, getUserBadges, initializeUserBadgesIfEmpty, markNotificationAsRead } from '../services/mypageService';
+import { getMemories, getNotifications, getUserBadges, initializeUserBadgesIfEmpty, markNotificationAsRead, createTripNotifications } from '../services/mypageService';
+import { communityService } from '../services/communityService';
 import TravelBiorhythm from '../components/TravelBiorhythm';
 import TravelStyleAnalysis from '../components/TravelStyleAnalysis';
 import { FaChevronRight, FaChevronLeft, FaMapMarkedAlt, FaPen, FaHeart, FaBell, FaCog, FaSignOutAlt, FaUserSlash, FaRobot, FaChartPie, FaCalendarAlt, FaUserFriends, FaStar, FaCheckDouble, FaTrash, FaPlane, FaCommentDots } from 'react-icons/fa';
@@ -43,17 +44,37 @@ export default function MyPage() {
     // Review Detail State
     const [selectedReview, setSelectedReview] = useState(null);
 
-    // Initial Mock Data
-    const initialNotifications = [
-        { id: 1, type: 'like', message: '김철수님이 회원님의 "스위스 여행" 후기를 좋아합니다.', time: '방금 전', read: false },
-        { id: 2, type: 'comment', message: '이영희님이 "오사카 먹방 투어" 후기에 댓글을 남겼습니다: "저도 여기 가봤는데 정말 맛있더라고요!"', time: '10분 전', read: false },
-        { id: 3, type: 'schedule', message: '오사카 3박 4일 여행이 3일 남았습니다. 준비물 챙기셨나요?', time: '30분 전', read: false },
-    ];
-    const [notifications, setNotifications] = useState(initialNotifications);
-
     // Data Queries
     const { data: myPlans = [] } = useQuery({ queryKey: ['plans'], queryFn: loadPlans });
     const { data: aiSchedules = [] } = useQuery({ queryKey: ['schedules'], queryFn: loadSchedules });
+
+    // Fetch user's reviews from community
+    const { data: userReviews = [] } = useQuery({
+        queryKey: ['userReviews', user?.id],
+        queryFn: async () => {
+            if (!user?.id) return [];
+            const { data, error } = await communityService.getPosts('review', 'latest', { type: '', keyword: '' }, { mood: null, themes: [] }, user.id);
+            if (error) {
+                console.error('Failed to fetch user reviews:', error);
+                return [];
+            }
+            // Filter to only show posts by current user
+            return data.filter(post => post.user_id === user.id);
+        },
+        enabled: !!user?.id
+    });
+
+    // Fetch user's notifications from database
+    const { data: dbNotifications = [], refetch: refetchNotifications } = useQuery({
+        queryKey: ['notifications', user?.id],
+        queryFn: async () => {
+            if (!user?.id) return [];
+            const data = await getNotifications(user.id);
+            return data;
+        },
+        enabled: !!user?.id,
+        refetchInterval: 30000 // Refetch every 30 seconds
+    });
 
     // Date Classification Logic
     const today = new Date();
@@ -132,6 +153,21 @@ export default function MyPage() {
         }
     }, [user]);
 
+    // Create trip notifications for upcoming schedules (with duplicate prevention)
+    const notificationCreatedRef = useRef(false);
+
+    useEffect(() => {
+        // Only run once when data is loaded
+        if (user?.id && (myPlans.length > 0 || aiSchedules.length > 0) && !notificationCreatedRef.current) {
+            notificationCreatedRef.current = true;
+            const allSchedules = [...myPlans, ...aiSchedules];
+            createTripNotifications(user.id, allSchedules).then(() => {
+                // Refetch notifications after creating trip notifications
+                refetchNotifications();
+            });
+        }
+    }, [user?.id, myPlans.length, aiSchedules.length]);
+
     // Handlers
     const handleLogout = async () => {
         try {
@@ -190,77 +226,72 @@ export default function MyPage() {
         { id: 1, title: '교토 전통 료칸', category: '숙소', rating: 4.8, cover: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e' },
         { id: 2, title: '루브르 박물관 가이드 투어', category: '액티비티', rating: 4.9, cover: 'https://images.unsplash.com/photo-1499856871940-b625a4aa4e53' },
     ];
-    const mockReviews = [
-        {
-            id: 1,
-            title: '스위스 알프스에서의 놀라운 경험 🏔️',
-            date: '2024.12.20',
-            rating: 5,
-            content: '융프라우요흐의 만년설은 정말 장관이었습니다. 기차 여행도 너무 낭만적이었고...',
-            fullContent: "스위스 여행은 제 인생 최고의 선택이었어요! \n\n유럽의 지붕이라 불리는 융프라우요흐에 올라갔을 때의 그 감동은 말로 표현할 수 없습니다. \n\n기차를 타고 올라가는 내내 창밖으로 보이는 풍경이 한 폭의 그림 같았고, 정상에서 먹은 신라면은 정말 꿀맛이었죠. \n\n숙소는 인터라켄에 잡았는데, 아침에 눈을 떴을 때 창문 너머로 보이는 설산의 풍경이...",
-            thumb: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99',
-            tags: ['스위스', '알프스', '자연', '힐링'],
-            likes: 124,
-            comments: 45
-        },
-        {
-            id: 2,
-            title: '오사카 먹방 투어, 여기가 찐이다! 🍜',
-            date: '2023.10.15',
-            rating: 4,
-            content: '도톤보리의 타코야키, 오코노미야키... 하루에 5끼를 먹어도 부족했던 오사카 식도락 여행 후기.',
-            fullContent: "오사카는 정말 먹다 죽는다는 말이 딱 맞아요. \n\n도톤보리 강가를 거닐며 먹은 타코야키, 그리고 줄 서서 먹은 이치란 라멘... \n\n특히 구로몬 시장에서 먹은 신선한 해산물들은 잊을 수가 없네요. \n\n유니버셜 스튜디오도 갔는데 닌텐도 월드는 사람이 너무 많아서...",
-            thumb: 'https://images.unsplash.com/photo-1590559899731-a068f637db64',
-            tags: ['일본', '오사카', '먹방', '맛집'],
-            likes: 89,
-            comments: 12
-        },
-        {
-            id: 3,
-            title: '발리 우붓에서의 완벽한 휴식 🌿',
-            date: '2024.01.10',
-            rating: 5,
-            content: '초록빛 논뷰를 바라보며 즐기는 요가, 그리고 풀빌라에서의 수영. 지상낙원이 따로 없네요.',
-            fullContent: "발리 우붓은 정말 힐링 그 자체였습니다. \n\n아침 일찍 요가 클래스를 듣고, 신선한 과일로 만든 스무디 볼을 먹으니 몸과 마음이 정화되는 기분이었어요. \n\n몽키 포레스트에서 원숭이들과 재미있는 추억도 만들었고, 특히 저녁에 풀빌라에서 본 쏟아지는 별들은 평생 잊지 못할 것 같습니다. \n\n디지털 디톡스를 원하신다면 우붓을 강력 추천합니다!",
-            thumb: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4',
-            tags: ['발리', '휴양', '요가', '풀빌라'],
-            likes: 215,
-            comments: 34
-        },
-        {
-            id: 4,
-            title: '낭만의 도시 파리, 에펠탑 야경 ✨',
-            date: '2023.11.05',
-            rating: 4,
-            content: '센강 유람선을 타고 바라본 에펠탑의 반짝임. 파리는 역시 사랑의 도시였습니다.',
-            fullContent: "파리에 도착하자마자 느껴지는 그 특유의 낭만적인 분위기! \n\n낮에는 루브르 박물관과 오르세 미술관을 돌며 예술에 취하고, 밤에는 바토무슈를 타고 에펠탑의 정각 반짝임(화이트 에펠)을 감상했습니다. \n\n길거리 빵집에서 사 먹은 크루아상은 한국에서 먹던 것과는 차원이 다르더군요. \n\n다만 소매치기는 조심해야 해요! 가방 꼭 붙들고 다니세요.",
-            thumb: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34',
-            tags: ['프랑스', '파리', '야경', '예술'],
-            likes: 178,
-            comments: 28
-        }
-    ];
-    const unreadCount = notifications.filter(n => !n.read).length;
 
-    const handleDeleteNotification = (id) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-        toast.success("알림이 삭제되었습니다.");
+    // Calculate unread count from database notifications
+    const unreadCount = dbNotifications.filter(n => !n.is_read).length;
+
+    const handleDeleteNotification = async (id) => {
+        const { error } = await supabase
+            .from('notifications')
+            .delete()
+            .eq('id', id);
+
+        if (!error) {
+            toast.success("알림이 삭제되었습니다.");
+            refetchNotifications();
+        } else {
+            toast.error("알림 삭제에 실패했습니다.");
+        }
     };
 
-    const handleClearAllNotifications = () => {
+    const handleClearAllNotifications = async () => {
         if (window.confirm("모든 알림을 삭제하시겠습니까?")) {
-            setNotifications([]);
-            toast.success("모든 알림이 삭제되었습니다.");
+            const { error } = await supabase
+                .from('notifications')
+                .delete()
+                .eq('user_id', user?.id);
+
+            if (!error) {
+                toast.success("모든 알림이 삭제되었습니다.");
+                refetchNotifications();
+            } else {
+                toast.error("알림 삭제에 실패했습니다.");
+            }
         }
     };
 
-    const handleMarkAsRead = (id) => {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    const handleMarkAsRead = async (id) => {
+        await markNotificationAsRead(id);
+        refetchNotifications();
     };
 
-    const handleMarkAllAsRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    const handleMarkAllAsRead = async () => {
+        const unreadNotifications = dbNotifications.filter(n => !n.is_read);
+
+        for (const notification of unreadNotifications) {
+            await markNotificationAsRead(notification.id);
+        }
+
         toast.success("모든 알림을 읽음 처리했습니다.");
+        refetchNotifications();
+    };
+
+    // Helper function to format notification time
+    const formatNotificationTime = (createdAt) => {
+        if (!createdAt) return '';
+
+        const now = new Date();
+        const created = new Date(createdAt);
+        const diffMs = now - created;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return '방금 전';
+        if (diffMins < 60) return `${diffMins}분 전`;
+        if (diffHours < 24) return `${diffHours}시간 전`;
+        if (diffDays < 7) return `${diffDays}일 전`;
+        return created.toLocaleDateString('ko-KR');
     };
 
 
@@ -506,53 +537,58 @@ export default function MyPage() {
                                     <div className="review-detail-header">
                                         <h2 className="review-detail-title">{selectedReview.title}</h2>
                                         <div className="review-detail-meta">
-                                            <span>📅 {selectedReview.date}</span>
-                                            <span className="star-rating">{'★'.repeat(selectedReview.rating)}</span>
+                                            <span>📅 {new Date(selectedReview.created_at).toLocaleDateString('ko-KR')}</span>
+                                            <span className="star-rating">{'★'.repeat(selectedReview.rating || 5)}</span>
                                         </div>
                                     </div>
-                                    <div className="review-detail-img-wrapper">
-                                        <img src={selectedReview.thumb} alt={selectedReview.title} className="review-detail-img" />
-                                    </div>
+                                    {selectedReview.media && selectedReview.media.length > 0 && (
+                                        <div className="review-detail-img-wrapper">
+                                            <img src={selectedReview.media[0]} alt={selectedReview.title} className="review-detail-img" />
+                                        </div>
+                                    )}
                                     <div className="review-tags">
-                                        {selectedReview.tags.map((tag, idx) => (
-                                            <span key={idx} className="review-tag">#{tag}</span>
-                                        ))}
+                                        {selectedReview.destination && <span className="review-tag">#{selectedReview.destination}</span>}
+                                        {selectedReview.mood && <span className="review-tag">#{selectedReview.mood}</span>}
+                                        {selectedReview.theme && <span className="review-tag">#{selectedReview.theme}</span>}
                                     </div>
-                                    <p className="review-body-text">{selectedReview.fullContent}</p>
+                                    <p className="review-body-text">{selectedReview.body || selectedReview.content}</p>
                                     <div className="review-interactions">
                                         <div className="interaction-item red">
-                                            <FaHeart /> {selectedReview.likes}
+                                            <FaHeart /> {selectedReview.likes || 0}
                                         </div>
                                         <div className="interaction-item blue">
-                                            <FaUserFriends /> {selectedReview.comments}
+                                            <FaUserFriends /> {selectedReview.comments || 0}
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         ) : (
                             <div className="reviews-list">
-                                {mockReviews.map(item => (
+                                {userReviews.map(item => (
                                     <div key={item.id} className="review-card" onClick={() => setSelectedReview(item)}>
                                         <div className="review-card-thumb">
-                                            <img src={item.thumb} alt={item.title} />
+                                            <img
+                                                src={item.media && item.media.length > 0 ? item.media[0] : 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=800&q=80'}
+                                                alt={item.title}
+                                            />
                                         </div>
                                         <div className="review-card-content">
                                             <div className="review-card-header">
                                                 <h3 className="review-card-title">{item.title}</h3>
-                                                <span className="review-card-rating">⭐ {item.rating}</span>
+                                                <span className="review-card-rating">⭐ {item.rating || 5}</span>
                                             </div>
-                                            <p className="review-card-snippet">{item.content}</p>
+                                            <p className="review-card-snippet">{item.body?.substring(0, 100) || item.content?.substring(0, 100)}...</p>
                                             <div className="review-card-footer">
-                                                <span className="review-date">{item.date}</span>
+                                                <span className="review-date">{new Date(item.created_at).toLocaleDateString('ko-KR')}</span>
                                                 <div className="review-card-stats">
-                                                    <span>❤️ {item.likes}</span>
-                                                    <span>💬 {item.comments}</span>
+                                                    <span>❤️ {item.likes || 0}</span>
+                                                    <span>💬 {item.comments || 0}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 ))}
-                                {mockReviews.length === 0 && <div className="empty-state">작성한 후기가 없습니다.</div>}
+                                {userReviews.length === 0 && <div className="empty-state">작성한 후기가 없습니다.</div>}
                             </div>
                         )}
                     </div>
@@ -577,7 +613,7 @@ export default function MyPage() {
 
                     <div className="notification-list-container">
                         <div className="notification-header-actions">
-                            <span className="noti-count-label">총 {notifications.length}개</span>
+                            <span className="noti-count-label">총 {dbNotifications.length}개</span>
                             <div className="noti-actions">
                                 <button className="action-pill-btn" onClick={handleMarkAllAsRead}>
                                     <FaCheckDouble /> 모두 읽음
@@ -588,7 +624,7 @@ export default function MyPage() {
                             </div>
                         </div>
 
-                        {notifications.map(noti => {
+                        {dbNotifications.map(noti => {
                             let Icon = FaBell;
                             let colorClass = 'gray';
                             if (noti.type === 'like') { Icon = FaHeart; colorClass = 'red'; }
@@ -596,16 +632,16 @@ export default function MyPage() {
                             if (noti.type === 'comment') { Icon = FaCommentDots; colorClass = 'green'; }
 
                             return (
-                                <div key={noti.id} className={`notification-card ${!noti.read ? 'unread' : ''}`} onClick={() => handleMarkAsRead(noti.id)}>
+                                <div key={noti.id} className={`notification-card ${!noti.is_read ? 'unread' : ''}`} onClick={() => handleMarkAsRead(noti.id)}>
                                     <div className={`noti-icon-box ${colorClass}`}>
                                         <Icon />
                                     </div>
                                     <div className="noti-content-wrapper">
                                         <p className="noti-message">{noti.message}</p>
-                                        <span className="noti-time">{noti.time}</span>
+                                        <span className="noti-time">{formatNotificationTime(noti.created_at)}</span>
                                     </div>
                                     <div className="noti-right-actions">
-                                        {!noti.read && <div className="noti-unread-dot"></div>}
+                                        {!noti.is_read && <div className="noti-unread-dot"></div>}
                                         <button
                                             className="noti-delete-btn"
                                             onClick={(e) => { e.stopPropagation(); handleDeleteNotification(noti.id); }}
@@ -617,7 +653,7 @@ export default function MyPage() {
                                 </div>
                             );
                         })}
-                        {notifications.length === 0 && (
+                        {dbNotifications.length === 0 && (
                             <div className="empty-state">
                                 <div className="empty-icon">🔕</div>
                                 새로운 알림이 없습니다.
@@ -652,13 +688,12 @@ export default function MyPage() {
         };
 
         const titles = {
-            plans: '내 여행 플랜',
-            ai_plans: 'AI 여행 계획',
+            plans: '저장된 장소',
+            ai_plans: '나의 여행 일정',
             upcoming: '다가오는 여행',
             past: '지난 여행',
             analysis: '내 여행 성향',
-            reviews: '내가 쓴 글',
-            wishlist: '저장한 장소',
+            reviews: '나의 후기',
             notifications: '알림',
             settings: '설정'
         };
