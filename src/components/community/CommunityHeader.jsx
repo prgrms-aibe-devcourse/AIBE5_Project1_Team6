@@ -6,36 +6,46 @@ export default function CommunityHeader({ activeCategory, onCategoryChange, onWr
     const navigate = useNavigate();
 
     return (
-        <div className="community-header-container" style={{ textAlign: 'center', position: 'relative', padding: '40px 20px 20px' }}>
-            {/* Back Button */}
-            <button
-                onClick={() => navigate(-1)}
-                style={{
-                    position: 'absolute',
-                    left: '20px',
-                    top: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #e5e7eb',
-                    background: 'white',
-                    color: '#3b82f6',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '0.9rem'
-                }}
-            >
-                <FaChevronLeft /> 돌아가기
-            </button>
+        <div className="community-header-container" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: '40px 20px 20px',
+            gap: '24px',
+            maxWidth: '1200px',
+            margin: '0 auto',
+            width: '100%'
+        }}>
 
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
+                <button
+                    onClick={() => navigate(-1)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        background: 'white',
+                        color: '#3b82f6',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '0.9rem',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                >
+                    <FaChevronLeft /> 돌아가기
+                </button>
+            </div>
 
-            {/* Title & Subtitle */}
-            <h1 style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '8px', color: '#1f2937' }}>여행 Talk</h1>
-            <p style={{ color: '#6b7280', fontSize: '1.1rem', marginBottom: '32px' }}>여행 이야기를 나눠요</p>
+            <div style={{ textAlign: 'center' }}>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '8px', color: '#1f2937' }}>여행 Talk</h1>
+                <p style={{ color: '#6b7280', fontSize: '1.1rem', margin: 0 }}>여행 이야기를 나눠요</p>
+            </div>
 
-            {/* Tab Switcher */}
             <div style={{
                 display: 'inline-flex',
                 background: 'white',

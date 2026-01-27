@@ -85,3 +85,38 @@
     color: #1a1a1a;
     font-weight: 800;
 }
+
+/* Responsive tweaks */
+@media (max-width: 600px) {
+    .pageWrap {
+        padding: 0 16px 40px;
+    }
+
+    .mapContainer {
+        height: 320px;
+        /* Adjust map height for mobile to see more content */
+        border-radius: 20px;
+    }
+
+    .searchContainer {
+        flex-direction: row;
+        /* Keep row but tighten */
+        padding: 4px;
+        gap: 6px;
+    }
+
+    .searchInput {
+        font-size: 14px;
+        padding: 10px 16px;
+    }
+
+    .searchBtn {
+        padding: 0 16px;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    .pageTitle {
+        font-size: 1.6rem;
+    }
+}

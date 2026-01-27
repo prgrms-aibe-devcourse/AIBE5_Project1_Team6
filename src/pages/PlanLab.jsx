@@ -250,9 +250,9 @@ export default function PlanLab() {
                             </div>
                         </div>
 
-                    <ErrorBoundary>
-                        <ScheduleDetailView schedule={selectedForView} />
-                    </ErrorBoundary>
+                        <ErrorBoundary>
+                            <ScheduleDetailView schedule={selectedForView} />
+                        </ErrorBoundary>
 
                         <div className="detailActions">
                             <button className="secondaryBtn" onClick={() => setActiveTab(0)}>

@@ -34,7 +34,7 @@ export default function RecommendationCard({
       <div className="rec-info">
         <div className="rec-header">
           <h3 className="rec-title">{title}</h3>
-          {tag && <span className="rec-tag">{tag}</span>}
+          {tag && <span className="rec-tag" data-tag={tag}>{tag}</span>}
         </div>
         <div className="rec-country">{country || "대한민국"}</div>
         <div className="rec-desc">{desc || "AI가 분석한 최적의 코스입니다."}</div>

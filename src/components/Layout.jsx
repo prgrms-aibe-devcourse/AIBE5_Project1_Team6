@@ -47,7 +47,7 @@ function HamburgerMenu({ user, nav, handleLogout, setShowAuth }) {
             {isOpen && (
                 <>
                     {/* Overlay to close menu */}
-                    <div 
+                    <div
                         onClick={() => setIsOpen(false)}
                         style={{
                             position: 'fixed',
@@ -150,142 +150,133 @@ function HamburgerMenu({ user, nav, handleLogout, setShowAuth }) {
 }
 
 export default function Layout() {
-  const nav = useNavigate();
-  const location = useLocation();
-  const { user, isGuest, guestId } = useAuthStore();
-  const { reset } = useTripStore(); // Added
-  const [showAuth, setShowAuth] = useState(false);
+    const nav = useNavigate();
+    const location = useLocation();
+    const { user, isGuest, guestId } = useAuthStore();
+    const { reset } = useTripStore(); // Added
+    const [showAuth, setShowAuth] = useState(false);
 
-  const isHome = location.pathname === '/';
-  const isCommunity = location.pathname.startsWith('/community');
+    const isHome = location.pathname === '/';
+    const isCommunity = location.pathname.startsWith('/community');
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    // User stays on current page after logout as requested
-    // Toast removed as requested
-  };
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        // User stays on current page after logout as requested
+        // Toast removed as requested
+    };
 
-  const navButtonStyle = {
-    background: 'none',
-    border: 'none',
-    color: '#5C94FF',
-    fontSize: '0.95rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '8px 12px',
-    borderRadius: '8px',
-    transition: 'background 0.2s'
-  };
+    const navButtonStyle = {
+        background: 'none',
+        border: 'none',
+        color: '#5C94FF',
+        fontSize: '0.95rem',
+        fontWeight: '600',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        transition: 'background 0.2s'
+    };
 
-  const hoverStyle = (e) => e.target.style.backgroundColor = '#F0F7FF';
-  const unhoverStyle = (e) => e.target.style.backgroundColor = 'transparent';
+    const hoverStyle = (e) => e.target.style.backgroundColor = '#F0F7FF';
+    const unhoverStyle = (e) => e.target.style.backgroundColor = 'transparent';
 
-  // Mode Tab Helper
-  const ModeTab = ({ path, label }) => {
-    const isActive = location.pathname === path;
+    // Mode Tab Helper
+    const ModeTab = ({ path, label }) => {
+        const isActive = location.pathname === path;
+        return (
+            <span
+                onClick={() => nav(path)}
+                style={{
+                    cursor: 'pointer',
+                    fontWeight: isActive ? '800' : '400',
+                    color: isActive ? '#1a1a1a' : '#999',
+                    fontSize: '1rem',
+                    borderBottom: isActive ? '2px solid #1a1a1a' : '2px solid transparent', // Added visual indicator
+                    paddingBottom: '2px', // spacing for underline
+                    transition: 'all 0.2s'
+                }}
+            >
+                {label}
+            </span>
+        );
+    };
+
+    const Separator = () => <span style={{ color: '#ddd', fontSize: '0.8rem' }}>|</span>;
+
+    // Track Last Main Mode
+    useEffect(() => {
+        if (['/walk', '/traffic', '/airplane'].includes(location.pathname)) {
+            sessionStorage.setItem('lastMainMode', location.pathname);
+        }
+    }, [location.pathname]);
+
+    const handleLogoClick = () => {
+        // If user is logged in, go to last used mode (Walk/Traffic/Airplane)
+        // If logged out, go to initial page (Home)
+        if (user) {
+            const lastMode = sessionStorage.getItem('lastMainMode');
+            nav(lastMode || '/walk');
+        } else {
+            nav('/');
+        }
+    };
+
     return (
-        <span 
-            onClick={() => nav(path)}
-            style={{
-                cursor: 'pointer',
-                fontWeight: isActive ? '800' : '400',
-                color: isActive ? '#1a1a1a' : '#999',
-                fontSize: '1rem',
-                borderBottom: isActive ? '2px solid #1a1a1a' : '2px solid transparent', // Added visual indicator
-                paddingBottom: '2px', // spacing for underline
-                transition: 'all 0.2s'
-            }}
-        >
-            {label}
-        </span>
-    );
-  };
-
-  const Separator = () => <span style={{ color: '#ddd', fontSize: '0.8rem' }}>|</span>;
-
-  // Track Last Main Mode
-  useEffect(() => {
-    if (['/walk', '/traffic', '/airplane'].includes(location.pathname)) {
-        sessionStorage.setItem('lastMainMode', location.pathname);
-    }
-  }, [location.pathname]);
-
-  const handleLogoClick = () => {
-      // If user is logged in, go to last used mode (Walk/Traffic/Airplane)
-      // If logged out, go to initial page (Home)
-      if (user) {
-          const lastMode = sessionStorage.getItem('lastMainMode');
-          nav(lastMode || '/walk');
-      } else {
-          nav('/');
-      }
-  };
-
-  return (
-    <div className="appShell">
-      <AnimatePresence>
-        {!isHome && (
-          <motion.header 
-            className="topbar" 
-            initial={{ y: -80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -80, opacity: 0 }}
-            transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }} // Smooth easeOutCubic
-            style={{ 
-                backgroundColor: 'white', 
-                borderBottom: '1px solid #f0f0f0',
-                position: 'sticky',
-                top: 0,
-                zIndex: 1000
-            }}
-          >
-            <div className="global-layout-container topbar-inner" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center' }}>
-                {/* Left Group: Logo */}
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <div 
-                        className="brand" 
-                        style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-                        onClick={handleLogoClick}
+        <div className="appShell">
+            <AnimatePresence>
+                {!isHome && (
+                    <motion.header
+                        className="topbar"
+                        initial={{ y: -80, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -80, opacity: 0 }}
+                        transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }} // Smooth easeOutCubic
                     >
-                        <img src="/title.jpg" alt="Walk2Fly" style={{ height: '36px' }} />
-                    </div>
-                </div>
+                        <div className="global-layout-container topbar-inner">
+                            {/* Left Group: Logo & Navigation */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+                                <div
+                                    className="brand"
+                                    style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                                    onClick={handleLogoClick}
+                                >
+                                    <img src="/title.jpg" alt="Walk2Fly" style={{ height: '36px' }} />
+                                </div>
 
-                {/* Center Group: Mode Switcher */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px' }}>
-                    <ModeTab path="/walk" label="Walk" />
-                    <Separator />
-                    <ModeTab path="/traffic" label="Drive" />
-                    <Separator />
-                    <ModeTab path="/airplane" label="Airplane" />
-                </div>
+                                {/* Navigation Tabs (Moved from center) */}
+                                <div className="nav-tabs" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                                    <ModeTab path="/walk" label="Walk" />
+                                    <ModeTab path="/traffic" label="Drive" />
+                                    <ModeTab path="/airplane" label="Airplane" />
+                                </div>
+                            </div>
 
-                {/* Right Group: Hamburger Menu */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', position: 'relative' }}>
-                    <HamburgerMenu 
-                        user={user} 
-                        nav={nav} 
-                        handleLogout={handleLogout} 
-                        setShowAuth={setShowAuth} 
-                    />
-                </div>
-            </div>
-          </motion.header>
-        )}
-      </AnimatePresence>
+                            {/* Right Group: Hamburger Menu */}
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <HamburgerMenu
+                                    user={user}
+                                    nav={nav}
+                                    handleLogout={handleLogout}
+                                    setShowAuth={setShowAuth}
+                                />
+                            </div>
+                        </div>
+                    </motion.header>
+                )}
+            </AnimatePresence>
 
-      <main className={`content ${!isHome ? 'global-layout-container' : ''}`}>
-        <Outlet />
-      </main>
+            <main className={`content ${!isHome ? 'global-layout-container' : ''}`}>
+                <Outlet />
+            </main>
 
-      {/* ✅ 어디 페이지든 오른쪽 아래 고정 (홈 제외) */}
-      {!isHome && !isCommunity && <ChatbotWidget />}
+            {/* ✅ 어디 페이지든 오른쪽 아래 고정 (홈 제외) */}
+            {!isHome && !isCommunity && <ChatbotWidget />}
 
-      <Toaster position="top-center" />
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
-    </div>
-  );
+            <Toaster position="top-center" />
+            {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+        </div>
+    );
 }

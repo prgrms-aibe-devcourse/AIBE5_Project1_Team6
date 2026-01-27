@@ -283,7 +283,7 @@ export default function Airplane() {
                 </div>
 
                 {/* 🔍 Search Container */}
-                <div className="searchContainer" style={{ maxWidth: '600px', margin: '0 auto', position: 'relative', zIndex: 10 }}>
+                <div className="searchContainer" style={{ width: '100%', maxWidth: '100%', margin: '0 auto', position: 'relative', zIndex: 10 }}>
                     <input
                         type="text"
                         placeholder="어디로 떠나볼까요? (예: 파리, 방콕, 뉴욕)"
