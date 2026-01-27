@@ -1,7 +1,8 @@
 import { useTripStore } from "../../stores/tripStore";
 import FunnelStepShell from "./FunnelStepShell";
+import { motion } from "framer-motion";
 
-export default function StepTheme({ progressText = "3/4" }) {
+export default function StepTheme({ stepIndex, totalSteps }) {
   const { themes, setThemes, nextStep, prevStep } = useTripStore();
 
   const containerVariants = {
@@ -20,37 +21,59 @@ export default function StepTheme({ progressText = "3/4" }) {
   return (
     <FunnelStepShell
       title="이번 여행의 목적은 무엇인가요?"
-      progressText={progressText}
+      stepIndex={stepIndex}
+      totalSteps={totalSteps}
       onBack={prevStep}
       motionVariants={containerVariants}
     >
-      <div className="heroButtons">
-        <button
-          className={`heroBtn ${themes.includes("activity") ? "active" : ""}`}
-          onClick={() => selectTheme("activity")}
-          type="button"
-        >
-          🪂 액티비티
-        </button>
-
-        <button
-          className={`heroBtn ${themes.includes("food") ? "active" : ""}`}
-          onClick={() => selectTheme("food")}
-          type="button"
-        >
-          🍱 맛집 탐방
-        </button>
-
-        <button
-          className={`heroBtn ${themes.includes("healing") ? "active" : ""}`}
-          onClick={() => selectTheme("healing")}
-          type="button"
-        >
-          🌿 힐링/휴식
-        </button>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '20px',
+        width: '100%',
+        marginTop: '20px',
+        flex: 1
+      }}>
+        {/* Buttons Mapping */}
+        {[
+            { id: 'activity', label: '🪂 액티비티', desc: '역동적인 즐거움' },
+            { id: 'food', label: '🍱 맛집 탐방', desc: '미식의 세계로' },
+            { id: 'healing', label: '🌿 힐링/휴식', desc: '여유로운 시간' }
+        ].map((item) => (
+            <motion.button
+                key={item.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.05, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => selectTheme(item.id)}
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    minHeight: '200px',
+                    padding: '30px',
+                    backgroundColor: themes.includes(item.id) ? '#F0F7FF' : 'white',
+                    border: themes.includes(item.id) ? '2px solid #5C94FF' : '2px solid #eee',
+                    borderRadius: '24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+                }}
+            >
+                <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>
+                    {item.label.split(' ')[0]}
+                </div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '8px', color: '#333' }}>
+                    {item.label.split(' ')[1]}
+                </h3>
+                 <p style={{ fontSize: '1rem', color: '#666', fontWeight: '500' }}>{item.desc}</p>
+            </motion.button>
+        ))}
       </div>
-
-      <p className="funnelHint">여기서 고른 분위기가, 추천 루트의 톤을 결정해요.</p>
     </FunnelStepShell>
   );
 }

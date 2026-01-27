@@ -4,11 +4,8 @@ export const reviewService = {
     // 후기 목록 가져오기
     async getReviews(sort = 'latest', search = { type: '', keyword: '' }, wellnessOptions = { mood: null, themes: [] }, currentUserId = null) {
         try {
-            // 기본 쿼리: 후기와 함께 현재 사용자의 좋아요 여부 확인
-            let query = supabase.from('reviews').select(`
-                *,
-                user_liked:review_likes(count).eq(user_id, ${currentUserId ? `'${currentUserId}'` : 'null'})
-            `);
+            // 1. 기본 쿼리 (JOIN 제거)
+            let query = supabase.from('reviews').select('*');
 
             // 검색 필터
             if (search.keyword) {
@@ -17,9 +14,8 @@ export const reviewService = {
                     // DB 컬럼이 title로 바뀌었으므로 title에서 검색
                     query = query.ilike('title', term);
                 } else if (search.type === 'author') {
-                    // author_name 컬럼이 실제 DB에는 없을 수 있음 (스크린샷에 안보임)
-                    // 하지만 UI에서 필요하므로 일단 titles/body에서 검색 유도하거나 
-                    // user_id 기반 조인이 필요할 수 있음. 우선은 title/body 검색만 지원.
+                     // author_name 컬럼이 없으면 에러가 날 수 있으므로, 안전하게 title/body 검색으로 대체하거나
+                     // 실제 컬럼이 있는지 확인해야 함. 일단은 title/body 검색으로 폴백.
                     query = query.or(`title.ilike.${term},body.ilike.${term}`);
                 } else if (search.type === 'content') {
                     query = query.ilike('body', term);
@@ -33,7 +29,6 @@ export const reviewService = {
                 query = query.eq('mood', wellnessOptions.mood);
             }
             if (wellnessOptions.themes && wellnessOptions.themes.length > 0) {
-                // DB의 theme 컬럼이 단일 text이므로 첫 번째 테마만 매칭 (또는 전체 매칭 시도)
                 query = query.eq('theme', wellnessOptions.themes[0]);
             }
 
@@ -44,16 +39,30 @@ export const reviewService = {
                 query = query.order('created_at', { ascending: false });
             }
 
-            const { data, error } = await query;
-            if (error) throw error;
+            // 2. 쿼리 실행
+            const { data: reviews, error: reviewError } = await query;
+            if (reviewError) throw reviewError;
 
-            // 데이터 가공 (is_liked 여부 추출 및 필드 매핑)
-            const processed = data.map(review => ({
+            // 3. 사용자의 좋아요 여부 별도 조회 (FK 오류 방지)
+            let userLikedIds = new Set();
+            if (currentUserId) {
+                const { data: likes } = await supabase
+                    .from('review_likes')
+                    .select('review_id')
+                    .eq('user_id', currentUserId);
+                
+                if (likes) {
+                    likes.forEach(like => userLikedIds.add(like.review_id));
+                }
+            }
+
+            // 4. 데이터 병합
+            const processed = reviews.map(review => ({
                 ...review,
                 destination: review.title, // UI 지원
                 content: review.body,      // UI 지원
-                themes: review.theme ? [review.theme] : [], // UI 지원 (배열로 변환)
-                is_liked: (review.user_liked?.[0]?.count || 0) > 0,
+                themes: review.theme ? [review.theme] : [], // UI 지원
+                is_liked: userLikedIds.has(review.id),
                 likes: review.like_count || 0,
                 comments: review.comment_count || 0
             }));

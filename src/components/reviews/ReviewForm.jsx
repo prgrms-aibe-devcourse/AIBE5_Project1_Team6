@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { FaStar, FaPlus, FaTrash, FaFolderOpen } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
 export default function ReviewForm({ initialData, onSubmit, onClose }) {
     const [formData, setFormData] = useState({
         destination: '',
         rating: 5,
+        title: '',
         content: '',
-        media: [], // [{ url: '', type: 'image' }]
+        media: [],
         mood: '',
-        themes: []
+        themes: [] // Kept in state but ignored in UI
     });
 
     // 새 미디어 입력 상태
@@ -19,6 +21,7 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
             setFormData({
                 destination: initialData.destination,
                 rating: initialData.rating,
+                title: initialData.title || '',
                 content: initialData.content,
                 media: initialData.media || [],
                 mood: initialData.mood || '',
@@ -85,59 +88,133 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
     };
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h3>{initialData ? '후기 수정' : '후기 작성'}</h3>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}>
-                        &times;
-                    </button>
+        <motion.div 
+            className="modal-overlay" 
+            onClick={onClose} 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ 
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
+        >
+            <motion.div 
+                className="modal-content" 
+                onClick={e => e.stopPropagation()} 
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                style={{
+                    background: 'white', width: '90%', maxWidth: '580px', // Wider
+                    borderRadius: '20px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                    padding: 0 // Force Remove Padding
+                }}
+            >
+                {/* 🎨 Redesigned Blue Header */}
+                <div style={{
+                    background: '#3b82f6',
+                    padding: '24px 28px', // Slightly more horizontal padding
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <h3 style={{ margin: 0, color: 'white', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                        {initialData ? '여행후기 수정' : '여행후기 글쓰기'}
+                    </h3>
+                    {/* Close Button (X) */}
+                    <div 
+                        onClick={onClose}
+                        style={{
+                            background: 'rgba(255,255,255,0.2)',
+                            padding: '8px', borderRadius: '12px',
+                            color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', transition: 'background 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                    >
+                        <FaPlus size={18} style={{ transform: 'rotate(45deg)' }} /> 
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: '24px', maxHeight: '80vh', overflowY: 'auto' }}>
+                    
+                    {/* Destination */}
                     <div className="form-group">
-                        <label>여행지</label>
+                        <label style={{ display: 'block', fontSize: '1rem', fontWeight: '800', marginBottom: '10px', color: '#111827' }}>여행지</label>
                         <input
                             type="text"
                             name="destination"
-                            className="form-input"
                             value={formData.destination}
                             onChange={handleChange}
-                            placeholder="예: 제주도, 파리"
+                            placeholder="예: 제주도, 발리, 도쿄"
                             required
+                            style={{
+                                width: '100%', padding: '16px', borderRadius: '16px',
+                                border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '1rem', 
+                                outline: 'none', fontFamily: 'inherit', color: '#111'
+                            }}
                         />
                     </div>
 
+                    {/* Rating */}
                     <div className="form-group">
-                        <label>평점</label>
-                        <div style={{ display: 'flex', gap: 5 }}>
+                        <label style={{ display: 'block', fontSize: '1rem', fontWeight: '800', marginBottom: '10px', color: '#111827' }}>별점</label>
+                        <div style={{ display: 'flex', gap: 10 }}>
                             {[1, 2, 3, 4, 5].map((star) => (
                                 <FaStar
                                     key={star}
-                                    size={24}
-                                    color={star <= formData.rating ? "#fbbf24" : "#4b5563"}
-                                    style={{ cursor: 'pointer' }}
+                                    size={36}
+                                    color={star <= formData.rating ? "#fbbf24" : "#e5e7eb"}
+                                    style={{ cursor: 'pointer', transition: 'color 0.2s' }}
                                     onClick={() => setFormData(prev => ({ ...prev, rating: star }))}
                                 />
                             ))}
                         </div>
                     </div>
 
+                    {/* Title (Added per Request & Image) */}
                     <div className="form-group">
-                        <label>내용</label>
-                        <textarea
-                            name="content"
-                            className="form-textarea"
-                            value={formData.content}
+                        <label style={{ display: 'block', fontSize: '1rem', fontWeight: '800', marginBottom: '10px', color: '#111827' }}>제목</label>
+                        <input
+                            type="text"
+                            name="title"
+                            value={formData.title}
                             onChange={handleChange}
-                            placeholder="여행 후기를 자유롭게 작성해주세요."
+                            placeholder="제목을 입력하세요"
                             required
+                            style={{
+                                width: '100%', padding: '16px', borderRadius: '16px',
+                                border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '1rem', 
+                                outline: 'none', fontFamily: 'inherit', color: '#111'
+                            }}
                         />
                     </div>
 
+                    {/* Content */}
                     <div className="form-group">
-                        <label>여행 무드</label>
-                        <div className="mood-selection" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+                         <label style={{ display: 'block', fontSize: '1rem', fontWeight: '800', marginBottom: '10px', color: '#111827' }}>내용</label>
+                         <textarea
+                            name="content"
+                            value={formData.content}
+                            onChange={handleChange}
+                            placeholder="내용을 입력하세요"
+                            required
+                            style={{
+                                width: '100%', padding: '16px', borderRadius: '16px', minHeight: '160px',
+                                border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: '1rem', 
+                                outline: 'none', resize: 'none', fontFamily: 'inherit', color: '#111', lineHeight: '1.6'
+                            }}
+                        />
+                    </div>
+
+                    {/* Mood */}
+                    <div className="form-group">
+                         <label style={{ display: 'block', fontSize: '1rem', fontWeight: '800', marginBottom: '10px', color: '#111827' }}>여행 무드</label>
+                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             {[
                                 { id: 'romantic', label: '🌹 낭만' },
                                 { id: 'refresh', label: '🌈 리프레시' },
@@ -147,13 +224,13 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
                                 <button
                                     key={mood.id}
                                     type="button"
-                                    className={`action-btn ${formData.mood === mood.id ? 'active' : ''}`}
                                     onClick={() => setFormData(prev => ({ ...prev, mood: mood.id }))}
                                     style={{
-                                        background: formData.mood === mood.id ? 'white' : '#374151',
-                                        color: formData.mood === mood.id ? '#1e1e1e' : 'white',
-                                        fontSize: '0.9rem',
-                                        padding: '0.6rem'
+                                        padding: '8px 16px', borderRadius: '20px', fontSize: '0.9rem', fontWeight: '600',
+                                        border: formData.mood === mood.id ? '1px solid #3b82f6' : '1px solid #e5e7eb',
+                                        background: formData.mood === mood.id ? '#eff6ff' : 'white',
+                                        color: formData.mood === mood.id ? '#3b82f6' : '#6b7280',
+                                        cursor: 'pointer', transition: 'all 0.2s'
                                     }}
                                 >
                                     {mood.label}
@@ -162,95 +239,48 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
                         </div>
                     </div>
 
+                    {/* Media */}
                     <div className="form-group">
-                        <label>여행 테마 (복수 선택 가능)</label>
-                        <div className="theme-selection" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            {[
-                                { id: 'activity', label: '🪂 액티비티' },
-                                { id: 'food', label: '🍱 맛집 탐방' },
-                                { id: 'healing', label: '🌿 힐링/휴식' }
-                            ].map((theme) => {
-                                const isSelected = formData.themes.includes(theme.id);
-                                return (
-                                    <button
-                                        key={theme.id}
-                                        type="button"
-                                        className={`action-btn ${isSelected ? 'active' : ''}`}
-                                        onClick={() => {
-                                            setFormData(prev => ({
-                                                ...prev,
-                                                themes: isSelected
-                                                    ? prev.themes.filter(t => t !== theme.id)
-                                                    : [...prev.themes, theme.id]
-                                            }));
-                                        }}
-                                        style={{
-                                            background: isSelected ? 'white' : '#374151',
-                                            color: isSelected ? '#1e1e1e' : 'white',
-                                            fontSize: '0.9rem',
-                                            padding: '0.5rem 1rem'
-                                        }}
-                                    >
-                                        {theme.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label>이미지/동영상 추가</label>
-
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept="image/*,video/*"
-                            style={{ display: 'none' }}
-                        />
-
-                        {/* URL 입력 및 파일 추가 */}
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={newMediaUrl}
-                                onChange={(e) => setNewMediaUrl(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault(); // 폼 제출 방지
-                                        handleAddMedia();
-                                    }
-                                }}
-                                placeholder="URL을 입력하거나 + 버튼을 눌러 파일 업로드"
-                            />
+                        <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: 'bold', marginBottom: '8px', color: '#1f2937' }}>사진/동영상</label>
+                        
+                        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                            {/* Upload Button */}
                             <button
                                 type="button"
-                                onClick={handleAddMedia}
-                                className="action-btn"
-                                style={{ background: 'white', color: '#1e1e1e', padding: '0 1rem', borderRadius: 8 }}
+                                onClick={() => fileInputRef.current.click()}
+                                style={{
+                                    width: '80px', height: '80px', borderRadius: '12px', border: '1px dashed #d1d5db',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af',
+                                    background: '#f9fafb', cursor: 'pointer', flexShrink: 0
+                                }}
                             >
-                                <FaPlus />
+                                <FaPlus size={20} />
                             </button>
-                        </div>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                accept="image/*,video/*"
+                                style={{ display: 'none' }}
+                            />
 
-                        {/* 추가된 미디어 목록 */}
-                        <div className="media-preview-list" style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0.5rem 0' }}>
+                            {/* Previews */}
                             {formData.media.map((item, idx) => (
-                                <div key={idx} style={{ position: 'relative', minWidth: '80px', height: '80px', flexShrink: 0 }}>
+                                <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', flexShrink: 0 }}>
                                     {item.type === 'video' ? (
-                                        <video
-                                            src={item.url}
-                                            muted
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }}
-                                        />
+                                        <video src={item.url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
                                     ) : (
-                                        <img src={item.url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
+                                        <img src={item.url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
                                     )}
                                     <button
                                         type="button"
                                         onClick={() => handleRemoveMedia(idx)}
-                                        style={{ position: 'absolute', top: -5, right: -5, background: 'red', color: 'white', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                        style={{
+                                            position: 'absolute', top: -6, right: -6,
+                                            background: '#ef4444', color: 'white', border: 'none',
+                                            borderRadius: '50%', width: '20px', height: '20px',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                        }}
                                     >
                                         &times;
                                     </button>
@@ -259,12 +289,31 @@ export default function ReviewForm({ initialData, onSubmit, onClose }) {
                         </div>
                     </div>
 
-                    <div className="modal-actions">
-                        <button type="button" onClick={onClose} className="action-btn" style={{ background: '#333', color: 'white', padding: '0.8rem 1.5rem', borderRadius: 8 }}>취소</button>
-                        <button type="submit" className="action-btn submit-btn" style={{ background: 'white', color: '#000', padding: '0.8rem 1.5rem', borderRadius: 8, fontWeight: 'bold' }}>저장하기</button>
+                    {/* Actions */}
+                    <div className="modal-actions" style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                        <button 
+                            type="button" 
+                            onClick={onClose} 
+                            style={{ 
+                                flex: 1, padding: '14px', borderRadius: '12px', border: 'none', 
+                                background: '#f3f4f6', color: '#4b5563', fontWeight: 'bold', cursor: 'pointer' 
+                            }}
+                        >
+                            취소
+                        </button>
+                        <button 
+                            type="submit" 
+                            style={{ 
+                                flex: 2, padding: '14px', borderRadius: '12px', border: 'none', 
+                                background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                            }}
+                        >
+                            등록하기
+                        </button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 }

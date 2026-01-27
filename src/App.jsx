@@ -44,7 +44,7 @@ export default function App() {
         <Route path="/traffic" element={<Traffic />} />
         <Route path="/airplane" element={<Airplane />} />
         <Route path="/planlab" element={<PlanLab />} />
-        {/* <Route path="/plans" element={<Plans />} /> */}
+        <Route path="/plans" element={<PlanLab />} />
         <Route path="/reviews" element={<Reviews />} />
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/login" element={<AuthPage />} />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { useTripStore } from '../stores/tripStore';
 import { reviewService } from '../services/reviewService';
@@ -207,18 +208,20 @@ export default function Reviews() {
                         style={{
                             padding: '8px 16px',
                             borderRadius: '20px',
-                            border: '1px solid #4b5563',
-                            background: !wellnessOptions.mood && wellnessOptions.themes.length === 0 ? 'white' : 'transparent',
-                            color: !wellnessOptions.mood && wellnessOptions.themes.length === 0 ? '#1e1e1e' : 'white',
+                            border: !wellnessOptions.mood && wellnessOptions.themes.length === 0 ? 'none' : '1px solid #e5e7eb',
+                            background: !wellnessOptions.mood && wellnessOptions.themes.length === 0 ? '#3b82f6' : 'white',
+                            color: !wellnessOptions.mood && wellnessOptions.themes.length === 0 ? 'white' : '#4b5563',
                             whiteSpace: 'nowrap',
                             cursor: 'pointer',
-                            flexShrink: 0
+                            flexShrink: 0,
+                            fontWeight: '600',
+                            boxShadow: !wellnessOptions.mood && wellnessOptions.themes.length === 0 ? '0 4px 12px rgba(59, 130, 246, 0.4)' : 'none'
                         }}
                     >
                         전체
                     </button>
 
-                    <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)', margin: '0 4px', flexShrink: 0 }}></div>
+                    <div style={{ width: '1px', height: '20px', background: '#e5e7eb', margin: '0 4px', flexShrink: 0 }}></div>
 
                     {/* 무드 그룹 */}
                     {[
@@ -239,12 +242,14 @@ export default function Reviews() {
                                 style={{
                                     padding: '8px 16px',
                                     borderRadius: '20px',
-                                    border: '1px solid #4b5563',
-                                    background: isActive ? 'white' : 'transparent',
-                                    color: isActive ? '#1e1e1e' : 'white',
+                                    border: isActive ? 'none' : '1px solid #e5e7eb',
+                                    background: isActive ? '#3b82f6' : 'white',
+                                    color: isActive ? 'white' : '#4b5563',
                                     whiteSpace: 'nowrap',
                                     cursor: 'pointer',
-                                    flexShrink: 0
+                                    flexShrink: 0,
+                                    fontWeight: '600',
+                                    boxShadow: isActive ? '0 4px 12px rgba(59, 130, 246, 0.4)' : 'none'
                                 }}
                             >
                                 {item.label}
@@ -252,7 +257,7 @@ export default function Reviews() {
                         );
                     })}
 
-                    <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)', margin: '0 4px', flexShrink: 0 }}></div>
+                    <div style={{ width: '1px', height: '20px', background: '#e5e7eb', margin: '0 4px', flexShrink: 0 }}></div>
 
                     {/* 테마 그룹 */}
                     {[
@@ -276,12 +281,14 @@ export default function Reviews() {
                                 style={{
                                     padding: '8px 16px',
                                     borderRadius: '20px',
-                                    border: '1px solid #4b5563',
-                                    background: isActive ? '#555' : 'transparent',
-                                    color: 'white',
+                                    border: isActive ? 'none' : '1px solid #e5e7eb',
+                                    background: isActive ? '#3b82f6' : 'white',
+                                    color: isActive ? 'white' : '#4b5563',
                                     whiteSpace: 'nowrap',
                                     cursor: 'pointer',
-                                    flexShrink: 0
+                                    flexShrink: 0,
+                                    fontWeight: '600',
+                                    boxShadow: isActive ? '0 4px 12px rgba(59, 130, 246, 0.4)' : 'none'
                                 }}
                             >
                                 {item.label}
@@ -327,18 +334,21 @@ export default function Reviews() {
                     setEditingReview(null);
                     setIsModalOpen(true);
                 }}>
-                    <FaPen size={20} />
+                    <span style={{ marginRight: '8px', fontSize: '1.2rem' }}>✍️</span>
+                    <span style={{ fontWeight: 'bold' }}>글쓰기</span>
                 </button>
             )}
 
-            {/* 작성/수정 모달 */}
-            {isModalOpen && (
-                <ReviewForm
-                    initialData={editingReview}
-                    onSubmit={handleSaveReview}
-                    onClose={() => setIsModalOpen(false)}
-                />
-            )}
+            {/* 작성/수정 모달 - AnimatePresence Added */}
+            <AnimatePresence>
+                {isModalOpen && (
+                    <ReviewForm
+                        initialData={editingReview}
+                        onSubmit={handleSaveReview}
+                        onClose={() => setIsModalOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
 
             {/* 상세 보기 모달 */}
             {viewingReview && (

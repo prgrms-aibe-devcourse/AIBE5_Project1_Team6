@@ -21,21 +21,49 @@ export default function StepTransport() {
     <FunnelStepShell
       title="이번 여행의 이동 수단은?"
       subtitle="원하시는 여행 스타일에 맞춰 추천해드릴게요."
-      progressText="1/4"
+      stepIndex={0}
+      totalSteps={0}
       motionVariants={containerVariants}
     >
-      <div className="selectionGrid col-3">
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '20px',
+        width: '100%',
+        marginTop: '20px',
+        flex: 1
+      }}>
          {options.map((option) => (
           <motion.button
             key={option.id}
-            className="selectionCard"
             variants={itemVariants}
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.05, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
             whileTap={{ scale: 0.95 }}
             onClick={() => handleSelect(option.id)}
+            style={{
+                width: '100%',
+                height: '100%',
+                minHeight: '200px',
+                padding: '30px',
+                backgroundColor: 'white',
+                border: '2px solid #eee',
+                borderRadius: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+            }}
           >
-             <h3 className="cardTitle" style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{option.label}</h3>
-             <p className="cardDesc" style={{ fontSize: '0.9rem', color: '#666' }}>{option.desc}</p>
+             <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>
+                 {option.label.split(' ')[0]}
+             </div>
+             <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '8px', color: '#333' }}>
+                 {option.label.split(' ')[1]}
+             </h3>
+             <p style={{ fontSize: '1rem', color: '#666', fontWeight: '500' }}>{option.desc}</p>
           </motion.button>
         ))}
       </div>
