@@ -1,18 +1,19 @@
-import { useState, useEffect } from 'react';
-import { FaStar, FaHeart, FaRegHeart, FaArrowLeft, FaArrowRight, FaPaperPlane } from 'react-icons/fa';
+import { useState, useEffect, useRef } from 'react';
+import { FaStar, FaHeart, FaRegHeart, FaArrowLeft, FaArrowRight, FaPaperPlane, FaTrash, FaEdit } from 'react-icons/fa';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { reviewService } from '../../services/reviewService';
+import { communityService } from '../../services/communityService';
 import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
 
-export default function ReviewDetailModal({ review, onClose, onLike }) {
+export default function ReviewDetailModal({ review, onClose, onLike, onEdit, onDelete }) {
     const { user } = useAuthStore();
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [replyingTo, setReplyingTo] = useState(null); // { id, author_name }
     const [loadingComments, setLoadingComments] = useState(true);
+    const commentInputRef = useRef(null);
 
     // 미디어 배열 (없으면 빈 배열)
     const mediaList = review.media || [];
@@ -23,7 +24,7 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
     // 댓글 로드
     const loadComments = async () => {
         setLoadingComments(true);
-        const { data, error } = await reviewService.getComments(review.id);
+        const { data, error } = await communityService.getComments(review.id);
         if (!error) {
             setComments(data);
         }
@@ -60,7 +61,7 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
             parent_id: replyingTo ? replyingTo.id : null
         };
 
-        const { data, error } = await reviewService.addComment(review.id, commentData);
+        const { data, error } = await communityService.addComment(review.id, commentData);
         if (!error) {
             setComments([...comments, data]);
             setNewComment('');
@@ -74,7 +75,7 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
     const handleDeleteComment = async (commentId) => {
         if (!window.confirm('정말 삭제하시겠습니까?')) return;
 
-        const { error } = await reviewService.deleteComment(review.id, commentId);
+        const { error } = await communityService.deleteComment(review.id, commentId);
         if (!error) {
             setComments(comments.filter(c => c.id !== commentId && c.parent_id !== commentId));
             toast.success('삭제되었습니다.');
@@ -118,47 +119,96 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
 
                     {/* 오른쪽: 내용 및 댓글 */}
                     <div className="detail-content-section">
-                        <div className="detail-header">
-                            <div className="author-info">
-                                <img
-                                    src={review.author_avatar || `https://ui-avatars.com/api/?name=${review.author_name || '익명'}&background=random`}
-                                    alt={review.author_name || '익명'}
-                                    className="author-avatar small"
-                                />
-                                <div>
-                                    <h4>{review.author_name || '익명'}</h4>
-                                    <span className="location-tag">{review.destination}</span>
+                        <div className="detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div className="author-info">
+                                    <img
+                                        src={review.author_avatar || `https://ui-avatars.com/api/?name=${review.author_name || '익명'}&background=random`}
+                                        alt={review.author_name || '익명'}
+                                        className="author-avatar small"
+                                    />
+                                    <div className="author-details">
+                                        <h4>{review.author_name || '익명'}</h4>
+                                        <span className="review-destination">{review.destination}</span>
+                                    </div>
+                                </div>
+                                <div className="rating">
+                                    <FaStar color="#fbbf24" /> {review.rating}
                                 </div>
                             </div>
-                            <div className="rating">
-                                <FaStar color="#fbbf24" /> {review.rating}
-                            </div>
+                            {/* Edit/Delete Buttons */}
+                            {user && user.id === review.user_id && (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        onClick={() => { onClose(); onEdit && onEdit(review); }}
+                                        style={{
+                                            background: '#f3f4f6',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            padding: '8px 12px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            fontSize: '0.85rem',
+                                            color: '#4b5563'
+                                        }}
+                                    >
+                                        <FaEdit size={14} /> 수정
+                                    </button>
+                                    <button
+                                        onClick={() => { onDelete && onDelete(review.id); onClose(); }}
+                                        style={{
+                                            background: '#fee2e2',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            padding: '8px 12px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            fontSize: '0.85rem',
+                                            color: '#dc2626'
+                                        }}
+                                    >
+                                        <FaTrash size={14} /> 삭제
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="scrollable-content">
                             <div className="wellness-tags" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
                                 {review.mood && (
-                                    <span className="wellness-tag mood" style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#eee', fontSize: '0.85rem', padding: '4px 12px', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                                    <span className="wellness-tag mood" style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: '0.85rem', padding: '4px 12px', borderRadius: '16px', fontWeight: '500' }}>
                                         {review.mood === 'romantic' ? '🌹 낭만' :
                                             review.mood === 'refresh' ? '🌈 리프레시' :
                                                 review.mood === 'active' ? '👟 에너지 충전' : '🤫 고요한 휴식'}
                                     </span>
                                 )}
-                                {review.mood && review.themes?.length > 0 && (
-                                    <span style={{ color: '#4b5563', fontSize: '1rem', margin: '0 4px' }}>•</span>
-                                )}
                                 {review.themes?.map(theme => (
-                                    <span key={theme} className="wellness-tag theme" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#bbb', fontSize: '0.85rem', padding: '4px 12px', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                                    <span key={theme} className="wellness-tag theme" style={{ background: '#d1fae5', color: '#047857', fontSize: '0.85rem', padding: '4px 12px', borderRadius: '16px', fontWeight: '500' }}>
                                         {theme === 'activity' ? '🪂 액티비티' :
                                             theme === 'food' ? '🍱 맛집 탐방' : '🌿 힐링/휴식'}
                                     </span>
                                 ))}
                             </div>
-                            <p className="detail-text">{review.content}</p>
-                            <p className="detail-date">{timeAgo}</p>
+                            <p className="detail-text">{review.content || review.body}</p>
+                            <p className="detail-date" style={{ marginBottom: '20px' }}>{timeAgo}</p>
 
-                            <div className="comments-section">
-                                <h5>댓글 {comments.length}개</h5>
+                            <div className="action-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 0 12px 0', borderBottom: '1px solid #f3f4f6', marginBottom: '20px' }}>
+                                <button
+                                    className={`action-btn ${review.is_liked ? 'liked' : ''}`}
+                                    onClick={() => onLike(review.id)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: review.is_liked ? '#ef4444' : '#6b7280', display: 'flex', alignItems: 'center', padding: '4px' }}
+                                >
+                                    {review.is_liked ? <FaHeart size={22} /> : <FaRegHeart size={22} />}
+                                </button>
+                                <span className="likes-count" style={{ fontWeight: '600', color: '#4b5563', fontSize: '0.95rem' }}>좋아요 {review.likes}개</span>
+                            </div>
+
+                            <div className="comments-section" style={{ marginTop: '0' }}>
+                                <h5 style={{ marginBottom: '16px', fontSize: '1rem', fontWeight: '600', color: '#374151' }}>댓글 {comments.length}개</h5>
                                 {loadingComments ? (
                                     <p>댓글 로딩 중...</p>
                                 ) : (
@@ -180,9 +230,11 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                                                         </div>
                                                         <span className="comment-text">{comment.content}</span>
                                                         <div className="comment-actions">
-                                                            <button className="reply-btn" onClick={() => setReplyingTo({ id: comment.id, author_name: comment.author_name })}>답글달기</button>
-                                                            {user && (user.id === comment.user_id || comment.user_id.startsWith('mock-')) && (
-                                                                <button className="del-btn" onClick={() => handleDeleteComment(comment.id)}>삭제</button>
+                                                            <button className="reply-btn" onClick={() => { setReplyingTo({ id: comment.id, author_name: comment.author_name }); setTimeout(() => commentInputRef.current?.focus(), 100); }}>답글달기</button>
+                                                            {user && user.id === comment.user_id && (
+                                                                <button className="del-btn" onClick={() => handleDeleteComment(comment.id)}>
+                                                                    <FaTrash /> 삭제
+                                                                </button>
                                                             )}
                                                         </div>
                                                     </div>
@@ -204,9 +256,11 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                                                                     </span>
                                                                 </div>
                                                                 <span className="comment-text">{reply.content}</span>
-                                                                {user && (user.id === reply.user_id || reply.user_id.startsWith('mock-')) && (
+                                                                {user && user.id === reply.user_id && (
                                                                     <div className="comment-actions">
-                                                                        <button className="del-btn" onClick={() => handleDeleteComment(reply.id)}>삭제</button>
+                                                                        <button className="del-btn" onClick={() => handleDeleteComment(reply.id)}>
+                                                                            <FaTrash /> 삭제
+                                                                        </button>
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -221,18 +275,8 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
                         </div>
 
                         <div className="detail-footer">
-                            <div className="action-row">
-                                <button
-                                    className={`action-btn ${review.is_liked ? 'liked' : ''}`}
-                                    onClick={() => onLike(review.id)}
-                                >
-                                    {review.is_liked ? <FaHeart size={20} /> : <FaRegHeart size={20} />}
-                                </button>
-                                <span className="likes-count" style={{ color: '#aaa' }}>좋아요 {review.likes}개</span>
-                            </div>
-
                             {replyingTo && (
-                                <div className="reply-hint" style={{ padding: '8px 12px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', marginBottom: '8px', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div className="reply-hint">
                                     <span style={{ color: '#60a5fa' }}>@{replyingTo.author_name}님에게 답글 남기는 중...</span>
                                     <button onClick={() => setReplyingTo(null)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem' }}>&times;</button>
                                 </div>
@@ -240,6 +284,7 @@ export default function ReviewDetailModal({ review, onClose, onLike }) {
 
                             <form className="comment-form" onSubmit={handleSubmitComment}>
                                 <input
+                                    ref={commentInputRef}
                                     type="text"
                                     placeholder={replyingTo ? "답글 달기..." : "댓글 달기..."}
                                     value={newComment}
