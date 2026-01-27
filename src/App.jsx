@@ -7,7 +7,7 @@ import Airplane from "./pages/Airplane";
 
 import PlanLab from "./pages/PlanLab";
 // import Plans from "./pages/Plans";
-import Reviews from "./pages/Reviews";
+import Community from "./pages/Community";
 import MyPage from "./pages/MyPage";
 import { useEffect } from "react";
 import { supabase } from "./services/supabase";
@@ -45,7 +45,7 @@ export default function App() {
         <Route path="/airplane" element={<Airplane />} />
         <Route path="/planlab" element={<PlanLab />} />
         <Route path="/plans" element={<PlanLab />} />
-        <Route path="/reviews" element={<Reviews />} />
+        <Route path="/community" element={<Community />} />
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/login" element={<AuthPage />} />
       </Route>
