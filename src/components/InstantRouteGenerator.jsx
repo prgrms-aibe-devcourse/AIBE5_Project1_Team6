@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
+import { generateAllTravelPlans } from "../services/geminiTravelPlanner";
 import "../styles/instantroute.css";
 
 // Calculate number of nights
@@ -326,29 +328,81 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
     const [routes, setRoutes] = useState([]);
     const [selectedRoute, setSelectedRoute] = useState(null);
     const [progress, setProgress] = useState(0);
+    const [usingMockData, setUsingMockData] = useState(false);
 
     useEffect(() => {
-        // 로딩 애니메이션 (1초 목표)
-        const progressInterval = setInterval(() => {
-            setProgress((prev) => {
-                if (prev >= 100) {
-                    clearInterval(progressInterval);
-                    return 100;
-                }
-                return prev + 10;
-            });
-        }, 80);
+        let isCancelled = false;
 
-        // Mock AI 응답 시뮬레이션 - 3개 플랜 생성
-        const timer = setTimeout(() => {
-            const generatedRoutes = generateMockRoutes(selections);
-            setRoutes(generatedRoutes);
-            setLoading(false);
-        }, 1000); // 1초
+        const loadRoutes = async () => {
+            // 로딩 애니메이션 시작
+            const progressInterval = setInterval(() => {
+                setProgress((prev) => {
+                    if (prev >= 95) {
+                        clearInterval(progressInterval);
+                        return 95;
+                    }
+                    return prev + 5;
+                });
+            }, 100);
+
+            try {
+                console.log("[InstantRoute] AI 플랜 생성 시작...");
+
+                // Gemini API로 일정 생성 시도
+                const aiPlans = await generateAllTravelPlans(selections);
+
+                if (isCancelled) return;
+
+                if (aiPlans) {
+                    // AI 플랜 성공
+                    console.log("[InstantRoute] AI 플랜 생성 성공!");
+                    const generatedRoutes = [
+                        aiPlans.relaxed,
+                        aiPlans.balanced,
+                        aiPlans.active
+                    ];
+                    setRoutes(generatedRoutes);
+                    setUsingMockData(false);
+                    toast.success("✨ AI가 완벽한 여행 플랜을 생성했어요!");
+                } else {
+                    // AI 플랜 실패 -> Mock 데이터 사용
+                    console.warn("[InstantRoute] AI 플랜 생성 실패. Mock 데이터 사용.");
+                    const mockRoutes = generateMockRoutes(selections);
+                    setRoutes(mockRoutes);
+                    setUsingMockData(true);
+                    toast("💡 샘플 플랜을 보여드려요. API 키를 설정하면 더 정확한 플랜을 받을 수 있어요!", {
+                        icon: "ℹ️",
+                        duration: 4000,
+                    });
+                }
+            } catch (err) {
+                console.error("[InstantRoute] 플랜 생성 중 오류:", err);
+
+                if (isCancelled) return;
+
+                // 오류 발생 시에도 Mock 데이터 사용
+                const mockRoutes = generateMockRoutes(selections);
+                setRoutes(mockRoutes);
+                setUsingMockData(true);
+                toast.error("일정 생성 중 문제가 발생했어요. 샘플 플랜을 보여드릴게요.");
+            } finally {
+                if (!isCancelled) {
+                    clearInterval(progressInterval);
+                    setProgress(100);
+                    // 약간의 지연 후 로딩 완료
+                    setTimeout(() => {
+                        if (!isCancelled) {
+                            setLoading(false);
+                        }
+                    }, 300);
+                }
+            }
+        };
+
+        loadRoutes();
 
         return () => {
-            clearTimeout(timer);
-            clearInterval(progressInterval);
+            isCancelled = true;
         };
     }, [selections]);
 

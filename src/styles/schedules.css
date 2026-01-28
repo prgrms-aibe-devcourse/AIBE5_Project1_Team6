@@ -5,6 +5,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 20px;
+    margin-top: 48px;
     margin-bottom: 32px;
     flex-wrap: wrap;
     padding: 32px 40px;
@@ -834,16 +835,38 @@
 /* Responsive */
 @media (max-width: 768px) {
     .planlabHeader {
+        padding: 20px;
         flex-direction: column;
         align-items: stretch;
+        gap: 20px;
+    }
+
+    .planlabHeader .pageTitle {
+        font-size: 1.5rem;
     }
 
     .createBtn {
         width: 100%;
+        margin-top: 10px;
+        justify-content: center;
+    }
+
+    .tabNavigation {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 8px;
+        margin-bottom: 16px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tabBtn {
+        padding: 10px 16px;
+        font-size: 14px;
     }
 
     .schedulesGrid {
-        max-width: 100%;
+        grid-template-columns: 1fr;
+        gap: 16px;
     }
 
     .scheduleCard {
@@ -854,7 +877,26 @@
     .scheduleCardImage {
         width: 100%;
         min-width: 100%;
-        height: 160px;
+        height: 180px;
+    }
+
+    .scheduleCardBody {
+        padding: 16px;
+    }
+
+    .scheduleCardHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .scheduleCardTitle {
+        font-size: 1.1rem;
+    }
+
+    .scheduleCardActions {
+        flex-direction: row;
+        margin-top: 16px;
     }
 
     .formRow {
@@ -862,6 +904,44 @@
     }
 
     .scheduleEditorDrawer {
+        width: 100%;
+    }
+
+    .scheduleEditorHeader,
+    .scheduleEditorBody {
+        padding: 16px;
+    }
+
+    /* Detail View Mobile */
+    .detailViewHeader {
+        padding: 20px;
+    }
+
+    .detailTitle {
+        font-size: 1.5rem;
+    }
+
+    .detailMeta {
+        flex-direction: column;
+        gap: 10px;
+        font-size: 0.9rem;
+    }
+
+    .detailContent {
+        padding: 20px;
+    }
+
+    .scheduleDetailText {
+        padding: 16px;
+        font-size: 0.9rem;
+    }
+
+    .detailActions {
+        padding: 16px 20px;
+        flex-direction: column;
+    }
+
+    .detailActions button {
         width: 100%;
     }
 }

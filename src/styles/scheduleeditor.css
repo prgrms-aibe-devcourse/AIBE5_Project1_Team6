@@ -22,7 +22,8 @@
     border-radius: 20px;
     width: min(900px, 100%);
     max-height: 90vh;
-    overflow: hidden;
+    overflow-y: auto;
+    /* Enable global scroll */
     display: flex;
     flex-direction: column;
     box-shadow: none;
@@ -36,6 +37,10 @@
     padding: 24px 32px;
     border-bottom: 1px solid #f0f0f0;
     background: #fff;
+    /* Remove sticky header to allow natural flow if desired, or keep it sticky */
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .editorTitle {
@@ -126,7 +131,8 @@
 /* Timeline Section */
 .editorTimeline {
     flex: 1;
-    overflow-y: auto;
+    overflow: visible;
+    /* Remove inner scroll */
     padding: 24px 32px;
 }
 
