@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
+import { FiEdit3, FiTrash2 } from "react-icons/fi";
 import ConfirmModal from "./ConfirmModal";
 import "../styles/schedules.css";
 
@@ -35,17 +36,20 @@ export default function ScheduleCard({ schedule, onEdit, onDelete, onClick }) {
     const moodLabel = hasMoodData?.mood?.label || "";
     const styleLabel = hasMoodData?.style?.label || "";
 
-    // Solid sky blue colors instead of gradients
-    const wellnessColor = '#5C94FF';
+    // New Pastel/Soft Color Palette
     const cardColors = [
-        '#3b82f6',  // Sky Blue
-        '#60a5fa',  // Light Blue
-        '#5C94FF',  // Primary Blue
-        '#38bdf8',  // Cyan Blue
-        '#0ea5e9',  // Ocean Blue
+        '#81D4FA', // Light Green
+        '#F48FB1', // Pink
+        '#CE93D8', // Purple
+        '#9FA8DA', // Indigo
+        '#90CAF9', // Blue
+        '#80CBC4', // Teal
+        '#FFCC80', // Orange
     ];
     const colorIndex = (schedule.title?.charCodeAt(0) || 0) % cardColors.length;
-    const cardGradient = hasMoodData ? wellnessColor : cardColors[colorIndex];
+    
+    // Use user-selected mood color if available, otherwise random pastel
+    const cardColor = hasMoodData ? '#5C94FF' : cardColors[colorIndex];
 
     const handleCardClick = () => {
         if (onClick) {
@@ -72,56 +76,53 @@ export default function ScheduleCard({ schedule, onEdit, onDelete, onClick }) {
         <>
             <article className="scheduleCard" onClick={handleCardClick}>
                 {/* Thumbnail Image */}
-                <div className="scheduleCardImage" style={{ background: cardGradient }}>
+                <div className="scheduleCardImage" style={{ background: cardColor }}>
                     <div style={{ fontSize: hasMoodData ? "48px" : "64px", marginTop: hasMoodData ? "8px" : "0" }}>
                         {hasMoodData ? `${moodEmoji}${destinationEmoji}${styleEmoji}` : "✈️"}
-                    </div>
-                    <div className="scheduleCardImageOverlay">
-                        <span className="scheduleCardBadgeOnImg">{nights}</span>
                     </div>
                 </div>
 
                 <div className="scheduleCardBody">
+                    {/* Top Right Actions */}
+                    <div className="cardTopActions">
+                        <button 
+                            className="iconActionBtn edit" 
+                            onClick={handleEditClick}
+                            title="수정"
+                        >
+                            <FiEdit3 />
+                        </button>
+                        <button 
+                            className="iconActionBtn delete" 
+                            onClick={handleDeleteClick}
+                            title="삭제"
+                        >
+                            <FiTrash2 />
+                        </button>
+                    </div>
+
                     <div className="scheduleCardHeader">
-                        <h3 className="scheduleCardTitle">{schedule.title}</h3>
+                        <h3 className="scheduleCardTitle" style={{ paddingRight: '60px' }}>{schedule.title}</h3>
+                    </div>
+
+                    <div className="scheduleCardMeta">
+                        <span className="scheduleCardBadgeOnImg" style={{ position: 'static', boxShadow: 'none', background: '#f5f5f5', color: '#666', border: '1px solid #e0e0e0', padding: '2px 8px', fontSize: '11px' }}>
+                            {nights}
+                        </span>
                         {hasMoodData && moodLabel && (
-                            <div className="wellnessBadge">
-                                🌿 {moodLabel}
-                            </div>
+                             <span className="scheduleCardBadgeOnImg" style={{ position: 'static', boxShadow: 'none', background: '#eef2ff', color: '#5C94FF', border: '1px solid #c7d2fe', padding: '2px 8px', fontSize: '11px' }}>
+                                {moodLabel}
+                            </span>
                         )}
                     </div>
 
-                    {schedule.description && (
-                        <p className="scheduleCardDesc">{schedule.description}</p>
-                    )}
-
-                    <div className="scheduleCardMeta">
-                        <div className="scheduleCardDate">
-                            <span className="metaIcon">📅</span>
+                    <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#888' }}>
+                         <div className="scheduleCardDate">
                             {range}
                         </div>
                         <div className="scheduleCardPeople">
-                            <span className="metaIcon">👥</span>
                             {schedule.people}명
                         </div>
-                    </div>
-
-                    {hasMoodData && styleLabel && (
-                        <div className="wellnessTags">
-                            <span className="wellnessTag">
-                                {styleEmoji} {styleLabel}
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Card Actions */}
-                    <div className="scheduleCardActions">
-                        <button className="scheduleCardEditBtn" onClick={handleEditClick}>
-                            ✏️ 수정
-                        </button>
-                        <button className="scheduleCardDeleteBtn" onClick={handleDeleteClick}>
-                            🗑️ 삭제
-                        </button>
                     </div>
                 </div>
             </article>

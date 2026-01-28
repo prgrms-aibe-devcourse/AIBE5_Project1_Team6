@@ -2,67 +2,122 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { FaCity, FaTree, FaHiking, FaUtensils, FaChartPie } from 'react-icons/fa';
 
-const TravelStyleAnalysis = ({ schedules = [] }) => {
+const TravelStyleAnalysis = ({ 
+    savedPlaces = [], 
+    upcomingSchedules = [], 
+    pastSchedules = [] 
+}) => {
     // 분석 로직
     const analysis = useMemo(() => {
-        const scores = {
-            urban: 0,
-            nature: 0,
-            activity: 0,
-            food: 0
-        };
-
         const keywords = {
-            urban: ['도시', '쇼핑', '박물관', '미술관', '시장', '빌딩', '야경', '현대', '문화', '서울', '도쿄', '뉴욕'],
-            nature: ['자연', '힐링', '바다', '산', '공원', '숲', '풍경', '휴식', '제주', '강원', '호수', '해변'],
-            activity: ['체험', '액티비티', '하이킹', '수영', '다이빙', '걷기', '운동', '등산', '서핑', '스키', '레저'],
-            food: ['맛집', '음식', '카페', '식당', '요리', '먹방', '미식', '빵', '커피', '술', '디저트']
+            urban: [
+                '도시', '쇼핑', '박물관', '미술관', '시장', '빌딩', '야경', '현대', '문화', '서울', '도쿄', '뉴욕', '랜드마크', 'traffic', 
+                '시내', '백화점', '몰', '아웃렛', '광장', '메트로', '지하철', '전시', '공연', '콘서트', '클럽', '바', '명소', '관광지'
+            ],
+            nature: [
+                '자연', '힐링', '바다', '산', '공원', '숲', '풍경', '휴식', '제주', '강원', '호수', '해변', '캠핑', '산책', 'walk',
+                '수목원', '식물원', '계곡', '해수욕장', '일출', '일몰', '노을', '별', '등대', '섬', '마을', '사찰', '절'
+            ],
+            activity: [
+                '체험', '액티비티', '하이킹', '수영', '다이빙', '걷기', '운동', '등산', '서핑', '스키', '레저', '테마파크', 'activity', 'airplane',
+                '놀이동산', '워크', '트레킹', '자전거', '라이딩', '낚시', '골프', '패러글라이딩', '번지점프', '스포츠', '경기', '관람'
+            ],
+            food: [
+                '맛집', '음식', '카페', '식당', '요리', '먹방', '미식', '빵', '커피', '술', '디저트', '레스토랑', '베이커리', 'food',
+                '카페거리', '베이커리', '브런치', '저녁', '점심', '아침', '일식', '중식', '한식', '양식', '전통시장', '포장마차', '와인', '맥주',
+                '고기', '회', '스시', '라면', '치킨', '피자', '파스타', '빵집', '디저트', '달콤', '음료', '티타임', '찻집', '술집', '이자카야', 
+                '다이닝', '오마카세', '로컬음식', '스트리트푸드', '카페투어', '빵지순례', '먹거리', '식사', '냠냠', '맛있는'
+            ]
         };
 
-        let totalPoints = 0;
+        const analyzeSource = (items) => {
+            if (!items || items.length === 0) {
+                return { urban: 25, nature: 25, activity: 25, food: 25 };
+            }
 
-        schedules.forEach(schedule => {
-            const text = `${schedule.title} ${schedule.description} ${schedule.scheduleText || ''} ${JSON.stringify(schedule.moodData || {})}`.toLowerCase();
+            const baselineValue = 10;
+            const bScores = {
+                urban: baselineValue,
+                nature: baselineValue,
+                activity: baselineValue,
+                food: baselineValue
+            };
+            let bTotal = baselineValue * 4;
 
-            // 키워드 매칭 (가중치 1)
-            Object.keys(keywords).forEach(category => {
-                keywords[category].forEach(keyword => {
-                    if (text.includes(keyword)) {
-                        scores[category]++;
-                        totalPoints++;
-                    }
+            items.forEach(item => {
+                const textParts = [
+                    item.title,
+                    item.description,
+                    item.subtitle,
+                    item.scheduleText,
+                    item.tag,
+                    item.category,
+                    item.overview,
+                    item.addr1,
+                    JSON.stringify(item.moodData || {})
+                ].filter(Boolean);
+                
+                const text = textParts.join(' ').toLowerCase();
+
+                Object.keys(keywords).forEach(cat => {
+                    keywords[cat].forEach(kw => {
+                        if (text.includes(kw.toLowerCase())) {
+                            bScores[cat]++;
+                            bTotal++;
+                        }
+                    });
                 });
+
+                if (item.moodData) {
+                    const { mood, style } = item.moodData;
+                    if (mood === 'active' || style === 'dynamic') { bScores.activity += 2; bTotal += 2; }
+                    if (mood === 'calm' || style === 'relax') { bScores.nature += 2; bTotal += 2; }
+                    if (style === 'modern') { bScores.urban += 2; bTotal += 2; }
+                }
+                
+                if (item.category === 'walk') { bScores.nature += 2; bTotal += 2; }
+                if (item.category === 'traffic') { bScores.urban += 2; bTotal += 2; }
+                if (item.category === 'airplane' || item.category === 'flight') { bScores.activity += 2; bTotal += 2; }
+                
+                if (item.tag === '맛집' || item.tag?.includes('미식')) { bScores.food += 5; bTotal += 5; }
+                if (item.tag === '액티비티' || item.tag?.includes('체험')) { bScores.activity += 5; bTotal += 5; }
+                if (item.tag === '힐링' || item.tag?.includes('자연')) { bScores.nature += 5; bTotal += 5; }
+                if (item.tag?.includes('문화') || item.tag?.includes('도시')) { bScores.urban += 5; bTotal += 5; }
             });
 
-            // MoodData 활용 (가중치 2)
-            if (schedule.moodData) {
-                const { mood, style } = schedule.moodData;
-                if (mood === 'active' || style === 'dynamic') { scores.activity += 2; totalPoints += 2; }
-                if (mood === 'calm' || style === 'relax') { scores.nature += 2; totalPoints += 2; }
-                if (style === 'modern') { scores.urban += 2; totalPoints += 2; }
-            }
-        });
-
-        // 기본값 처리 (데이터 없을 때)
-        if (totalPoints === 0) {
             return {
-                scores: { urban: 25, nature: 25, activity: 25, food: 25 }, // 균등 분포
-                percentages: { urban: 25, nature: 25, activity: 25, food: 25 },
-                mainType: 'none',
-                comment: "아직 충분한 여행 데이터가 없습니다. 다양한 여행을 계획해보세요!"
+                urban: (bScores.urban / bTotal) * 100,
+                nature: (bScores.nature / bTotal) * 100,
+                activity: (bScores.activity / bTotal) * 100,
+                food: (bScores.food / bTotal) * 100
             };
-        }
-
-        const percentages = {
-            urban: Math.round((scores.urban / totalPoints) * 100),
-            nature: Math.round((scores.nature / totalPoints) * 100),
-            activity: Math.round((scores.activity / totalPoints) * 100),
-            food: Math.round((scores.food / totalPoints) * 100)
         };
 
+        const dnaSaved = analyzeSource(savedPlaces);
+        const dnaUpcoming = analyzeSource(upcomingSchedules);
+        const dnaPast = analyzeSource(pastSchedules);
+
+        // 산술 평균 계산
+        const avgPercentages = {
+            urban: (dnaSaved.urban + dnaUpcoming.urban + dnaPast.urban) / 3,
+            nature: (dnaSaved.nature + dnaUpcoming.nature + dnaPast.nature) / 3,
+            activity: (dnaSaved.activity + dnaUpcoming.activity + dnaPast.activity) / 3,
+            food: (dnaSaved.food + dnaUpcoming.food + dnaPast.food) / 3
+        };
+
+        // 소수점 보정 및 최종 퍼센테이지 (합계 100%)
+        const totalRaw = avgPercentages.urban + avgPercentages.nature + avgPercentages.activity + avgPercentages.food;
+        const percentages = {
+            urban: Math.round((avgPercentages.urban / totalRaw) * 100),
+            nature: Math.round((avgPercentages.nature / totalRaw) * 100),
+            activity: Math.round((avgPercentages.activity / totalRaw) * 100),
+            food: 0
+        };
+        percentages.food = 100 - (percentages.urban + percentages.nature + percentages.activity);
+
         // 메인 성향 찾기
-        const maxScore = Math.max(scores.urban, scores.nature, scores.activity, scores.food);
-        const mainType = Object.keys(scores).find(key => scores[key] === maxScore);
+        const maxPercent = Math.max(percentages.urban, percentages.nature, percentages.activity, percentages.food);
+        const mainType = Object.keys(percentages).find(key => percentages[key] === maxPercent);
 
         let comment = "";
         switch (mainType) {
@@ -73,8 +128,14 @@ const TravelStyleAnalysis = ({ schedules = [] }) => {
             default: comment = "다양한 매력을 골고루 즐기는 '밸런스 여행자'입니다.";
         }
 
-        return { scores, percentages, mainType, comment };
-    }, [schedules]);
+        const isNone = (savedPlaces.length + upcomingSchedules.length + pastSchedules.length) === 0;
+
+        return { 
+            percentages, 
+            mainType: isNone ? 'none' : mainType, 
+            comment: isNone ? "아직 충분한 여행 데이터가 없습니다. 다양한 여행을 계획해보세요!" : comment 
+        };
+    }, [savedPlaces, upcomingSchedules, pastSchedules]);
 
     const categories = [
         { key: 'urban', label: '도심 탐방형', icon: <FaCity />, color: '#3b82f6', bg: '#eff6ff' },

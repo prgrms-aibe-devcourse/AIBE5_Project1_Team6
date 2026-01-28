@@ -213,10 +213,20 @@ export default function Layout() {
         }
     }, [location.pathname]);
 
+    // 로그아웃 상태에서 보호된 페이지 접근 시 홈으로 리다이렉트
+    // Walk, Traffic, Airplane, PlanLab, Community는 비로그인/게스트 사용자도 접근 가능
+    // MyPage만 로그인 필요
+    const publicRoutes = ['/', '/walk', '/traffic', '/airplane', '/login', '/planlab', '/community'];
+    useEffect(() => {
+        if (!user && !isGuest && !publicRoutes.includes(location.pathname)) {
+            nav('/', { replace: true });
+        }
+    }, [user, isGuest, location.pathname, nav]);
+
     const handleLogoClick = () => {
-        // If user is logged in, go to last used mode (Walk/Traffic/Airplane)
-        // If logged out, go to initial page (Home)
-        if (user) {
+        // If user is logged in (not guest), go to last used mode (Walk/Traffic/Airplane)
+        // If guest or logged out, go to initial page (Home)
+        if (user && !isGuest) {
             const lastMode = sessionStorage.getItem('lastMainMode');
             nav(lastMode || '/walk');
         } else {

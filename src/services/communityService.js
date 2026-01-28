@@ -6,7 +6,7 @@ export const communityService = {
     async uploadImage(file) {
         try {
             if (!file) return null;
-
+            
             // 파일명 생성 (unique)
             const fileExt = file.name.split('.').pop();
             const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
@@ -246,12 +246,12 @@ export const communityService = {
 
             // Trigger Notification for Self (Testing purpose) - Fixed await and error handling
             try {
-                await createNotification({
+                 await createNotification({
                     user_id: postData.user_id, // Use the user_id from arguments
                     sender_id: postData.user_id, // Sender is self
                     type: 'post',
                     message: `새로운 글 "${postData.title}"을(를) 작성하였습니다.`,
-                    link: '/mypage?tab=reviews'
+                    link: '/mypage?tab=reviews' 
                 });
             } catch (notiError) {
                 console.error("Notification trigger failed:", notiError);
@@ -371,15 +371,6 @@ export const communityService = {
                     .delete()
                     .eq('post_id', postId)
                     .eq('user_id', userId);
-
-                // 좋아요 취소 시 알림도 삭제
-                await supabase
-                    .from('notifications')
-                    .delete()
-                    .eq('post_id', postId)
-                    .eq('actor_id', userId)
-                    .eq('type', 'like');
-
                 return { liked: false, error };
             } else {
                 // 좋아요 추가
@@ -387,39 +378,25 @@ export const communityService = {
                     .from('community_post_likes')
                     .insert([{ post_id: postId, user_id: userId }]);
 
+                // 알림 생성
                 if (!error) {
                     // 게시글 작성자 정보 가져오기
-                    const { data: post } = await supabase
+                    const { data: postData } = await supabase
                         .from('community_posts')
                         .select('user_id, title')
                         .eq('id', postId)
                         .single();
 
-                    // 자기 자신의 글에 좋아요를 누른 경우 알림 생성 안 함
-                    if (post && post.user_id !== userId) {
-                        // 좋아요 누른 사용자 정보 가져오기
-                        const { data: actor } = await supabase
-                            .from('profiles')
-                            .select('username, avatar_url')
-                            .eq('id', userId)
-                            .single();
-
-                        const actorName = actor?.username || '익명';
-
-                        // 알림 생성
-                        await supabase
-                            .from('notifications')
-                            .insert([{
-                                user_id: post.user_id,
-                                type: 'like',
-                                message: `${actorName}님이 회원님의 "${post.title}" 후기를 좋아합니다.`,
-                                post_id: postId,
-                                actor_id: userId,
-                                is_read: false
-                            }]);
+                    if (postData && postData.user_id !== userId) {
+                        await createNotification({
+                            user_id: postData.user_id, // 수신자: 게시글 작성자
+                            sender_id: userId,        // 발신자: 좋아요 누른 사람
+                            type: 'like',
+                            message: `님이 회원님의 게시글 "${postData.title}"을 좋아합니다.`,
+                            link: `/community/${postId}` // (선택) 이동 링크
+                        });
                     }
                 }
-
                 return { liked: true, error };
             }
         } catch (error) {
@@ -498,31 +475,21 @@ export const communityService = {
             };
 
             // 알림 생성
-            if (!error && data) {
-                // 게시글 작성자 정보 가져오기
-                const { data: post } = await supabase
-                    .from('community_posts')
-                    .select('user_id, title')
-                    .eq('id', postId)
-                    .single();
+            // 게시글 작성자 정보 가져오기
+            const { data: postData } = await supabase
+                .from('community_posts')
+                .select('user_id, title')
+                .eq('id', postId)
+                .single();
 
-                // 자기 자신의 글에 댓글을 단 경우 알림 생성 안 함
-                if (post && post.user_id !== commentData.user_id) {
-                    const actorName = data.profiles?.username || '익명';
-                    const commentSnippet = (commentData.content || commentData.body).substring(0, 30);
-
-                    // 알림 생성
-                    await supabase
-                        .from('notifications')
-                        .insert([{
-                            user_id: post.user_id,
-                            type: 'comment',
-                            message: `${actorName}님이 "${post.title}" 후기에 댓글을 남겼습니다: "${commentSnippet}${commentSnippet.length >= 30 ? '...' : ''}"`,
-                            post_id: postId,
-                            actor_id: commentData.user_id,
-                            is_read: false
-                        }]);
-                }
+            if (postData && postData.user_id !== commentData.user_id) {
+                 await createNotification({
+                    user_id: postData.user_id,
+                    sender_id: commentData.user_id,
+                    type: 'comment',
+                    message: `님이 회원님의 게시글 "${postData.title}"에 댓글을 남겼습니다.`,
+                    link: `/community/${postId}`
+                });
             }
 
             return { data: processed, error: null };

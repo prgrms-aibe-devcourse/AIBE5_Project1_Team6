@@ -1,13 +1,13 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const MODEL_ID = "gemini-3-flash-preview"; // 작동 확인됨 (Free tier)
+const MODEL_ID = "gemini-3-flash-preview"; // Full model path format
 
 // Gemini API 클라이언트 초기화
 let genAI = null;
 if (GEMINI_API_KEY) {
     try {
-        genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+        genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         console.log("[GeminiTravelPlanner] Gemini API 클라이언트 초기화 완료");
     } catch (err) {
         console.error("[GeminiTravelPlanner] Gemini 클라이언트 생성 실패:", err);
@@ -88,25 +88,17 @@ async function generateTravelItinerary(selections, planType) {
     let retries = 3;
     while (retries > 0) {
         try {
-            const result = await genAI.models.generateContent({
-                model: MODEL_ID,
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 2048,
-                },
-            });
+            const model = genAI.getGenerativeModel({ model: MODEL_ID });
+            const result = await model.generateContent(prompt);
 
             console.log("[GeminiTravelPlanner] Gemini 응답 수신:", result);
 
             // 응답 텍스트 추출
             let responseText = null;
-            if (result.candidates?.length > 0) {
-                responseText = result.candidates[0]?.content?.parts?.[0]?.text;
-            } else if (typeof result.response?.text === "function") {
+            if (result.response && typeof result.response.text === "function") {
                 responseText = result.response.text();
-            } else {
-                responseText = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
+            } else if (result.response?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                responseText = result.response.candidates[0].content.parts[0].text;
             }
 
             if (!responseText) {
@@ -178,11 +170,21 @@ export async function generateAllTravelPlans(selections) {
             return null;
         }
 
-        const { mood, destination, style, startDate, endDate } = selections;
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-        const days = nights + 1;
+        const { mood, destination, style, startDate, endDate, duration } = selections;
+        
+        let nights, days;
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            days = nights + 1;
+        } else if (duration) {
+            nights = duration;
+            days = duration + 1;
+        } else {
+            nights = 2;
+            days = 3;
+        }
 
         console.log("[GeminiTravelPlanner] 모든 플랜 생성 완료!");
 
@@ -271,7 +273,7 @@ export async function getCityEmoji(cityName) {
         if (result.response && typeof result.response.text === 'function') {
             text = result.response.text();
         } else {
-            text = result.candidates?.[0]?.content?.parts?.[0]?.text || "🌍";
+            text = result.response?.candidates?.[0]?.content?.parts?.[0]?.text || "🌍";
         }
 
         return text.trim() || "🌍";

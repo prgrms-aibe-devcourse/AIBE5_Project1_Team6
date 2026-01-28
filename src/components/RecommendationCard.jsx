@@ -9,7 +9,9 @@ export default function RecommendationCard({
   tag,
   desc,
   matchScore = 95,
-  onClick
+  onClick,
+  onSave,
+  onLike
 }) {
   return (
     <motion.div
@@ -26,8 +28,26 @@ export default function RecommendationCard({
         </div>
 
         <div className="rec-actions">
-          <button className="rec-action-btn"><FiHeart /></button>
-          <button className="rec-action-btn"><FiBookmark /></button>
+          <button 
+            className="rec-action-btn like-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onLike) onLike();
+            }}
+            title="저장하기"
+          >
+            <FiHeart />
+          </button>
+          <button 
+            className="rec-action-btn save-btn" 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onSave) onSave();
+            }}
+            title="일정에 추가"
+          >
+            <FiBookmark />
+          </button>
         </div>
       </div>
 

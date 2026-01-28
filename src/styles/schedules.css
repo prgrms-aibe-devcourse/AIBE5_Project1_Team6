@@ -317,15 +317,17 @@
 
 /* Schedule Card */
 .scheduleCard {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #f0f0f0;
+    border-radius: 24px;
     overflow: hidden;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
     flex-direction: row;
     min-height: 160px;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
 }
 
 .scheduleCard:hover {
@@ -409,10 +411,11 @@
 
 .scheduleCardMeta {
     display: flex;
-    gap: 16px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-bottom: 8px;
     font-size: 14px;
     opacity: 0.9;
+    flex-wrap: wrap;
 }
 
 .scheduleCardDate,
@@ -440,46 +443,52 @@
 }
 
 /* Schedule Card Actions */
-.scheduleCardActions {
+/* Schedule Card Actions (New Icon Style) */
+.cardTopActions {
+    position: absolute;
+    top: 16px;
+    right: 16px;
     display: flex;
     gap: 8px;
-    margin-top: 12px;
-}
-
-.scheduleCardEditBtn,
-.scheduleCardDeleteBtn {
-    flex: 1;
-    padding: 10px 16px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
+    z-index: 5;
+    opacity: 0;
+    transform: translateY(-5px);
     transition: all 0.2s ease;
+}
+
+.scheduleCard:hover .cardTopActions {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.iconActionBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     border: none;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    color: #666;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s;
 }
 
-.scheduleCardEditBtn {
-    background: rgba(79, 195, 247, 0.15);
-    border: 1px solid rgba(79, 195, 247, 0.3);
-    color: #4fc3f7;
+.iconActionBtn:hover {
+    transform: scale(1.1);
 }
 
-.scheduleCardEditBtn:hover {
-    background: rgba(79, 195, 247, 0.25);
-    border-color: rgba(79, 195, 247, 0.5);
-    transform: translateY(-2px);
+.iconActionBtn.edit:hover {
+    color: #3b82f6;
+    background: #fff;
 }
 
-.scheduleCardDeleteBtn {
-    background: rgba(244, 67, 54, 0.15);
-    border: 1px solid rgba(244, 67, 54, 0.3);
-    color: #f44336;
-}
-
-.scheduleCardDeleteBtn:hover {
-    background: rgba(244, 67, 54, 0.25);
-    border-color: rgba(244, 67, 54, 0.5);
-    transform: translateY(-2px);
+.iconActionBtn.delete:hover {
+    color: #ef4444;
+    background: #fff;
 }
 
 /* Wellness Badges and Tags */

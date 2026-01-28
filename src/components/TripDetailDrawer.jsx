@@ -16,6 +16,7 @@ export default function TripDetailDrawer({
   setPlanText,
   onSave,
   onImprove,
+  onOpenAIOptions,
 }) {
   const { budgetAmount } = useTripStore();
   
@@ -262,8 +263,16 @@ export default function TripDetailDrawer({
 
         <div className="drawerFooter">
             <button 
+                className="secondaryBtn"
+                onClick={onOpenAIOptions}
+                style={{ flex: 1, marginRight: '8px', background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe' }}
+            >
+                ✨ AI로 전체 일정 만들기
+            </button>
+            <button 
                 className="primaryBtn" 
                 onClick={handleSave}
+                style={{ flex: 1 }}
             >
                 선택 완료
             </button>

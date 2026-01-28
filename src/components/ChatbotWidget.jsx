@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import toast from "react-hot-toast";
 import { useTripStore } from "../stores/tripStore";
 import { useAuthStore } from "../stores/authStore";
@@ -19,7 +19,7 @@ export default function ChatbotWidget() {
   const roomIdRef = useRef(null);
 
   const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-  const MODEL_ID = "gemini-3-flash-preview"; // 작동 확인됨 (Free tier)
+  const MODEL_ID = "models/gemini-1.5-flash"; // Full model path format
 
   const { user } = useAuthStore();
 
@@ -32,7 +32,7 @@ export default function ChatbotWidget() {
     }
     try {
       console.log("[ChatBot] Gemini 클라이언트 생성 중...");
-      return new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+      return new GoogleGenerativeAI(GEMINI_API_KEY);
     } catch (err) {
       console.error("Gemini 클라이언트 생성 실패", err);
       return null;
@@ -226,11 +226,8 @@ ${history}
     while (retries > 0) {
       try {
         console.log(`[ChatBot] Gemini API 호출 중... (재시도: ${4 - retries}/3)`);
-        const result = await genAI.models.generateContent({
-          model: MODEL_ID,
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.6, maxOutputTokens: 300 },
-        });
+        const model = genAI.getGenerativeModel({ model: MODEL_ID });
+        const result = await model.generateContent(prompt);
 
         console.log("[ChatBot] Gemini 응답 전체:", result);
 
@@ -238,13 +235,13 @@ ${history}
         let text = null;
 
         // 1. candidates 직접 접근
-        if (result.candidates?.length > 0) {
-          text = result.candidates[0]?.content?.parts?.[0]?.text;
+        if (result.response?.candidates?.length > 0) {
+          text = result.response.candidates[0].content.parts[0].text;
           console.log("[ChatBot] 시도1 (candidates):", text);
         }
 
         // 2. response.text() 메서드
-        if (!text && typeof result.response?.text === "function") {
+        if (!text && result.response && typeof result.response.text === "function") {
           text = result.response.text();
           console.log("[ChatBot] 시도2 (response.text()):", text);
         }
