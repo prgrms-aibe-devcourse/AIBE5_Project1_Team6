@@ -7,9 +7,12 @@ import { fetchCurrentWeatherByLatLon, clothingTip, compareWithKorea, getWeatherL
 import { getCountryRecommendations } from "../services/recommendations";
 import RecommendationCard from "../components/RecommendationCard";
 import WeatherWidget from "../components/WeatherWidget";
+import { createNotification } from "../services/mypageService";
+import { savePlace, isPlaceSaved } from "../services/savedPlacesService";
 import Skeleton from "../components/common/Skeleton"; // Import Skeleton
 import "../styles/cards.css";
 import toast from "react-hot-toast";
+import { addSchedule } from "../services/schedulesStorage";
 
 /// Travel Warning Levels
 // 1: Blue (Attention), 2: Yellow (Caution), 3: Red (Restrain), 4: Black (Ban)
@@ -125,6 +128,44 @@ export default function Airplane() {
     };
 
     const onKeyDown = (e) => { if (e.key === 'Enter') handleSearch(); };
+
+    const handleSaveCard = async (item) => {
+        if (!user) {
+            toast.error("로그인이 필요합니다.");
+            return;
+        }
+        
+        try {
+            const alreadySaved = await isPlaceSaved(user.id, item.title || item.name);
+            if (alreadySaved) {
+                toast.error("이미 저장된 장소입니다.");
+                return;
+            }
+            
+            await savePlace(user.id, {
+                title: item.title || item.name,
+                image: item.image,
+                country: item.country || query,
+                description: item.description,
+                tag: item.tag,
+                category: 'airplane',
+                matchScore: item.matchScore || 92,
+                ...item
+            });
+            
+            await createNotification({
+                user_id: user.id,
+                type: 'save',
+                message: `"${item.title || item.name}" 카드가 저장되었습니다.`,
+                link: '/mypage'
+            });
+            
+            toast.success(`"${item.title || item.name}" 저장 완료!`);
+        } catch (error) {
+            console.error('저장 실패:', error);
+            toast.error("저장에 실패했습니다.");
+        }
+    };
 
     // Render Logic
     const warningInfo = data ? getWarningLevel(data.warning) : null;
@@ -347,6 +388,7 @@ export default function Airplane() {
                                             "https://images.unsplash.com/photo-1504609773096-104ff2c73ba4?auto=format&fit=crop&w=800&q=80"
                                         ];
                                         const matchScore = 85 + (idx * 3);
+                                        const cardImage = images[idx % images.length];
                                         return (
                                             <div key={item.id || idx}>
                                                 <RecommendationCard
@@ -354,8 +396,20 @@ export default function Airplane() {
                                                     country={data.nameKr}
                                                     tag={item.category}
                                                     desc={item.desc}
-                                                    image={images[idx % images.length]}
+                                                    image={cardImage}
                                                     matchScore={matchScore > 99 ? 99 : matchScore}
+                                                    onLike={() => handleSaveCard({ 
+                                                        ...item, 
+                                                        image: cardImage, 
+                                                        country: data.nameKr,
+                                                        matchScore: matchScore > 99 ? 99 : matchScore
+                                                    })}
+                                                    onSave={() => handleSaveCard({ 
+                                                        ...item, 
+                                                        image: cardImage, 
+                                                        country: data.nameKr,
+                                                        matchScore: matchScore > 99 ? 99 : matchScore
+                                                    })}
                                                 />
                                             </div>
                                         );
