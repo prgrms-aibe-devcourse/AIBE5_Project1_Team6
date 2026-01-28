@@ -155,51 +155,262 @@ export default function ScheduleDetailView({ schedule }) {
         const toastId = toast.loading("PDF 만드는 중이에요...");
 
         try {
+            // A4 크기 설정 (px 단위, 96DPI 기준 약 3.78px/mm)
+            // A4: 210mm x 297mm => 794px x 1123px
+            const A4_WIDTH_PX = 794;
+            const A4_HEIGHT_PX = 1123;
+
             // PDF용 임시 컨테이너 생성
             const pdfContainer = document.createElement('div');
+            // pdf-container 클래스는 CSS 간섭을 피하기 위해 사용 (필요시)
             pdfContainer.style.cssText = `
                 position: absolute;
                 left: -9999px;
                 top: 0;
-                width: 210mm;
+                width: ${A4_WIDTH_PX}px;
                 background: white;
-                padding: 20px;
-                font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+                font-family: 'Pretendard', 'Malgun Gothic', '맑은 고딕', sans-serif;
                 color: #000;
+                box-sizing: border-box;
             `;
-
-            // PDF 내용 생성
-            pdfContainer.innerHTML = `
-                <div style="padding: 20px;">
-                    <h1 style="font-size: 24px; margin-bottom: 10px; color: #333;">${schedule.title || '여행 일정'}</h1>
-                    <p style="font-size: 14px; margin: 5px 0; color: #666;">📅 기간: ${schedule.startDate} ~ ${schedule.endDate}</p>
-                    <p style="font-size: 14px; margin: 5px 0 30px; color: #666;">👥 인원: ${schedule.people}명</p>
-                    
-                    ${dailySchedule.map(day => `
-                        <div style="margin-bottom: 30px; page-break-inside: avoid;">
-                            <h2 style="font-size: 18px; margin: 20px 0 15px; color: #333; border-bottom: 2px solid #66bb6a; padding-bottom: 8px;">Day ${day.day}</h2>
-                            ${day.items.map(item => `
-                                <div style="margin: 15px 0 15px 10px; padding: 12px; background: #f5f5f5; border-left: 3px solid #66bb6a;">
-                                    <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 8px;">
-                                        🕒 ${item.time} - ${item.emoji} ${item.title}
-                                    </div>
-                                    ${item.description ? `
-                                        <div style="font-size: 12px; color: #666; line-height: 1.6; margin-left: 20px;">
-                                            ${item.description}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-
             document.body.appendChild(pdfContainer);
 
-            // HTML을 캔버스로 변환
+            // 콘텐츠 누적 높이 추적 변수
+            let currentHeight = 0;
+
+            // 높이 측정 헬퍼 함수
+            const measureElement = (elementHtml) => {
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = elementHtml.trim();
+                const element = wrapper.firstElementChild;
+
+                pdfContainer.appendChild(element);
+                const height = element.offsetHeight;
+                pdfContainer.removeChild(element);
+                return height;
+            };
+
+            // 요소를 PDF 컨테이너에 추가하고 페이지 넘김을 처리하는 헬퍼 함수
+            const appendElement = (elementHtml) => {
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = elementHtml.trim();
+                const element = wrapper.firstElementChild;
+
+                // 1. 일단 추가해서 높이를 측정
+                pdfContainer.appendChild(element);
+                const elementHeight = element.offsetHeight;
+
+                // 2. 현재 페이지에서의 위치(세로 좌표) 계산
+                // currentHeight는 지금까지 쌓인 전체 높이
+                // pagePos는 현재 페이지(A4) 내에서의 Y좌표 (0 ~ 1123)
+                const pagePos = currentHeight % A4_HEIGHT_PX;
+                const remainingSpace = A4_HEIGHT_PX - pagePos;
+
+                // 3. 페이지 넘김 판단
+                // - 새 페이지의 시작점(pagePos < 10)이면 그냥 둠
+                // - 남은 공간보다 요소가 더 크면 다음 페이지로 넘김
+                if (pagePos > 10 && remainingSpace < elementHeight) {
+                    // 추가했던 요소 제거
+                    pdfContainer.removeChild(element);
+
+                    // 남은 공간을 채울 스페이서(빈 박스) 추가
+                    const spacer = document.createElement('div');
+                    spacer.style.height = `${remainingSpace}px`;
+                    spacer.style.width = '100%';
+                    spacer.style.backgroundColor = 'white'; // 투명/흰색
+                    pdfContainer.appendChild(spacer);
+
+                    // 높이 정보 업데이트 (다음 페이지 시작으로 이동)
+                    currentHeight += remainingSpace;
+
+                    // 다음 페이지 상단 여백 추가
+                    const topMargin = document.createElement('div');
+                    topMargin.style.height = '30px';
+                    topMargin.style.width = '100%';
+                    pdfContainer.appendChild(topMargin);
+                    currentHeight += 30;
+
+                    // 요소를 다시 추가 (다음 페이지 맨 위에 위치하게 됨)
+                    pdfContainer.appendChild(element);
+                }
+
+                // 높이 누적
+                currentHeight += elementHeight;
+            };
+
+            // --- PDF 내용 구성 시작 ---
+
+            // 1. 헤더 영역 (제목, 기간, 인원)
+            const headerHtml = `
+                <div style="padding: 40px 40px 20px;">
+                    <h1 style="font-size: 32px; margin: 0 0 15px; color: #1a1a1a; font-weight: 800; line-height: 1.2;">
+                        ${schedule.title || '여행 일정'}
+                    </h1>
+                    <div style="font-size: 15px; color: #666; margin-bottom: 8px;">
+                        <span style="display:inline-block; margin-right: 6px;">📅</span> 
+                        ${schedule.startDate} ~ ${schedule.endDate}
+                    </div>
+                    <div style="font-size: 15px; color: #666;">
+                        <span style="display:inline-block; margin-right: 6px;">👥</span> 
+                        총 ${schedule.people}명
+                    </div>
+                    <div style="margin-top: 30px; border-bottom: 2px solid #333;"></div>
+                </div>
+            `;
+            appendElement(headerHtml);
+
+            // 2. 일차별(Daily) 일정 순회
+            dailySchedule.forEach(day => {
+                // Day 헤더 HTML 생성 (디자인 수정: 검은 글씨 + 하단 녹색 선)
+                const dayHeaderHtml = `
+                    <div style="padding: 30px 40px 20px;">
+                        <h2 style="
+                            font-size: 24px;
+                            color: #333;
+                            margin: 0;
+                            font-weight: 700;
+                            border-bottom: 2px solid #66bb6a;
+                            padding-bottom: 10px;
+                        ">
+                            Day ${day.day}
+                        </h2>
+                    </div>
+                `;
+
+                // 모든 아이템 HTML 생성 (디자인 수정: 한 줄 정렬 + 카테고리 우측 상단 뱃지)
+                const itemsHtmls = day.items.map(item => `
+                    <div style="padding: 0 40px 15px;">
+                        <div style="
+                            background: #f8f9fa; 
+                            border-radius: 4px; 
+                            padding: 16px 20px; 
+                            border-left: 4px solid #66bb6a; 
+                            display: flex; 
+                            flex-direction: column;
+                            position: relative;
+                        ">
+                            ${item.category ? `
+                                <span style="
+                                    position: absolute;
+                                    right: 20px;
+                                    top: 16px;
+                                    font-size: 11px; 
+                                    background: #e8f5e9; 
+                                    color: #2e7d32; 
+                                    padding: 4px 8px; 
+                                    border-radius: 12px;
+                                    font-weight: 600;
+                                ">${item.category}</span>
+                            ` : ''}
+
+                            <div style="
+                                font-weight: 700; 
+                                font-size: 15px; 
+                                color: #333; 
+                                margin-bottom: 6px;
+                                display: flex; 
+                                align-items: center;
+                                padding-right: 60px; /* 뱃지 공간 확보 */
+                            ">
+                                <span style="color: #666; margin-right: 8px;">🕒</span>
+                                <span>${item.time}</span>
+                                <span style="margin: 0 8px; color: #999;">-</span>
+                                <span style="margin-right: 6px;">${item.emoji}</span>
+                                <span>${item.title}</span>
+                            </div>
+                            
+                            ${item.description ? `
+                                <div style="
+                                    font-size: 13px; 
+                                    color: #666; 
+                                    line-height: 1.5; 
+                                    margin-left: 26px; 
+                                    white-space: pre-wrap;
+                                ">${item.description}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `);
+
+                // 통째로 묶은 전체 Day 블록 HTML
+                const dayFullHtml = `
+                    <div>
+                        ${dayHeaderHtml}
+                        ${itemsHtmls.join('')}
+                    </div>
+                `;
+
+                // 1. 전체 블록 높이와 현재 페이지 남은 공간 측정
+                const dayHeight = measureElement(dayFullHtml);
+                const pagePos = currentHeight % A4_HEIGHT_PX;
+                const remainingSpace = A4_HEIGHT_PX - pagePos;
+
+                // 임계값: 공간이 이보다 많이 남았는데 넘어가면 아깝다 (약 1/4 페이지)
+                const GAP_THRESHOLD = 300;
+
+                // 로직 결정
+                // Case A: 현재 페이지에 다 들어감 -> 통째로 추가
+                if (dayHeight <= remainingSpace) {
+                    appendElement(dayFullHtml);
+                }
+                // Case B: 다 안 들어가지만, 넘기기엔 남은 공간이 너무 큼(아까움) OR Day가 너무 길어서 어차피 잘라야 함
+                // -> 쪼개서 채움
+                else if (remainingSpace > GAP_THRESHOLD || dayHeight > A4_HEIGHT_PX) {
+                    // 헤더+첫아이템 고아 방지 로직
+                    const headerHeight = measureElement(dayHeaderHtml);
+                    const firstItemHeight = itemsHtmls.length > 0 ? measureElement(itemsHtmls[0]) : 0;
+
+                    // 남은 공간이 헤더+첫아이템보다 작다면 (근데 300px보다 큰데 이게 작을 수 있나? 헤더+아이템이 클 수 있음)
+                    // 만약 그렇다면 여기서 강제 스페이싱을 줘서 넘겨버림
+                    if (remainingSpace < (headerHeight + firstItemHeight)) {
+                        const spacer = document.createElement('div');
+                        spacer.style.height = `${remainingSpace}px`;
+                        spacer.style.width = '100%';
+                        spacer.style.backgroundColor = 'white';
+                        pdfContainer.appendChild(spacer);
+                        currentHeight += remainingSpace;
+
+                        // 다음 페이지 상단 여백
+                        const topMargin = document.createElement('div');
+                        topMargin.style.height = '30px';
+                        topMargin.style.width = '100%';
+                        pdfContainer.appendChild(topMargin);
+                        currentHeight += 30;
+                    }
+
+                    // 분할 추가 시작
+                    appendElement(dayHeaderHtml);
+                    itemsHtmls.forEach(html => appendElement(html));
+                }
+                // Case C: 다 안 들어가고, 남은 공간도 적음 (깔끔하게 넘기는게 나음)
+                // -> 통째로 추가 시도 (appendElement 내부 로직에 의해 자동으로 다음 페이지로 넘어감)
+                else {
+                    appendElement(dayFullHtml);
+                }
+            });
+
+            // 3. 푸터 (브랜드 서명)
+            const footerHtml = `
+                <div style="
+                    margin-top: 50px; 
+                    text-align: center; 
+                    font-size: 14px; 
+                    color: #999; 
+                    font-weight: 500;
+                    font-style: italic;
+                    padding-bottom: 30px;
+                    font-family: 'Pretendard', sans-serif;
+                ">
+                    Walk your path, Fly your dream — Walk2Fly ✈️
+                </div>
+            `;
+            appendElement(footerHtml);
+
+            // --- HTML 구성 완료 ---
+
+            // HTML을 이미지로 변환 (html2canvas)
             const canvas = await html2canvas(pdfContainer, {
-                scale: 2,
+                scale: 2, // 해상도 2배 (선명하게)
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff'
@@ -207,7 +418,7 @@ export default function ScheduleDetailView({ schedule }) {
 
             document.body.removeChild(pdfContainer);
 
-            // PDF 생성
+            // PDF 생성 (jsPDF)
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF({
                 orientation: 'portrait',
@@ -215,21 +426,23 @@ export default function ScheduleDetailView({ schedule }) {
                 format: 'a4'
             });
 
-            const imgWidth = 210; // A4 width in mm
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            const imgWidth = 210; // A4 가로 (mm)
+            const pageHeight = 297; // A4 세로 (mm)
+            const imgHeight = (canvas.height * imgWidth) / canvas.width; // 비율에 맞춘 전체 이미지 높이
+
             let heightLeft = imgHeight;
             let position = 0;
 
-            // 첫 페이지
+            // 첫 페이지 출력
             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= 297; // A4 height in mm
+            heightLeft -= pageHeight;
 
-            // 추가 페이지 (필요시)
+            // 내용이 다음 페이지로 넘어가는 경우 루프
             while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
+                position = heightLeft - imgHeight; // 다음 페이지에서의 이미지 시작 Y좌표 (항상 음수)
                 pdf.addPage();
                 pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= 297;
+                heightLeft -= pageHeight;
             }
 
             // PDF를 Blob으로 생성
