@@ -8,6 +8,7 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
 
     // 날짜 포맷팅
     const timeAgo = formatDistanceToNow(new Date(review.created_at), { addSuffix: true, locale: ko });
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // 첫 번째 미디어 가져오기
     const firstMedia = review.media && review.media.length > 0 ? review.media[0] : null;
@@ -17,7 +18,7 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
         <div className="review-card" onClick={() => onClick(review)} style={{ cursor: 'pointer' }}>
             <div className="review-header">
                 <img
-                    src={review.author_avatar || `https://ui-avatars.com/api/?name=${review.author_name || '익명'}&background=random`}
+                    src={review.author_avatar || `https://ui-avatars.com/api/?name=${review.author_name || '익명'}&background=3b82f6&color=fff`}
                     alt={review.author_name || '익명'}
                     className="author-avatar"
                 />
@@ -87,27 +88,72 @@ export default function ReviewCard({ review, currentUser, onLike, onDelete, onEd
                 <p className="review-text">{review.content || review.body}</p>
             </div>
 
-            <div className="review-footer" onClick={(e) => e.stopPropagation()}>
+            <div
+                className="review-footer"
+                onClick={(e) => e.stopPropagation()}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
                 <div className="review-actions">
                     <button className={`action-btn ${review.is_liked ? 'liked' : ''}`} onClick={() => onLike(review.id)}>
                         {review.is_liked ? <FaHeart /> : <FaRegHeart />}
                         <span>{review.likes}</span>
                     </button>
-                    <button className="action-btn">
+                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); onClick(review, true); }}>
                         <FaComment />
                         <span>{review.comments}</span>
                     </button>
                 </div>
 
-                {/* 본인 글일 경우 수정/삭제 버튼 */}
+                {/* Edit/Delete Buttons */}
                 {currentUser && currentUser.id === review.user_id && (
-                    <div className="review-actions">
-                        <button className="action-btn" onClick={() => onEdit(review)}>
-                            <FaEdit />
-                        </button>
-                        <button className="action-btn" onClick={() => onDelete(review.id)}>
-                            <FaTrash />
-                        </button>
+                    <div className="review-actions" style={{ position: 'relative' }}>
+                        {showDeleteConfirm ? (
+                            <div style={{
+                                position: 'absolute',
+                                right: 0,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: '#fef2f2',
+                                padding: '4px 8px',
+                                borderRadius: '8px',
+                                border: '1px solid #fee2e2',
+                                whiteSpace: 'nowrap',
+                                zIndex: 10,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                            }}>
+                                <span style={{ fontSize: '0.85rem', color: '#ef4444', fontWeight: '600', marginRight: '4px' }}>삭제하시겠습니까?</span>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onDelete(review.id); }}
+                                    style={{
+                                        background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px',
+                                        padding: '2px 8px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold'
+                                    }}
+                                >
+                                    예
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }}
+                                    style={{
+                                        background: '#e5e7eb', color: '#4b5563', border: 'none', borderRadius: '4px',
+                                        padding: '2px 8px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold'
+                                    }}
+                                >
+                                    아니오
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <button className="action-btn" onClick={(e) => { e.stopPropagation(); onEdit(review); }}>
+                                    <FaEdit />
+                                </button>
+                                <button className="action-btn" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}>
+                                    <FaTrash />
+                                </button>
+                            </>
+                        )}
                     </div>
                 )}
             </div>

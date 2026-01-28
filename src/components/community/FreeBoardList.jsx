@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FaHeart, FaRegHeart, FaComment, FaEdit, FaTrash } from 'react-icons/fa';
 
 export default function FreeBoardList({ posts, onPostClick, currentUser, onEdit, onDelete, onLike }) {
+    const [deleteConfirmId, setDeleteConfirmId] = useState(null);
     return (
         <div className="free-board-list" style={{ width: '100%' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {posts.map(post => (
                     <div
                         key={post.id}
-                        onClick={() => onPostClick(post)}
+                        onClick={() => onPostClick(post, false)}
                         style={{
                             background: 'white',
                             borderRadius: '16px',
@@ -45,7 +46,7 @@ export default function FreeBoardList({ posts, onPostClick, currentUser, onEdit,
                                     width: '40px',
                                     height: '40px',
                                     borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    background: '#3b82f6',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -141,6 +142,7 @@ export default function FreeBoardList({ posts, onPostClick, currentUser, onEdit,
                                 </button>
                                 <button
                                     className="action-btn"
+                                    onClick={(e) => { e.stopPropagation(); onPostClick(post, true); }}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -162,48 +164,56 @@ export default function FreeBoardList({ posts, onPostClick, currentUser, onEdit,
                             {/* Edit/Delete Buttons - Only for post owner */}
                             {currentUser && currentUser.id === post.user_id && (
                                 <div className="review-actions" style={{ display: 'flex', gap: '4px' }}>
-                                    <button
-                                        className="action-btn"
-                                        onClick={() => onEdit(post)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '4px',
-                                            background: 'none',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            color: '#9ca3af',
-                                            fontSize: '0.9rem',
-                                            padding: '4px 8px',
-                                            borderRadius: '8px',
-                                            transition: 'color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.color = '#4b5563'}
-                                        onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                                    >
-                                        <FaEdit />
-                                    </button>
-                                    <button
-                                        className="action-btn"
-                                        onClick={() => onDelete(post.id)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '4px',
-                                            background: 'none',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            color: '#9ca3af',
-                                            fontSize: '0.9rem',
-                                            padding: '4px 8px',
-                                            borderRadius: '8px',
-                                            transition: 'color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                                        onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                                    >
-                                        <FaTrash />
-                                    </button>
+                                    {deleteConfirmId === post.id ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.2s', marginLeft: 'auto', background: '#fef2f2', padding: '4px 8px', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+                                            <span style={{ fontSize: '0.85rem', color: '#ef4444', fontWeight: '600', marginRight: '4px' }}>삭제하겠습니까?</span>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onDelete(post.id); setDeleteConfirmId(null); }}
+                                                style={{
+                                                    background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px',
+                                                    padding: '2px 8px', fontSize: '0.8rem', cursor: 'pointer'
+                                                }}
+                                            >
+                                                예
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }}
+                                                style={{
+                                                    background: '#e5e7eb', color: '#4b5563', border: 'none', borderRadius: '4px',
+                                                    padding: '2px 8px', fontSize: '0.8rem', cursor: 'pointer'
+                                                }}
+                                            >
+                                                아니오
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <button
+                                                className="action-btn"
+                                                onClick={(e) => { e.stopPropagation(); onEdit(post); }}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer',
+                                                    color: '#9ca3af', fontSize: '0.9rem', padding: '4px 8px', borderRadius: '8px', transition: 'color 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.color = '#4b5563'}
+                                                onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                                            >
+                                                <FaEdit />
+                                            </button>
+                                            <button
+                                                className="action-btn"
+                                                onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(post.id); }}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer',
+                                                    color: '#9ca3af', fontSize: '0.9rem', padding: '4px 8px', borderRadius: '8px', transition: 'color 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                                                onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                                            >
+                                                <FaTrash />
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>

@@ -163,7 +163,7 @@ export default function MoodPalette({ onComplete, onCancel }) {
 
                 {/* Step 2: Destination */}
                 {step === 2 && (
-                    <div className="moodPaletteStep fadeIn">
+                    <div className="moodPaletteStep compact-step fadeIn">
                         <h3 className="stepTitle">어디로 떠나고 싶으세요?</h3>
 
                         {!showCustomDestination ? (

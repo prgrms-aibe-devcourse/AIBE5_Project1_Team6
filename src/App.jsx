@@ -13,16 +13,23 @@ import { useEffect } from "react";
 import { supabase } from "./services/supabase";
 import { useAuthStore } from "./stores/authStore";
 
+import { useTripStore } from "./stores/tripStore";
+
 import AuthPage from "./pages/AuthPage";
 
 export default function App() {
   const { setSession, setUser } = useAuthStore();
+  const { reset: resetTrip } = useTripStore();
 
   useEffect(() => {
     // 초기 세션 확인
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      // 세션이 없으면 (로그아웃 상태) trip 상태 초기화
+      if (!session) {
+        resetTrip();
+      }
     });
 
     // 변경 감지
@@ -31,10 +38,14 @@ export default function App() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      // 로그아웃 시 trip 상태 초기화
+      if (!session) {
+        resetTrip();
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, [setSession, setUser]);
+  }, [setSession, setUser, resetTrip]);
 
   return (
     <Routes>

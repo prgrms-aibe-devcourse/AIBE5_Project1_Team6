@@ -51,7 +51,7 @@ export default function ReviewForm({ initialData, onSubmit, onClose, category = 
 
             setFormData(prev => ({
                 ...prev,
-                media: [...prev.media, { url: result, type }]
+                media: [...prev.media, { url: result, type, file: file }] // file 객체 저장
             }));
         };
         reader.readAsDataURL(file);
