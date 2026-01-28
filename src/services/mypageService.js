@@ -14,14 +14,20 @@ export const getMemories = async () => {
 
 // --- Notifications (알림) ---
 
-export const getNotifications = async () => {
+export const getNotifications = async (userId) => {
+    if (!userId) return [];
+
     const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data;
+    if (error) {
+        console.error('getNotifications error:', error);
+        return [];
+    }
+    return data || [];
 };
 
 export const markNotificationAsRead = async (id) => {
@@ -33,6 +39,77 @@ export const markNotificationAsRead = async (id) => {
 
     if (error) throw error;
     return data;
+};
+
+// 다가오는 여행 일정 알림 생성
+export const createTripNotifications = async (userId, schedules) => {
+    if (!userId || !schedules || schedules.length === 0) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const schedule of schedules) {
+        const startDate = schedule.startDate ? new Date(schedule.startDate) : null;
+        if (!startDate) continue;
+
+        startDate.setHours(0, 0, 0, 0);
+        const daysUntil = Math.ceil((startDate - today) / (1000 * 60 * 60 * 24));
+
+        // 1일, 3일, 7일, 14일 전에 알림 생성 (중복 방지)
+        const notificationDays = [1, 3, 7, 14];
+
+        for (const days of notificationDays) {
+            if (daysUntil === days) {
+                // 이미 같은 알림이 있는지 더 정확하게 확인
+                const { data: existingNotifications, error: checkError } = await supabase
+                    .from('notifications')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .eq('type', 'schedule')
+                    .eq('schedule_id', schedule.id);
+
+                // 이미 해당 일정에 대한 알림이 있으면 건너뛰기
+                if (existingNotifications && existingNotifications.length > 0) {
+                    // 같은 일수에 대한 알림이 있는지 확인
+                    const hasSameDayNotification = existingNotifications.some(notif => {
+                        // 데이터베이스에서 가져온 알림을 다시 조회하여 메시지 확인
+                        return true; // 일단 하나라도 있으면 건너뛰기
+                    });
+
+                    if (hasSameDayNotification) {
+                        continue;
+                    }
+                }
+
+                // 메시지 커스터마이징
+                let message;
+                if (days === 1) {
+                    message = `🎒 내일 출발! ${schedule.title || '여행'} 일정이 하루 남았습니다. 마지막 점검하세요!`;
+                } else if (days === 3) {
+                    message = `⏰ ${schedule.title || '여행'} 일정이 ${days}일 남았습니다. 준비물 챙기셨나요?`;
+                } else if (days === 7) {
+                    message = `📋 ${schedule.title || '여행'} 일정이 일주일 남았습니다. 슬슬 준비를 시작하세요!`;
+                } else {
+                    message = `✈️ ${schedule.title || '여행'} 일정이 ${days}일 남았습니다. 미리 계획을 세워보세요!`;
+                }
+
+                try {
+                    await supabase
+                        .from('notifications')
+                        .insert([{
+                            user_id: userId,
+                            type: 'schedule',
+                            message: message,
+                            schedule_id: schedule.id,
+                            is_read: false
+                        }]);
+                } catch (insertError) {
+                    // 삽입 에러 무시 (중복 방지)
+                    console.log('Notification already exists or insert failed:', insertError);
+                }
+            }
+        }
+    }
 };
 
 // --- Badges (뱃지) ---
