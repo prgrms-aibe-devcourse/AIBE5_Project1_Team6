@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { useTripStore } from '../stores/tripStore';
@@ -10,12 +11,17 @@ import FreeBoardDetailModal from '../components/community/FreeBoardDetailModal';
 import CommunityHeader from '../components/community/CommunityHeader';
 import FreeBoardList from '../components/community/FreeBoardList';
 import { FaSearch } from 'react-icons/fa';
+import LoadingOverlay from '../components/LoadingOverlay';
 import '../styles/Community.css';
 import toast from 'react-hot-toast';
 
 export default function Community() {
     const { user } = useAuthStore();
-    const [category, setCategory] = useState('free'); // 'free' or 'review'
+    const [searchParams, setSearchParams] = useSearchParams();
+    
+    // URL 파라미터에서 탭 상태 가져오기 (기본값: 'free')
+    const category = searchParams.get('tab') || 'free'; 
+
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -37,6 +43,7 @@ export default function Community() {
     const [isSortOpen, setIsSortOpen] = useState(false);
     const [editingPost, setEditingPost] = useState(null);
     const [viewingPost, setViewingPost] = useState(null);
+    const [autoFocusComment, setAutoFocusComment] = useState(false); // 댓글 입력 포커스 여부
 
     // 데이터 불러오기
     const loadPosts = async () => {
@@ -60,7 +67,7 @@ export default function Community() {
     // 초기 로드 및 필터 변경 시 재로드
     useEffect(() => {
         loadPosts();
-    }, [category, sortBy, activeSearchKeyword, searchType, wellnessOptions]);
+    }, [category, sortBy, activeSearchKeyword, searchType, wellnessOptions, user?.id]);
 
     // 카테고리 변경 시 초기화
     useEffect(() => {
@@ -69,14 +76,37 @@ export default function Community() {
         setKeywordInput('');
     }, [category]);
 
+    // 탭 변경 핸들러
+    const handleCategoryChange = (newCategory) => {
+        setSearchParams({ tab: newCategory });
+    };
+
     const handleSearchTrigger = () => {
         setActiveSearchKeyword(keywordInput);
     };
 
     // 저장 핸들러 (작성/수정)
     const handleSavePost = async (formData) => {
+        // 1. 이미지 업로드 처리
+        const processedMedia = await Promise.all(
+            (formData.media || []).map(async (item) => {
+                // 이미 URL이 있고 file 객체가 없으면 기존 이미지
+                if (!item.file) return item;
+
+                // 새 파일인 경우 업로드
+                try {
+                    const publicUrl = await communityService.uploadImage(item.file);
+                    return { ...item, url: publicUrl || item.url }; // 실패 시 기존 base64라도 반환 (혹은 에러처리)
+                } catch (e) {
+                    console.error("이미지 업로드 실패", e);
+                    return item;
+                }
+            })
+        );
+
         const postData = {
             ...formData,
+            media: processedMedia, // 업로드된 URL이 담긴 미디어 배열 사용
             category: category,
             user_id: user?.id,
             author_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || '익명',
@@ -84,34 +114,58 @@ export default function Community() {
         };
 
         if (editingPost) {
-            const { error } = await communityService.updatePost(editingPost.id, postData);
-            if (!error) {
+            const { error, data } = await communityService.updatePost(editingPost.id, postData);
+            if (!error && data) {
                 toast.success('수정되었습니다.');
-                loadPosts();
+                // Optimistic Update: Replace the item in the list
+                setPosts(prev => prev.map(p => p.id === data.id ? { ...p, ...data } : p));
+                // Update viewingPost if needed
+                if (viewingPost?.id === data.id) {
+                    setViewingPost(prev => ({ ...prev, ...data }));
+                }
                 setIsModalOpen(false);
                 setEditingPost(null);
             }
         } else {
             const { data, error } = await communityService.createPost(postData);
-            if (!error) {
+            if (!error && data) {
                 toast.success('작성되었습니다.');
-                loadPosts();
+                // Optimistic Update: Prepend the new item to the list
+                setPosts(prev => [data, ...prev]);
                 setIsModalOpen(false);
             } else {
                 console.error('게시글 작성 실패:', error);
-                toast.error('게시글 작성에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
+                toast.error('게시글 작성에 실패했습니다: ' + (error?.message || '알 수 없는 오류'));
             }
         }
     };
 
-    // 삭제 핸들러
+    // 게시글 상세 보기 및 댓글 포커스 처리
+    const handleOpenDetail = (post, focusComment = false) => {
+        setViewingPost(post);
+        setAutoFocusComment(focusComment);
+    };
+
+    // 하위 모달에서 게시글 정보 업데이트 (댓글 수, 좋아요 등) - Optimistic UI
+    const handleUpdatePost = (updatedPost) => {
+        // 목록 업데이트
+        setPosts(prev => prev.map(p => p.id === updatedPost.id ? { ...p, ...updatedPost } : p));
+        // 보고 있는 포스트 업데이트
+        setViewingPost(prev => prev && prev.id === updatedPost.id ? { ...prev, ...updatedPost } : prev);
+    };
+
+    // 삭제 핸들러 (Inline confirmation already done in child components)
     const handleDelete = async (id) => {
-        if (window.confirm('정말 삭제하시겠습니까?')) {
-            const { error } = await communityService.deletePost(id);
-            if (!error) {
-                toast.success('삭제되었습니다.');
-                loadPosts();
-            }
+        // Optimistic update for Delete
+        const previousPosts = [...posts];
+        setPosts(prev => prev.filter(post => post.id !== id));
+        if (viewingPost?.id === id) setViewingPost(null);
+
+        const { error } = await communityService.deletePost(id);
+        if (error) {
+            // Revert on error
+            setPosts(previousPosts);
+            toast.error('삭제 실패');
         }
     };
 
@@ -121,39 +175,71 @@ export default function Community() {
             toast.error('로그인이 필요합니다.');
             return;
         }
-        await communityService.toggleLike(id, user.id);
-        loadPosts().then(() => {
-            if (viewingPost && viewingPost.id === id) {
-                setViewingPost(prev => {
-                    if (!prev) return null;
-                    const isLiked = !prev.is_liked;
-                    return {
-                        ...prev,
-                        is_liked: isLiked,
-                        likes: isLiked ? prev.likes + 1 : prev.likes - 1
-                    };
-                });
+
+        // 1. Optimistic update (UI 즉시 반영)
+        const previousPosts = [...posts];
+        const previousViewingPost = viewingPost ? { ...viewingPost } : null;
+
+        const toggleOptimistic = (post) => {
+            const isLiked = !post.is_liked;
+            return {
+                ...post,
+                is_liked: isLiked,
+                likes: isLiked ? (post.likes || 0) + 1 : Math.max(0, (post.likes || 0) - 1)
+            };
+        };
+
+        setPosts(prev => prev.map(post => post.id === id ? toggleOptimistic(post) : post));
+
+        if (viewingPost && viewingPost.id === id) {
+            setViewingPost(prev => toggleOptimistic(prev));
+        }
+
+        // 2. Server request
+        const { error } = await communityService.toggleLike(id, user.id);
+        
+        if (error) {
+            // Revert on error
+            console.error(error);
+            setPosts(previousPosts);
+            if (previousViewingPost) setViewingPost(previousViewingPost);
+            toast.error('좋아요 처리에 실패했습니다.');
+        } else {
+            // 3. Sync with Server (DB Trigger가 count를 업데이트하므로 확실한 값을 위해 재조회)
+            // 약간의 딜레이를 주어 트리거 실행 시간을 확보할 수도 있지만, 보통은 즉시 반영됨.
+            const { data: syncedPost } = await communityService.getPost(id, user.id);
+            if (syncedPost) {
+                handleUpdatePost(syncedPost);
             }
-        });
+        }
+    };
+
+    const handleEditPost = (post) => {
+        setEditingPost(post);
+        setIsModalOpen(true);
     };
 
     return (
         <div className="reviews-container">
+            {/* Global Loading Overlay */}
+            {loading && <LoadingOverlay message="함께 떠나는 이야기를 불러오는 중이에요!" icon="💬" />}
+
             <CommunityHeader
                 activeCategory={category}
-                onCategoryChange={setCategory}
+                onCategoryChange={handleCategoryChange}
             />
 
             <div className="community-content" style={{ marginTop: '20px' }}>
-                <p style={{ color: '#6b7280', marginBottom: '16px' }}>
-                    {category === 'review' ? '다른 여행자들의 생생한 후기를 확인해보세요.' : '자유롭게 이야기를 나누고 정보를 공유해보세요.'}
-                </p>
+
 
                 <div className="reviews-controls-container" style={{ marginBottom: '24px' }}>
                     <div className="reviews-actions-row">
-                        <span className="total-count">
-                            총 {posts.length}개의 {category === 'review' ? '후기' : '글'}
-                        </span>
+                        <div className="total-count-badge">
+                            <span className="count-icon">📝</span>
+                            <span className="count-text">
+                                총 <strong className="highlight-count">{posts.length}</strong>개의 {category === 'review' ? '생생한 여행 이야기' : '자유로운 이야기'}
+                            </span>
+                        </div>
                         {category === 'review' && (
                             <div className="custom-sort-dropdown">
                                 <button className="sort-trigger" onClick={() => setIsSortOpen(!isSortOpen)}>
@@ -206,7 +292,7 @@ export default function Community() {
                 {category === 'review' ? (
                     <>
                         {/* 웰니스 필터 */}
-                        <div className="wellness-filter-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', padding: '1rem 0', marginBottom: '1rem' }}>
+                        <div className="wellness-filter-bar">
                             <button
                                 className={`wellness-chip ${!wellnessOptions.mood && wellnessOptions.themes.length === 0 ? 'active' : ''}`}
                                 onClick={() => setWellnessOptions({ mood: null, themes: [] })}
@@ -218,7 +304,6 @@ export default function Community() {
                                 }}
                             >전체</button>
                             <span style={{ color: '#e5e7eb', margin: '0 4px', userSelect: 'none' }}>|</span>
-                            {/* 무드/테마 버튼들 동일하게 배치... */}
                             {[
                                 { id: 'romantic', label: '🌹 낭만' },
                                 { id: 'refresh', label: '🌈 리프레시' },
@@ -259,13 +344,13 @@ export default function Community() {
                         </div>
 
                         <div className="reviews-grid">
-                            {loading ? <p>로딩 중...</p> : posts.length > 0 ? (
+                            {posts.length > 0 ? (
                                 posts.map(post => (
                                     <ReviewCard
-                                        key={post.id} post={post} review={post} // 호환성
+                                        key={post.id} post={post} review={post}
                                         currentUser={user} onLike={handleLike} onDelete={handleDelete}
-                                        onEdit={(p) => { setEditingPost(p); setIsModalOpen(true); }}
-                                        onClick={(p) => setViewingPost(p)}
+                                        onEdit={handleEditPost}
+                                        onClick={handleOpenDetail} // (post, focusComment) 인자 전달 가능
                                     />
                                 ))
                             ) : (
@@ -284,16 +369,12 @@ export default function Community() {
                     </>
                 ) : (
                     /* 자유게시판 UI */
-                    loading ? (
-                        <p style={{ textAlign: 'center', padding: '3rem' }}>로딩 중...</p>
-                    ) : posts.length > 0 ? (
+                    posts.length > 0 ? (
                         <FreeBoardList
                             posts={posts}
                             currentUser={user}
-                            onPostClick={(p) => {
-                                setViewingPost(p);
-                            }}
-                            onEdit={(p) => { setEditingPost(p); setIsModalOpen(true); }}
+                            onPostClick={(p) => handleOpenDetail(p, false)}
+                            onEdit={handleEditPost}
                             onDelete={handleDelete}
                             onLike={handleLike}
                         />
@@ -311,7 +392,7 @@ export default function Community() {
                 )}
             </div>
 
-            {/* 기존 플로팅 버튼 유지 요청 대응 */}
+            {/* 플로팅 버튼 */}
             {user && (
                 <button className="floating-fab" onClick={() => {
                     setEditingPost(null);
@@ -322,7 +403,7 @@ export default function Community() {
                 </button>
             )}
 
-            {/* 모달들 */}
+            {/* 글쓰기 모달 */}
             <AnimatePresence>
                 {isModalOpen && (
                     <ReviewForm
@@ -334,22 +415,27 @@ export default function Community() {
                 )}
             </AnimatePresence>
 
+            {/* 상세 보기 모달 */}
             {viewingPost && (
-                viewingPost.category === 'free' ? (
-                    <FreeBoardDetailModal
-                        post={viewingPost}
-                        onClose={() => setViewingPost(null)}
-                        onLike={handleLike}
-                        onEdit={(p) => { setEditingPost(p); setIsModalOpen(true); }}
-                        onDelete={handleDelete}
-                    />
-                ) : (
+                category === 'review' ? (
                     <ReviewDetailModal
                         review={viewingPost}
                         onClose={() => setViewingPost(null)}
                         onLike={handleLike}
-                        onEdit={(p) => { setEditingPost(p); setIsModalOpen(true); }}
+                        onEdit={handleEditPost}
                         onDelete={handleDelete}
+                        focusComment={autoFocusComment} // Prop 전달
+                        onUpdatePost={handleUpdatePost} // 콜백 전달
+                    />
+                ) : (
+                    <FreeBoardDetailModal
+                        post={viewingPost}
+                        onClose={() => setViewingPost(null)}
+                        onLike={handleLike}
+                        onEdit={handleEditPost}
+                        onDelete={handleDelete}
+                        focusComment={autoFocusComment} // Prop 전달
+                        onUpdatePost={handleUpdatePost} // 콜백 전달
                     />
                 )
             )}

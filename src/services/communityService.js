@@ -1,8 +1,42 @@
 import { supabase } from './supabase';
+import { createNotification } from './mypageService';
 
 export const communityService = {
+    // 이미지 업로드
+    async uploadImage(file) {
+        try {
+            if (!file) return null;
+
+            // 파일명 생성 (unique)
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            // Supabase Storage에 업로드
+            const { data, error } = await supabase.storage
+                .from('community_images')
+                .upload(filePath, file);
+
+            if (error) {
+                console.error('Upload image error:', error);
+                // 버킷이 없을 경우를 대비한 에러 처리 필요할 수 있음
+                throw error;
+            }
+
+            // Public URL 가져오기
+            const { data: { publicUrl } } = supabase.storage
+                .from('community_images')
+                .getPublicUrl(filePath);
+
+            return publicUrl;
+        } catch (error) {
+            console.error('uploadImage exception:', error);
+            return null;
+        }
+    },
+
     // 게시글 목록 가져오기 (카테고리별)
-    async getPosts(category, sort = 'latest', search = { type: '', keyword: '' }, wellnessOptions = { mood: null, themes: [] }, currentUserId = null) {
+    async getPosts(category, sort = 'latest', search = { type: '', keyword: '' }, wellnessOptions = { mood: null, themes: [] }, currentUserId = null, filterUserId = null) {
         try {
             // profiles 테이블과 join하여 작성자 정보 가져오기
             let query = supabase
@@ -16,14 +50,16 @@ export const communityService = {
                 `)
                 .eq('category', category);
 
+            // 특정 유저의 글만 필터링 (MyPage용)
+            if (filterUserId) {
+                query = query.eq('user_id', filterUserId);
+            }
+
             // 검색 필터
             if (search.keyword) {
                 const term = `%${search.keyword}%`;
                 if (search.type === 'author') {
-                    // 작성자 검색: profiles 테이블과 inner join하여 필터링
-                    // 이미 위에서 select를 했으므로 필터만 추가하되, 
-                    // !inner join이 필요하므로 query를 새로 구성하는 대신 select 구문만 조정할 수 없으므로 
-                    // 여기서는 필터 조건만 정확히 타겟팅합니다.
+                    // 작성자 검색
                     query = query.ilike('profiles.username', term);
                 } else if (search.type === 'destination') {
                     query = query.ilike('destination', term);
@@ -208,6 +244,19 @@ export const communityService = {
                 views: 0
             };
 
+            // Trigger Notification for Self (Testing purpose) - Fixed await and error handling
+            try {
+                await createNotification({
+                    user_id: postData.user_id, // Use the user_id from arguments
+                    sender_id: postData.user_id, // Sender is self
+                    type: 'post',
+                    message: `새로운 글 "${postData.title}"을(를) 작성하였습니다.`,
+                    link: '/mypage?tab=reviews'
+                });
+            } catch (notiError) {
+                console.error("Notification trigger failed:", notiError);
+            }
+
             return { data: processed, error: null };
         } catch (error) {
             console.error('createPost exception:', error);
@@ -313,7 +362,7 @@ export const communityService = {
                 .select('id')
                 .eq('post_id', postId)
                 .eq('user_id', userId)
-                .single();
+                .maybeSingle();
 
             if (existingLike) {
                 // 좋아요 취소

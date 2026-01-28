@@ -10,7 +10,7 @@ import WeatherWidget from "../components/WeatherWidget";
 import "../styles/cards.css";
 import "./Walk.css";
 import LoadingOverlay from "../components/LoadingOverlay";
-import { addPlan } from "../services/plansStorage";
+import { addSchedule } from "../services/schedulesStorage";
 import { improvePlanText } from "../services/aiPlanner";
 import { simpleDiff } from "../services/diff";
 import { rankTourItems } from "../services/recommend/rankTourItems";
@@ -18,6 +18,8 @@ import { sequenceRoute } from "../services/recommend/sequenceRoute";
 import { estimateBudgetLevel, estimateItemCost } from "../services/recommend/estimateBudget";
 import { haversineKm, KOREA_CITY_COORDS } from "../utils/geo"; 
 import { useAuthStore } from "../stores/authStore";
+import { createNotification } from "../services/mypageService";
+import { savePlace, isPlaceSaved } from "../services/savedPlacesService";
 import { GUEST_KEY } from "../utils/guestUtils";
 
 export default function Walk() {
@@ -66,6 +68,47 @@ export default function Walk() {
         arrange: isEnergySaving ? 'E' : 'Q', 
      };
   }, [priority, duration]);
+
+    const handleSaveCard = async (item, silent = false) => {
+        if (!user) {
+            if (!silent) toast.error("로그인이 필요합니다.");
+            return;
+        }
+        
+        try {
+            // 중복 확인
+            const alreadySaved = await isPlaceSaved(user.id, item.title);
+            if (alreadySaved) {
+                if (!silent) toast.error("이미 저장된 장소입니다.");
+                return;
+            }
+            
+            // 장소 저장
+            await savePlace(user.id, {
+                title: item.title,
+                image: item.firstimage || item.image,
+                country: item.addr1 ? item.addr1.split(" ")[0] : "대한민국",
+                description: item.addr1 || "AI가 추천하는 최고의 장소입니다.",
+                tag: activeCategory === 'food' ? '맛집' : activeCategory === 'activity' ? '액티비티' : '힐링',
+                category: 'walk',
+                matchScore: 90 + Math.floor(Math.random() * 10),
+                ...item // 전체 데이터 저장
+            });
+            
+            // 알림 생성
+            await createNotification({
+                user_id: user.id,
+                type: 'save',
+                message: `"${item.title}" 카드가 저장되었습니다.`,
+                link: '/mypage'
+            });
+            
+            if (!silent) toast.success(`"${item.title}" 저장 완료!`);
+        } catch (error) {
+            console.error('저장 실패:', error);
+            if (!silent) toast.error("저장에 실패했습니다.");
+        }
+    };
 
   // ✅ Fallback Location & Destination Logic
   const cityCoords = {
@@ -250,10 +293,15 @@ export default function Walk() {
 
   const onSave = async (payload) => {
     try {
-      await addPlan({ ...payload, category: "walk" });
-      toast.success("플랜이 저장됐어요!");
+      // 메인 페이지에서는 '선택 완료' 시 '저장된 장소'로 저장합니다.
+      if (selected) {
+        await handleSaveCard(selected);
+      }
       setSelected(null);
-    } catch (e) { toast.error(e.message); }
+    } catch (e) { 
+      console.error('Save failed:', e);
+      toast.error(e.message); 
+    }
   };
 
   const getCourseCost = (items) => {
@@ -439,14 +487,6 @@ export default function Walk() {
             
             return (
                 <div key={`course-${courseIdx}`} className="courseSection" style={{ marginTop: courseIdx === 0 ? '13px' : '40px' }}>
-                    <div style={{ marginBottom: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.95rem' }}>
-                            <span style={{ fontWeight: '700', color: courseColor }}>
-                                추천 경로 {courseIdx + 1}
-                            </span>
-                        </div>
-                    </div>
-
                     <div className="grid">
                         {courseItems.map((it, index) => {
                             const matchScore = 90 + Math.floor((Math.random() * 10) - (index * 2));
@@ -459,7 +499,8 @@ export default function Walk() {
                                         desc={it.addr1 || "AI가 추천하는 최고의 장소입니다."}
                                         image={it.firstimage || "https://images.unsplash.com/photo-1533658280665-224492bf552f?auto=format&fit=crop&w=800&q=80"} 
                                         matchScore={matchScore}
-                                        routeBadge={{ color: courseColor, number: index + 1 }}
+                                        onLike={() => handleSaveCard(it)}
+                                        onSave={() => handleSaveCard(it)}
                                     />
                                 </div>
                             );
