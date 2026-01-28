@@ -22,6 +22,11 @@ function MapUpdater({ center, zoom }) {
   const map = useMap();
   useEffect(() => {
     map.setView(center, zoom ?? map.getZoom());
+    // Fix for map rendering issues (gray space or wrong center on init)
+    const timeout = setTimeout(() => {
+        map.invalidateSize();
+    }, 100);
+    return () => clearTimeout(timeout);
   }, [center, zoom, map]);
   return null;
 }

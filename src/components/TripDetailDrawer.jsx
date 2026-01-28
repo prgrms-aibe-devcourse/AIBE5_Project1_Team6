@@ -6,6 +6,8 @@ import { useTripStore } from "../stores/tripStore";
 import "../styles/drawer.css";
 import { useMemo } from "react";
 
+import toast from "react-hot-toast"; // Ensure toast is imported if not already
+
 export default function TripDetailDrawer({
   open,
   onClose,
@@ -15,7 +17,14 @@ export default function TripDetailDrawer({
   planText,
   setPlanText,
   onSave,
+  onUnregister, // New prop
   onImprove,
+  onOpenAIOptions,
+
+  showScheduleControls = false,
+  showAIButton = false, // New prop to show AI Generate button instead of Register/Unregister
+  isRegistered = false, // Renamed from isSaved
+  hideRegisterButton = false // New prop to hide the registration button
 }) {
   const { budgetAmount } = useTripStore();
   
@@ -32,6 +41,11 @@ export default function TripDetailDrawer({
   if (!open || !item) return null;
 
   const handleSave = () => {
+    if (isRegistered) {
+        toast.error("이미 등록된 장소입니다.");
+        return;
+    }
+
     const payload = {
       id: crypto.randomUUID?.() ?? String(Date.now()),
       createdAt: new Date().toISOString(),
@@ -166,34 +180,31 @@ export default function TripDetailDrawer({
                     <span>{itemCost.toLocaleString()}원</span>
                 </div>
                  
-                {budgetAmount && (
-                    <div style={{ textAlign: 'right', marginTop: '8px', fontSize: '0.85rem', color: '#888' }}>
-                        내 예산 ({budgetAmount.toLocaleString()}원)의 약 <b style={{color: '#5C94FF'}}>{Math.round((itemCost / budgetAmount) * 100)}%</b>를 사용합니다.
-                    </div>
-                )}
             </section>
             
-            {/* 4. Smart Itinerary */}
-            <section className="drawerSection">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h3>🗺️ 여행 계획표</h3>
-                    <button 
-                        onClick={() => onImprove(detailData)}
-                        style={{ background: '#eef2ff', border: 'none', padding: '6px 12px', borderRadius: '20px', color: '#5C94FF', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.2s' }}
-                        onMouseOver={(e) => e.target.style.background = '#e0e7ff'}
-                        onMouseOut={(e) => e.target.style.background = '#eef2ff'}
-                    >
-                        ⚡ AI 자동 제안
-                    </button>
-                </div>
-                
-                <textarea
-                    className="planArea"
-                    value={planText}
-                    onChange={(e) => setPlanText(e.target.value)}
-                    placeholder="AI 버튼을 누르면 추천 코스가 자동으로 작성됩니다."
-                />
-            </section>
+            {/* 4. Smart Itinerary (Conditional) */}
+            {showScheduleControls && (
+                <section className="drawerSection">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h3>🗺️ 여행 계획표</h3>
+                        <button 
+                            onClick={() => onImprove(detailData)}
+                            style={{ background: '#eef2ff', border: 'none', padding: '6px 12px', borderRadius: '20px', color: '#5C94FF', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.2s' }}
+                            onMouseOver={(e) => e.target.style.background = '#e0e7ff'}
+                            onMouseOut={(e) => e.target.style.background = '#eef2ff'}
+                        >
+                            ⚡ AI 자동 제안
+                        </button>
+                    </div>
+                    
+                    <textarea
+                        className="planArea"
+                        value={planText}
+                        onChange={(e) => setPlanText(e.target.value)}
+                        placeholder="AI 버튼을 누르면 추천 코스가 자동으로 작성됩니다."
+                    />
+                </section>
+            )}
             
             {/* 5. Map */}
              {(item.mapy || item.lat) && (item.mapx || item.lon) && (
@@ -261,12 +272,53 @@ export default function TripDetailDrawer({
         </div>
 
         <div className="drawerFooter">
-            <button 
-                className="primaryBtn" 
-                onClick={handleSave}
-            >
-                선택 완료
-            </button>
+            {showAIButton ? (
+                <button 
+                    className="generate-btn"
+                    onClick={onOpenAIOptions}
+                    style={{ 
+                        width: '100%',
+                        flex: 1, 
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', 
+                        color: '#fff', 
+                        border: 'none',
+                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                        fontSize: '1rem',
+                        fontWeight: 'bold',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        borderRadius: '12px'
+                    }}
+                >
+                    ✨ AI로 전체 일정 만들기
+                </button>
+            ) : (
+                <>
+                    {showScheduleControls && (
+                        <button 
+                            className="secondaryBtn"
+                            onClick={onOpenAIOptions}
+                            style={{ flex: 1, marginRight: '8px', background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe' }}
+                        >
+                            ✨ AI로 전체 일정 만들기
+                        </button>
+                    )}
+                    {!hideRegisterButton && !showAIButton && (
+                        <button 
+                            className="primaryBtn" 
+                            onClick={isRegistered ? onUnregister : handleSave}
+                            style={{ 
+                                flex: 1,
+                                background: isRegistered ? '#ffebee' : undefined,
+                                color: isRegistered ? '#d32f2f' : undefined,
+                                border: isRegistered ? '1px solid #ffcdd2' : undefined
+                            }}
+                        >
+                            {isRegistered ? "여행지 해제하기" : "여행지 등록하기"}
+                        </button>
+                    )}
+                </>
+            )}
         </div>
 
       </aside>

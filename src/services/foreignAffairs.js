@@ -528,6 +528,12 @@ const FALLBACK_DATA = {
         code: "HT", nameKr: "아이티", nameEn: "Haiti",
         warning: { alarm_lvl: 4, remark: "여행금지 (치안 붕괴)" },
         basic: { capital: "포르토프랭스", currency: "구르드 (HTG) - 1 HTG ≈ 10원", lang: "프랑스어, 아이티어", religion: "가톨릭 80%, 개신교 16%" }
+    },
+    // 🏝️ 제주도 (JEJU) - Custom Virtual Country Code
+    "JEJU": {
+        code: "JEJU", nameKr: "제주도", nameEn: "Jeju Island",
+        warning: { alarm_lvl: 0, remark: "안전 (청정 자연)" },
+        basic: { capital: "제주시", currency: "원 (KRW)", lang: "한국어 (제주 방언)", religion: "무교, 불교, 개신교" }
     }
 };
 
@@ -556,7 +562,7 @@ export async function searchCountryData(query) {
       const alwaysSafeList = [
           '가나', '미국', '일본', '영국', '프랑스', '러시아', '베트남', '인도', '이란', '이라크', '우즈베키스탄', 
           '스페인', '이탈리아', '태국', '캐나다', '중국', '스위스', '그리스', '한국', '대만',
-          '멕시코', '아르헨티나', '브라질', '남아공', '우루과이', '아이티'
+          '멕시코', '아르헨티나', '브라질', '남아공', '우루과이', '아이티', '제주'
       ];
       if(alwaysSafeList.some(k => query.includes(k) || fallbackMatch.nameKr.includes(k))) {
           return fallbackMatch;

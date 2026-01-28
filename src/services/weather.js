@@ -36,11 +36,11 @@ export function clothingTip(tempC, code) {
   if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return "비가 오고 있어요 ☔ 우산과 방수 되는 신발을 추천해요.";
 
   // 2. Temperature Based
-  if (tempC <= 5) return "기온이 낮아요. 패딩/장갑 같은 방한 준비 꼭 해요!";
+  if (tempC <= 5) return "감기 걸릴 수 있는 날씨에요. 패딩을 준비하세요!";
   if (tempC <= 12) return "쌀쌀할 수 있어요. 자켓/맨투맨 챙기면 좋아요.";
   if (tempC <= 20) return "선선해요. 긴팔이나 얇은 겉옷 추천!";
-  if (tempC <= 28) return "따뜻해요. 반팔도 가능해요! (실내 냉방 대비 얇은 겉옷도 OK)";
-  return "무더운 날씨! 시원한 옷차림과 수분 섭취 잊지 마세요 ☀️";
+  if (tempC <= 28) return "따뜻해요. 반팔도 가능해요! ";
+  return "무더운 날씨! 시원한 옷차림과 수분 섭취 잊지 마세요";
 }
 
 export function getWeatherLabel(code) {

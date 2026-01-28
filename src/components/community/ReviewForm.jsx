@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FaStar, FaPlus, FaTrash, FaFolderOpen } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
-export default function ReviewForm({ initialData, onSubmit, onClose, category = 'review' }) {
+export default function ReviewForm({ initialData, onSubmit, onClose, category = 'review', isSubmitting = false }) {
     const isReview = category === 'review';
     const [formData, setFormData] = useState({
         destination: '',
@@ -11,7 +11,10 @@ export default function ReviewForm({ initialData, onSubmit, onClose, category = 
         content: '',
         media: [],
         mood: '',
-        theme: ''
+        theme: '',
+        noise_level: 3,
+        lighting_level: 3,
+        congestion_level: 3 // Default 'Normal'
     });
 
     // 새 미디어 입력 상태
@@ -26,10 +29,38 @@ export default function ReviewForm({ initialData, onSubmit, onClose, category = 
                 content: initialData.content,
                 media: initialData.media || [],
                 mood: initialData.mood || '',
-                theme: initialData.theme || ''
+                theme: initialData.theme || '',
+                noise_level: initialData.noise_level || 3,
+                lighting_level: initialData.lighting_level || 3,
+                congestion_level: initialData.congestion_level || 3
             });
         }
     }, [initialData]);
+
+    // Helpers for labels
+    const getNoiseLabel = (val) => {
+        if (val <= 1) return '🧘‍♂️ ASMR급 (매우 조용)';
+        if (val <= 2) return '🤫 조용한 편';
+        if (val <= 3) return '🔉 보통';
+        if (val <= 4) return '🔊 다소 시끄러움';
+        return '📢 북적이는 소음';
+    };
+
+    const getLightingLabel = (val) => {
+        if (val <= 1) return '🕯️ 은은한 무드 (어두움)';
+        if (val <= 2) return '🌘 차분함';
+        if (val <= 3) return '💡 적당한 밝기';
+        if (val <= 4) return '☀️ 화사함';
+        return '✨ 햇살 가득 (매우 밝음)';
+    };
+
+    const getCongestionLabel = (val) => {
+        if (val <= 1) return '🏝️ 나만 아는 곳 (텅 빔)';
+        if (val <= 2) return '😌 여유로움';
+        if (val <= 3) return '🙂 적당함';
+        if (val <= 4) return '👥 꽤 많음';
+        return '👨‍👩‍👧‍👦 인산인해 (매우 혼잡)';
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -217,6 +248,70 @@ export default function ReviewForm({ initialData, onSubmit, onClose, category = 
                         />
                     </div>
 
+                    {/* Detailed Metrics (Review Only) */}
+                    {isReview && (
+                        <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                            <label style={{ display: 'block', fontSize: '1rem', fontWeight: '800', marginBottom: '16px', color: '#111827' }}>상세 정보</label>
+                            
+                            {/* Noise Level */}
+                            <div style={{ marginBottom: '20px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#4b5563' }}>소음 정도</span>
+                                    <span style={{ fontSize: '0.85rem', color: '#3b82f6', fontWeight: 'bold' }}>{getNoiseLabel(formData.noise_level)}</span>
+                                </div>
+                                <input 
+                                    type="range" 
+                                    min="1" max="5" 
+                                    value={formData.noise_level}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, noise_level: Number(e.target.value) }))}
+                                    style={{ width: '100%', cursor: 'pointer', accentColor: '#3b82f6' }} 
+                                />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#9ca3af', marginTop: '4px' }}>
+                                    <span>조용함</span>
+                                    <span>시끄러움</span>
+                                </div>
+                            </div>
+
+                            {/* Lighting Level */}
+                            <div style={{ marginBottom: '20px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#4b5563' }}>조명 밝기</span>
+                                    <span style={{ fontSize: '0.85rem', color: '#fbbf24', fontWeight: 'bold' }}>{getLightingLabel(formData.lighting_level)}</span>
+                                </div>
+                                <input 
+                                    type="range" 
+                                    min="1" max="5" 
+                                    value={formData.lighting_level}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, lighting_level: Number(e.target.value) }))}
+                                    style={{ width: '100%', cursor: 'pointer', accentColor: '#fbbf24' }} 
+                                />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#9ca3af', marginTop: '4px' }}>
+                                    <span>어두움</span>
+                                    <span>밝음</span>
+                                </div>
+                            </div>
+
+                            {/* Congestion Level */}
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#4b5563' }}>혼잡도</span>
+                                    <span style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 'bold' }}>{getCongestionLabel(formData.congestion_level)}</span>
+                                </div>
+                                <input 
+                                    type="range" 
+                                    min="1" max="5" 
+                                    value={formData.congestion_level}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, congestion_level: Number(e.target.value) }))}
+                                    style={{ width: '100%', cursor: 'pointer', accentColor: '#10b981' }} 
+                                />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#9ca3af', marginTop: '4px' }}>
+                                    <span>여유로움</span>
+                                    <span>복잡함</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Mood */}
                     {isReview && (
                         <div className="form-group">
@@ -376,13 +471,17 @@ export default function ReviewForm({ initialData, onSubmit, onClose, category = 
                         </button>
                         <button
                             type="submit"
+                            disabled={isSubmitting}
                             style={{
                                 flex: 2, padding: '14px', borderRadius: '12px', border: 'none',
-                                background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: 'pointer',
-                                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                                background: isSubmitting ? '#9ca3af' : '#3b82f6', 
+                                color: 'white', fontWeight: 'bold', 
+                                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                boxShadow: isSubmitting ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.3)',
+                                transition: 'all 0.2s'
                             }}
                         >
-                            등록하기
+                            {isSubmitting ? '등록 중...' : '등록하기'}
                         </button>
                     </div>
                 </form>

@@ -17,7 +17,7 @@
     padding: 40px 32px;
     border-radius: 24px;
     width: 90%;
-    max-width: 420px;
+    max-width: 550px;
     box-shadow: none;
     border: 1px solid rgba(255, 255, 255, 0.8);
     position: relative;
@@ -82,12 +82,12 @@
 
 .authBtn {
     width: 100%;
-    padding: 18px;
+    padding: 20px;
     border-radius: 16px;
     border: none;
-    background: #5C94FF;
+    background: #3B82F6;
     color: white;
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 700;
     cursor: pointer;
     margin-top: 16px;

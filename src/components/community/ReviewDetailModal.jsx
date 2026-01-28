@@ -7,7 +7,7 @@ import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
 
 export default function ReviewDetailModal({ review, onClose, onLike, onEdit, onDelete, focusComment, onUpdatePost }) {
-    const { user } = useAuthStore();
+    const { user, setShowLoginPrompt } = useAuthStore();
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
@@ -31,6 +31,34 @@ export default function ReviewDetailModal({ review, onClose, onLike, onEdit, onD
             }, 300);
         }
     }, [focusComment]);
+
+    // Helpers
+    const getNoiseLabel = (val) => {
+        if (!val) return '정보 없음'; // For old reviews
+        if (val <= 1) return '🧘‍♂️ ASMR급 (매우 조용)';
+        if (val <= 2) return '🤫 조용함';
+        if (val <= 3) return '🔉 보통';
+        if (val <= 4) return '🔊 다소 시끄러움';
+        return '📢 시끄러움';
+    };
+
+    const getLightingLabel = (val) => {
+        if (!val) return '정보 없음';
+        if (val <= 1) return '🕯️ 은은한 무드';
+        if (val <= 2) return '🌘 차분함';
+        if (val <= 3) return '💡 적당한 밝기';
+        if (val <= 4) return '☀️ 화사함';
+        return '✨ 햇살 가득';
+    };
+
+    const getCongestionLabel = (val) => {
+        if (!val) return '정보 없음';
+        if (val <= 1) return '🏝️ 나만 아는 곳';
+        if (val <= 2) return '😌 여유로움';
+        if (val <= 3) return '🙂 적당함';
+        if (val <= 4) return '👥 꽤 많음';
+        return '👨‍👩‍👧‍👦 인산인해';
+    };
 
     // 미디어 배열 (없으면 빈 배열)
     const mediaList = review.media || [];
@@ -68,7 +96,7 @@ export default function ReviewDetailModal({ review, onClose, onLike, onEdit, onD
         e.preventDefault();
         if (!newComment.trim()) return;
         if (!user) {
-            toast.error('로그인이 필요합니다.');
+            setShowLoginPrompt(true);
             return;
         }
 
@@ -196,6 +224,49 @@ export default function ReviewDetailModal({ review, onClose, onLike, onEdit, onD
                                     </span>
                                 ))}
                             </div>
+                            
+                            {/* New Wellness Metrics Display */}
+                            {(review.noise_level || review.lighting_level || review.congestion_level) && (
+                                <div style={{ 
+                                    background: '#f8fafc', 
+                                    padding: '16px', 
+                                    borderRadius: '12px', 
+                                    marginBottom: '20px',
+                                    border: '1px solid #e2e8f0',
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(3, 1fr)',
+                                    gap: '12px'
+                                }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>소음</div>
+                                        <div style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>{getNoiseLabel(review.noise_level)}</div>
+                                        {review.noise_level && (
+                                            <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', marginTop: '6px', overflow: 'hidden' }}>
+                                                <div style={{ width: `${review.noise_level * 20}%`, height: '100%', background: '#3b82f6' }}></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>조명</div>
+                                        <div style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>{getLightingLabel(review.lighting_level)}</div>
+                                        {review.lighting_level && (
+                                            <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', marginTop: '6px', overflow: 'hidden' }}>
+                                                <div style={{ width: `${review.lighting_level * 20}%`, height: '100%', background: '#fbbf24' }}></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>혼잡도</div>
+                                        <div style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>{getCongestionLabel(review.congestion_level)}</div>
+                                        {review.congestion_level && (
+                                            <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', marginTop: '6px', overflow: 'hidden' }}>
+                                                <div style={{ width: `${review.congestion_level * 20}%`, height: '100%', background: '#10b981' }}></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             <p className="detail-text">{review.content || review.body}</p>
                             <p className="detail-date" style={{ marginBottom: '20px' }}>{timeAgo}</p>
 
@@ -405,7 +476,16 @@ export default function ReviewDetailModal({ review, onClose, onLike, onEdit, onD
                                         type="text"
                                         placeholder={replyingTo ? "답글을 입력하세요..." : "따뜻한 댓글을 남겨주세요..."}
                                         value={newComment}
-                                        onChange={(e) => setNewComment(e.target.value)}
+                                        onChange={(e) => {
+                                            if (!user) {
+                                                setShowLoginPrompt(true);
+                                                return;
+                                            }
+                                            setNewComment(e.target.value);
+                                        }}
+                                        onClick={() => {
+                                            if (!user) setShowLoginPrompt(true);
+                                        }}
                                         style={{
                                             border: 'none',
                                             background: 'transparent',

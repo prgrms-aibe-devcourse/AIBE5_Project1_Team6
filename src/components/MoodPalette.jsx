@@ -29,6 +29,12 @@ const STYLES = [
     { id: "activity", emoji: "🏄", label: "액티비티", desc: "신나는 활동과 체험" },
 ];
 
+const BUDGETS = [
+    { id: "low", emoji: "💰", label: "가성비", desc: "저렴하고 알차게" },
+    { id: "mid", emoji: "💎", label: "적당히", desc: "밸런스 있는 여행" },
+    { id: "high", emoji: "✨", label: "럭셔리", desc: "호화롭고 편안하게" },
+];
+
 export default function MoodPalette({ onComplete, onCancel }) {
     const [step, setStep] = useState(1);
     const [showCustomDestination, setShowCustomDestination] = useState(false);
@@ -38,9 +44,10 @@ export default function MoodPalette({ onComplete, onCancel }) {
         mood: null,
         destination: null,
         style: null,
+        budget: null,
         startDate: "",
         endDate: "",
-        people: 2,
+        people: 1,
     });
 
     const handleMoodSelect = (mood) => {
@@ -85,6 +92,11 @@ export default function MoodPalette({ onComplete, onCancel }) {
         setTimeout(() => setStep(4), 300);
     };
 
+    const handleBudgetSelect = (budget) => {
+        setSelections({ ...selections, budget });
+        setTimeout(() => setStep(5), 300);
+    };
+
     const handleDetailsSubmit = (e) => {
         e.preventDefault();
 
@@ -107,7 +119,7 @@ export default function MoodPalette({ onComplete, onCancel }) {
         }
     };
 
-    const progressPercent = (step / 4) * 100;
+    const progressPercent = (step / 5) * 100;
 
     return (
         <div className="moodPaletteOverlay" onClick={onCancel}>
@@ -119,7 +131,7 @@ export default function MoodPalette({ onComplete, onCancel }) {
                             컵라면보다 빠른 여행 계획 ✨
                         </h2>
                         <p className="moodPaletteSubtitle">
-                            그냥 느낌(Vibe)만 고르세요. 계획은 AI가 1초 만에!
+                            그냥 느낌(Vibe)만 고르세요. 계획은 AI가 30초 만에!
                         </p>
                     </div>
                     <button className="moodPaletteClose" onClick={onCancel}>
@@ -136,7 +148,7 @@ export default function MoodPalette({ onComplete, onCancel }) {
                         />
                     </div>
                     <div className="progressText">
-                        Step {step} / 4
+                        Step {step} / 5
                     </div>
                 </div>
 
@@ -144,7 +156,7 @@ export default function MoodPalette({ onComplete, onCancel }) {
                 {step === 1 && (
                     <div className="moodPaletteStep fadeIn">
                         <h3 className="stepTitle">지금 당신의 상태는?</h3>
-                        <div className="optionsGrid">
+                        <div className="optionsGrid moodGrid">
                             {MOODS.map((mood) => (
                                 <button
                                     key={mood.id}
@@ -254,8 +266,32 @@ export default function MoodPalette({ onComplete, onCancel }) {
                     </div>
                 )}
 
-                {/* Step 4: Details */}
+                {/* Step 4: Budget */}
                 {step === 4 && (
+                    <div className="moodPaletteStep fadeIn">
+                        <h3 className="stepTitle">예산은 어느 정도로 생각하세요?</h3>
+                        <div className="optionsGrid budgetGrid">
+                            {BUDGETS.map((budget) => (
+                                <button
+                                    key={budget.id}
+                                    className={`optionCard ${selections.budget?.id === budget.id ? "selected" : ""
+                                        }`}
+                                    onClick={() => handleBudgetSelect(budget)}
+                                >
+                                    <div className="optionEmoji">{budget.emoji}</div>
+                                    <div className="optionLabel">{budget.label}</div>
+                                    <div className="optionDesc">{budget.desc}</div>
+                                </button>
+                            ))}
+                        </div>
+                        <button className="backBtn" onClick={handleBack}>
+                            ← 이전
+                        </button>
+                    </div>
+                )}
+
+                {/* Step 5: Details */}
+                {step === 5 && (
                     <div className="moodPaletteStep fadeIn">
                         <h3 className="stepTitle">마지막! 날짜와 인원만 알려주세요</h3>
                         <form onSubmit={handleDetailsSubmit} className="detailsForm">
@@ -316,7 +352,7 @@ export default function MoodPalette({ onComplete, onCancel }) {
                                 <p>
                                     <strong>{selections.mood?.emoji} {selections.mood?.label}</strong> 상태로,{" "}
                                     <strong>{selections.destination?.emoji} {selections.destination?.label}</strong>에서{" "}
-                                    <strong>{selections.style?.emoji} {selections.style?.label}</strong> 여행을 즐기실 예정이군요!
+                                    <strong>{selections.style?.emoji} {selections.style?.label}</strong> 여행을 <strong>{selections.budget?.label}</strong> 예산으로 즐기실 예정이군요!
                                 </p>
                             </div>
 
@@ -325,7 +361,7 @@ export default function MoodPalette({ onComplete, onCancel }) {
                                     ← 이전
                                 </button>
                                 <button type="submit" className="submitBtn">
-                                    ✨ 1초 만에 일정 생성하기!
+                                    ✨ 30초 만에 일정 생성하기!
                                 </button>
                             </div>
                         </form>

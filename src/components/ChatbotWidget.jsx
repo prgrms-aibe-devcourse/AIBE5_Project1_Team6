@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GoogleGenAI } from "@google/genai";
+import { useNavigate } from "react-router-dom";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import toast from "react-hot-toast";
 import { useTripStore } from "../stores/tripStore";
 import { useAuthStore } from "../stores/authStore";
@@ -7,19 +8,23 @@ import { supabase } from "../services/supabase";
 import { addSchedule } from "../services/schedulesStorage";
 import "../styles/chatbot.css";
 import { FiMessageSquare, FiX } from "react-icons/fi";
+import LoginPromptModal from "./LoginPromptModal";
 
 export default function ChatbotWidget() {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const { mood, themes, destination } = useTripStore();
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingItinerary, setPendingItinerary] = useState(null); // 저장 대기 중인 일정
+  const [isPromptOpen, setIsPromptOpen] = useState(false);
   const endRef = useRef(null);
   const roomIdRef = useRef(null);
 
   const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-  const MODEL_ID = "gemini-3-flash-preview"; // 작동 확인됨 (Free tier)
+  const MODEL_ID = "gemini-3-flash-preview"; // Full model path format
 
   const { user } = useAuthStore();
 
@@ -32,7 +37,7 @@ export default function ChatbotWidget() {
     }
     try {
       console.log("[ChatBot] Gemini 클라이언트 생성 중...");
-      return new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+      return new GoogleGenerativeAI(GEMINI_API_KEY);
     } catch (err) {
       console.error("Gemini 클라이언트 생성 실패", err);
       return null;
@@ -42,14 +47,9 @@ export default function ChatbotWidget() {
 
   // Initialize Greeting
   useEffect(() => {
-    let greeting = "여행지 추천을 해드릴게요! 어디로 떠나고 싶나요? 🙂";
-    if (mood || destination) {
-      const moodText = mood ? `[${mood}] 기분` : '';
-      const placeText = destination ? `[${destination}]` : '';
-      greeting = `안녕하세요! ${placeText} ${moodText} 여행을 계획 중이시군요? ✈️\n무엇을 도와드릴까요? (맛집, 숙소, 코스 등)`;
-    }
+    const greeting = "안녕하세요! 여행을 계획 중이시군요?\n무엇을 도와드릴까요?";
     setMessages([{ role: "bot", text: greeting }]);
-  }, [mood, destination]);
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -165,30 +165,54 @@ export default function ChatbotWidget() {
       .filter(Boolean)
       .join(" | ");
 
+    // Current date for context
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+    const currentDate = today.getDate();
+    const todayStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(currentDate).padStart(2, '0')}`;
+    
+    // Future date example (1 week from now)
+    const futureDate = new Date(today);
+    futureDate.setDate(today.getDate() + 7);
+    const futureStartStr = `${futureDate.getFullYear()}-${String(futureDate.getMonth() + 1).padStart(2, '0')}-${String(futureDate.getDate()).padStart(2, '0')}`;
+    
+    // End date example (4 days after start)
+    const futureEndDate = new Date(futureDate);
+    futureEndDate.setDate(futureDate.getDate() + 3);
+    const futureEndStr = `${futureEndDate.getFullYear()}-${String(futureEndDate.getMonth() + 1).padStart(2, '0')}-${String(futureEndDate.getDate()).padStart(2, '0')}`;
+
     const prompt = `너는 한국어 여행 플래너 챗봇이다.
 컨텍스트: ${context || "정보 없음"}
+
+**현재 날짜: ${todayStr}**
+**중요**: 일정을 추천할 때는 반드시 오늘 날짜(${todayStr}) 이후의 날짜를 사용해야 한다.
+또한, 사용자가 예산을 언급하지 않았다면 '적당한(mid)' 예산 기준으로, 언급했다면 그에 맞춰 **비용(KRW)을 추산**해라.
 
 최근 대화:
 ${history}
 사용자 요청: ${text}
 
-중요: 사용자가 여행 일정을 요청하면 (예: "제주도 3박4일 일정 짜줘"), 반드시 다음 JSON 형식으로 답변해야 한다:
+중요: 사용자가 여행 일정을 요청하면 (예: "제주도 3박4일 일정 짜줘"), 반드시 다음 JSON 형식으로 답변해야 한다.
+**각 명소의 예상 비용과 전체 여행 경비**를 포함해야 한다.
 
 \`\`\`json
 {
   "type": "itinerary",
   "destination": "제주도",
   "destinationEmoji": "🏝️",
-  "startDate": "2026-02-01",
-  "endDate": "2026-02-04",
+  "startDate": "${futureStartStr}",
+  "endDate": "${futureEndStr}",
   "people": 2,
   "title": "제주도 힐링 여행",
+  "totalEstimatedCost": 450000,
   "dailySchedule": [
     {
       "day": 1,
-      "date": "2026-02-01",
+      "date": "${futureStartStr}",
       "spots": [
-        {"time": "09:00", "emoji": "✈️", "spot": "제주 공항", "activity": "제주 도착 및 렌터카 픽업"}
+        {"time": "09:00", "emoji": "✈️", "spot": "제주 공항", "activity": "제주 도착", "cost": 0, "costDescription": "항공권 제외"},
+        {"time": "12:00", "emoji": "🍜", "spot": "자매국수", "activity": "점심 식사", "cost": 12000, "costDescription": "식비"}
       ]
     }
   ]
@@ -199,25 +223,13 @@ ${history}
 예시:
 - 제주도 → 🏝️
 - 부산 → 🌊
-- 강릉 → ⛰️
 - 서울 → 🏙️
-- 프랑스 → 🗼
-- 일본 → 🗾
-- 태국 → 🌴
-- 발리 → 🏖️
-- 뉴욕 → 🗽
-- 이탈리아 → 🍝
-- 스페인 → 💃
-- 영국 → 👑
 
 일정이 아닌 질문(맛집 추천, 숙소 추천 등)은 친절하게 짧게 답변해줘.
 규칙:
 1) 한국어로 3~5문장 이내로 간결하게.
 2) 각 항목이나 주제마다 줄바꿈(\\n)을 포함해서 가독성 있게 작성.
-3) 요청이 일정/체크리스트/예산/문제해결(분실, 숙박, 불편 신고) 관련이면 짧게 액션 아이템 위주로.
-4) 정보 부족 시 추가 질문 1개만.
-5) 안전/긴급 상황(분실, 부상, 불편) 질문 시 신고/연락처/기본 대응을 우선 안내.
-6) 명확하고 친근하게 여행 정보 제공하기`;
+3) 요청이 일정/체크리스트/예산/문제해결(분실, 숙박, 불편 신고) 관련이면 짧게 액션 아이템 위주로.`;
 
     console.log("[ChatBot] 프롬프트:", prompt);
 
@@ -226,11 +238,8 @@ ${history}
     while (retries > 0) {
       try {
         console.log(`[ChatBot] Gemini API 호출 중... (재시도: ${4 - retries}/3)`);
-        const result = await genAI.models.generateContent({
-          model: MODEL_ID,
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.6, maxOutputTokens: 300 },
-        });
+        const model = genAI.getGenerativeModel({ model: MODEL_ID });
+        const result = await model.generateContent(prompt);
 
         console.log("[ChatBot] Gemini 응답 전체:", result);
 
@@ -238,13 +247,13 @@ ${history}
         let text = null;
 
         // 1. candidates 직접 접근
-        if (result.candidates?.length > 0) {
-          text = result.candidates[0]?.content?.parts?.[0]?.text;
+        if (result.response?.candidates?.length > 0) {
+          text = result.response.candidates[0].content.parts[0].text;
           console.log("[ChatBot] 시도1 (candidates):", text);
         }
 
         // 2. response.text() 메서드
-        if (!text && typeof result.response?.text === "function") {
+        if (!text && result.response && typeof result.response.text === "function") {
           text = result.response.text();
           console.log("[ChatBot] 시도2 (response.text()):", text);
         }
@@ -282,11 +291,38 @@ ${history}
     const text = input.trim();
     if (!text || loading) return;
 
+    if (!user) {
+      setIsPromptOpen(true);
+      return;
+    }
+
     console.log("[ChatBot] 사용자 메시지:", text);
     setMessages((m) => [...m, { role: "user", text }]);
     setInput("");
-    setLoading(true);
+    
+    // 저장 대기 중인 일정이 있는 경우 확인 응답 체크
+    if (pendingItinerary) {
+      const affirmative = /^(예|응|넹|네|yes|ok|오케이|알겠|확인|저장)/i.test(text);
+      const negative = /^(아니|no|취소|안할|싫)/i.test(text);
+      
+      if (affirmative) {
+        setLoading(true);
+        await actualSaveToSchedules(pendingItinerary);
+        setPendingItinerary(null);
+        setMessages((m) => [...m, { role: "bot", text: "✅ 일정이 저장되었습니다!\n일정관리 페이지에서 확인해주세요. 🎉" }]);
+        setLoading(false);
+        return;
+      } else if (negative) {
+        setPendingItinerary(null);
+        setMessages((m) => [...m, { role: "bot", text: "알겠습니다. 일정 저장을 취소했어요." }]);
+        return;
+      } else {
+        setMessages((m) => [...m, { role: "bot", text: "죄송해요, 잘 이해하지 못했어요. 😅\n일정을 저장하시려면 '예' 또는 '확인'이라고 말씀해주세요.\n취소하시려면 '아니요' 또는 '취소'라고 해주세요." }]);
+        return;
+      }
+    }
 
+    setLoading(true);
     await saveMessage("user", text);
 
     const aiReply = await callGemini(text);
@@ -312,7 +348,8 @@ ${history}
           // 일정 요약 메시지 추가
           const nights = itineraryData.dailySchedule.length - 1;
           const totalSpots = itineraryData.dailySchedule.reduce((sum, day) => sum + day.spots.length, 0);
-          const summary = `\n\n📅 ${itineraryData.destination} ${nights}박${itineraryData.dailySchedule.length}일 일정이 준비되었습니다!\n총 ${totalSpots}개의 명소를 방문합니다.\n\n아래 버튼을 눌러 일정을 저장하세요! ⬇️`;
+          const totalCostStr = itineraryData.totalEstimatedCost ? `\n💰 총 예상 비용: ${itineraryData.totalEstimatedCost.toLocaleString()}원` : "";
+          const summary = `\n\n📅 ${itineraryData.destination} ${nights}박${itineraryData.dailySchedule.length}일 일정이 준비되었습니다!${totalCostStr}\n총 ${totalSpots}개의 명소를 방문합니다.\n\n아래 버튼을 눌러 일정을 저장하세요! ⬇️`;
 
           displayReply = displayReply + summary;
         }
@@ -327,17 +364,14 @@ ${history}
   };
 
   const saveToSchedules = async (itineraryData) => {
+    // 버튼 클릭 시 즉시 저장 및 이동
+    await actualSaveToSchedules(itineraryData);
+  };
+
+  const actualSaveToSchedules = async (itineraryData) => {
     try {
-      // AI 일정 → PlanLab 형식 변환 ([Day 1] 형식)
-      const scheduleText = itineraryData.dailySchedule
-        .map((day) => {
-          const dayHeader = `[Day ${day.day}]`;
-          const spots = day.spots
-            .map((s) => `${s.time} - ${s.emoji} ${s.spot}\n${s.activity}`)
-            .join("\n\n");
-          return `${dayHeader}\n${spots}`;
-        })
-        .join("\n\n");
+      // JSON 형식으로 저장하여 비용 및 상세 정보 보존
+      const scheduleText = JSON.stringify(itineraryData.dailySchedule);
 
       // MoodPalette 데이터 매칭
       const DESTINATIONS = [
@@ -367,18 +401,16 @@ ${history}
         { id: "activity", emoji: "🏄", label: "액티비티" },
       ];
 
-      // 목적지 이모지 결정: AI가 제공한 것 우선, 없으면 매칭, 그것도 없으면 기본값
+      // 목적지 이모지 결정
       let destinationData;
 
       if (itineraryData.destinationEmoji) {
-        // AI가 이모지를 제공한 경우 (프랑스 → 🗼 등)
         destinationData = {
           id: "custom",
           emoji: itineraryData.destinationEmoji,
           label: itineraryData.destination,
         };
       } else {
-        // AI가 이모지를 제공하지 않은 경우, 매칭 시도
         const destLower = itineraryData.destination.toLowerCase();
         const matchedDest = DESTINATIONS.find(d =>
           d.label.toLowerCase().includes(destLower) ||
@@ -406,13 +438,16 @@ ${history}
         },
       };
 
-
       console.log("[ChatBot] 일정 저장 중:", schedule);
       await addSchedule(schedule);
-      toast.success("✅ 일정이 저장되었습니다!\n일정관리에서 확인하세요.");
+      
+      toast.success("✅ 일정 저장 완료!", { duration: 3000 });
+      setOpen(false); // 챗봇 닫기
+      navigate("/planlab"); // 저장 후 이동
     } catch (err) {
       console.error("[ChatBot] 일정 저장 실패:", err);
       toast.error("일정 저장에 실패했습니다.");
+      throw err;
     }
   };
 
@@ -488,7 +523,7 @@ ${history}
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="예: 2박3일, 예산 30만원, 바다 좋아해요"
+              placeholder="계획을 마음껏 말씀해주세요."
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                   e.preventDefault();
@@ -501,6 +536,11 @@ ${history}
           </div>
         </div>
       )}
+      
+      <LoginPromptModal 
+        isOpen={isPromptOpen} 
+        onClose={() => setIsPromptOpen(false)} 
+      />
     </>
   );
 }

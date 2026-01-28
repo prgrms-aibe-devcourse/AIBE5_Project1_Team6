@@ -5,7 +5,7 @@ import { containerVariants } from '../../utils/animationVariants';
 import { motion } from 'framer-motion';
 
 export default function StepBudget({ stepIndex, totalSteps }) {
-  const { setBudgetAmount, nextStep, prevStep, transport } = useTripStore();
+  const { setBudgetAmount, setBudgetLevel, nextStep, prevStep, transport } = useTripStore();
   
   const isAirplane = transport === 'Airplane';
   
@@ -14,18 +14,21 @@ export default function StepBudget({ stepIndex, totalSteps }) {
     { 
       label: '가성비', 
       subLabel: '합리적으로', 
+      level: 'low',
       value: isAirplane ? 1000000 : 300000, 
       icon: '💰' 
     },
     { 
       label: '적당히', 
       subLabel: '밸런스 있게', 
+      level: 'mid',
       value: isAirplane ? 3000000 : 500000, 
       icon: '💎' 
     },
     { 
       label: '럭셔리', 
       subLabel: '여유있게', 
+      level: 'high',
       value: isAirplane ? 10000000 : 1000000, 
       icon: '✨' 
     },
@@ -33,9 +36,10 @@ export default function StepBudget({ stepIndex, totalSteps }) {
 
   const [selectedValue, setSelectedValue] = useState(null);
 
-  const handleSelect = (value) => {
-      setSelectedValue(value);
-      setBudgetAmount(value);
+  const handleSelect = (option) => {
+      setSelectedValue(option.value);
+      setBudgetAmount(option.value);
+      setBudgetLevel(option.level); // ✅ Set budget level for AI
       // Small delay for visual feedback if needed, but direct next is requested
       setTimeout(() => {
           nextStep();
@@ -61,7 +65,7 @@ export default function StepBudget({ stepIndex, totalSteps }) {
             {budgetOptions.map((option) => (
                 <motion.div
                     key={option.label}
-                    onClick={() => handleSelect(option.value)}
+                    onClick={() => handleSelect(option)}
                     whileHover={{ scale: 1.02, borderColor: '#5C94FF', backgroundColor: '#F0F7FF' }}
                     whileTap={{ scale: 0.98 }}
                     style={{

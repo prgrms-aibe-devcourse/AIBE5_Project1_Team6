@@ -16,7 +16,7 @@ import '../styles/Community.css';
 import toast from 'react-hot-toast';
 
 export default function Community() {
-    const { user } = useAuthStore();
+    const { user, setShowLoginPrompt } = useAuthStore();
     const [searchParams, setSearchParams] = useSearchParams();
     
     // URL 파라미터에서 탭 상태 가져오기 (기본값: 'free')
@@ -44,6 +44,7 @@ export default function Community() {
     const [editingPost, setEditingPost] = useState(null);
     const [viewingPost, setViewingPost] = useState(null);
     const [autoFocusComment, setAutoFocusComment] = useState(false); // 댓글 입력 포커스 여부
+    const [isSubmitting, setIsSubmitting] = useState(false); // 중복 제출 방지
 
     // 데이터 불러오기
     const loadPosts = async () => {
@@ -87,56 +88,63 @@ export default function Community() {
 
     // 저장 핸들러 (작성/수정)
     const handleSavePost = async (formData) => {
-        // 1. 이미지 업로드 처리
-        const processedMedia = await Promise.all(
-            (formData.media || []).map(async (item) => {
-                // 이미 URL이 있고 file 객체가 없으면 기존 이미지
-                if (!item.file) return item;
+        if (isSubmitting) return;
+        setIsSubmitting(true);
 
-                // 새 파일인 경우 업로드
-                try {
-                    const publicUrl = await communityService.uploadImage(item.file);
-                    return { ...item, url: publicUrl || item.url }; // 실패 시 기존 base64라도 반환 (혹은 에러처리)
-                } catch (e) {
-                    console.error("이미지 업로드 실패", e);
-                    return item;
+        try {
+            // 1. 이미지 업로드 처리
+            const processedMedia = await Promise.all(
+                (formData.media || []).map(async (item) => {
+                    // 이미 URL이 있고 file 객체가 없으면 기존 이미지
+                    if (!item.file) return item;
+
+                    // 새 파일인 경우 업로드
+                    try {
+                        const publicUrl = await communityService.uploadImage(item.file);
+                        return { ...item, url: publicUrl || item.url }; // 실패 시 기존 base64라도 반환 (혹은 에러처리)
+                    } catch (e) {
+                        console.error("이미지 업로드 실패", e);
+                        return item;
+                    }
+                })
+            );
+
+            const postData = {
+                ...formData,
+                media: processedMedia, // 업로드된 URL이 담긴 미디어 배열 사용
+                category: category,
+                user_id: user?.id,
+                author_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || '익명',
+                author_avatar: user?.user_metadata?.avatar_url || ''
+            };
+
+            if (editingPost) {
+                const { error, data } = await communityService.updatePost(editingPost.id, postData);
+                if (!error && data) {
+                    toast.success('수정되었습니다.');
+                    // Optimistic Update: Replace the item in the list
+                    setPosts(prev => prev.map(p => p.id === data.id ? { ...p, ...data } : p));
+                    // Update viewingPost if needed
+                    if (viewingPost?.id === data.id) {
+                        setViewingPost(prev => ({ ...prev, ...data }));
+                    }
+                    setIsModalOpen(false);
+                    setEditingPost(null);
                 }
-            })
-        );
-
-        const postData = {
-            ...formData,
-            media: processedMedia, // 업로드된 URL이 담긴 미디어 배열 사용
-            category: category,
-            user_id: user?.id,
-            author_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || '익명',
-            author_avatar: user?.user_metadata?.avatar_url || ''
-        };
-
-        if (editingPost) {
-            const { error, data } = await communityService.updatePost(editingPost.id, postData);
-            if (!error && data) {
-                toast.success('수정되었습니다.');
-                // Optimistic Update: Replace the item in the list
-                setPosts(prev => prev.map(p => p.id === data.id ? { ...p, ...data } : p));
-                // Update viewingPost if needed
-                if (viewingPost?.id === data.id) {
-                    setViewingPost(prev => ({ ...prev, ...data }));
-                }
-                setIsModalOpen(false);
-                setEditingPost(null);
-            }
-        } else {
-            const { data, error } = await communityService.createPost(postData);
-            if (!error && data) {
-                toast.success('작성되었습니다.');
-                // Optimistic Update: Prepend the new item to the list
-                setPosts(prev => [data, ...prev]);
-                setIsModalOpen(false);
             } else {
-                console.error('게시글 작성 실패:', error);
-                toast.error('게시글 작성에 실패했습니다: ' + (error?.message || '알 수 없는 오류'));
+                const { data, error } = await communityService.createPost(postData);
+                if (!error && data) {
+                    toast.success('작성되었습니다.');
+                    // Optimistic Update: Prepend the new item to the list
+                    setPosts(prev => [data, ...prev]);
+                    setIsModalOpen(false);
+                } else {
+                    console.error('게시글 작성 실패:', error);
+                    toast.error('게시글 작성에 실패했습니다: ' + (error?.message || '알 수 없는 오류'));
+                }
             }
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -172,7 +180,7 @@ export default function Community() {
     // 좋아요 핸들러
     const handleLike = async (id) => {
         if (!user) {
-            toast.error('로그인이 필요합니다.');
+            setShowLoginPrompt(true);
             return;
         }
 
@@ -393,15 +401,17 @@ export default function Community() {
             </div>
 
             {/* 플로팅 버튼 */}
-            {user && (
-                <button className="floating-fab" onClick={() => {
-                    setEditingPost(null);
-                    setIsModalOpen(true);
-                }}>
-                    <span style={{ marginRight: '8px', fontSize: '1.2rem' }}>✍️</span>
-                    <span style={{ fontWeight: 'bold' }}>글쓰기</span>
-                </button>
-            )}
+            <button className="floating-fab" onClick={() => {
+                if (!user) {
+                    setShowLoginPrompt(true);
+                    return;
+                }
+                setEditingPost(null);
+                setIsModalOpen(true);
+            }}>
+                <span style={{ marginRight: '8px', fontSize: '1.2rem' }}>✍️</span>
+                <span style={{ fontWeight: 'bold' }}>글쓰기</span>
+            </button>
 
             {/* 글쓰기 모달 */}
             <AnimatePresence>
@@ -411,6 +421,7 @@ export default function Community() {
                         onSubmit={handleSavePost}
                         onClose={() => setIsModalOpen(false)}
                         category={category}
+                        isSubmitting={isSubmitting}
                     />
                 )}
             </AnimatePresence>

@@ -63,10 +63,8 @@ export default function TravelChecklist({ checklistData = DEFAULT_CHECKLIST, onC
     const [loading, setLoading] = useState(false);
     const [checklistId, setChecklistId] = useState(null);
 
-    const isJeju = destination && (
-        (typeof destination === 'string' && destination.includes("제주")) ||
-        (destination.label && destination.label.includes("제주"))
-    );
+    // State for manual domestic toggle
+    const [isManualDomestic, setIsManualDomestic] = useState(false);
 
     // 사용자 변경 시 상태 초기화 (로그아웃/로그인)
     useEffect(() => {
@@ -75,6 +73,7 @@ export default function TravelChecklist({ checklistData = DEFAULT_CHECKLIST, onC
             setChecklist(checklistData);
             setChecklistId(null);
             setLoading(false);
+            setIsManualDomestic(false);
         }
     }, [user?.id, checklistData]);
 
@@ -97,10 +96,12 @@ export default function TravelChecklist({ checklistData = DEFAULT_CHECKLIST, onC
                 } else if (data) {
                     setChecklist(data.checklist_data);
                     setChecklistId(data.id);
+                    if (onChange) onChange(data.checklist_data);
                 } else {
                     // 저장된 데이터가 없으면 기본값 사용
                     setChecklist(checklistData);
                     setChecklistId(null);
+                    if (onChange) onChange(checklistData);
                 }
             } catch (err) {
                 console.error('체크리스트 fetch 오류:', err);
@@ -212,57 +213,35 @@ export default function TravelChecklist({ checklistData = DEFAULT_CHECKLIST, onC
                         checked: category.items.filter(item => item.checked).length
                     };
                     
-                    const isRequiredDocs = category.category === "필수 서류";
+                    const isRequiredDocs = category.category === "필수 서류" || category.category === "필수 서류(해외일 경우)";
 
                     return (
                         <div key={catIdx} className="checklistCategory">
                             <div className="categoryHeader" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h4 className="categoryTitle">
-                                    {category.category}
-                                </h4>
-                                {isRequiredDocs && (
-                                    <label className="domesticToggle" style={{ fontSize: '13px', color: '#666', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                                        <input 
-                                            type="checkbox" 
-                                            checked={checklist[catIdx].items.find(i => i.text.includes("여권"))?.checked && checklist[catIdx].items.find(i => i.text.includes("여행자 보험"))?.checked}
-                                            onChange={(e) => {
-                                                const isChecked = e.target.checked;
-                                                const newChecklist = [...checklist];
-                                                newChecklist[catIdx].items = newChecklist[catIdx].items.map(item => {
-                                                    if (item.text.includes("여권") || item.text.includes("여행자 보험")) {
-                                                        return { ...item, checked: isChecked };
-                                                    }
-                                                    return item;
-                                                });
-                                                setChecklist(newChecklist);
-                                                if (onChange) onChange(newChecklist);
-                                                saveChecklist(newChecklist);
-                                            }}
-                                            style={{ cursor: 'pointer' }}
-                                        />
-                                        국내 여행일 경우
-                                    </label>
-                                )}
+                                    <h4 className="categoryTitle">
+                                        {isRequiredDocs ? "필수 서류(해외일 경우)" : category.category}
+                                    </h4>
                             </div>
                             <div className="checklistItems">
                                 {category.items.map(item => {
-                                    const isPassport = item.text.includes("여권");
-                                    const shouldStrike = isJeju && isPassport;
+                                    const isTargetItem = item.text.includes("여권") || item.text.includes("여행자 보험") || item.text.includes("항공권");
+                                    const shouldHideCheckbox = isManualDomestic && isTargetItem;
 
                                     return (
                                         <label key={item.id} className="checklistItem">
-                                            <input
-                                                type="checkbox"
-                                                checked={item.checked}
-                                                onChange={() => handleToggle(catIdx, item.id)}
-                                                className="checklistCheckbox"
-                                                disabled={shouldStrike} 
-                                            />
+                                            {!shouldHideCheckbox && (
+                                                <input
+                                                    type="checkbox"
+                                                    checked={item.checked}
+                                                    onChange={() => handleToggle(catIdx, item.id)}
+                                                    className="checklistCheckbox"
+                                                />
+                                            )}
                                             <span 
                                                 className={item.checked ? "itemText checked" : "itemText"}
-                                                style={shouldStrike ? { textDecoration: 'line-through', color: '#ccc', opacity: 0.7 } : {}}
+                                                style={shouldHideCheckbox ? { color: '#ccc', fontStyle: 'italic', marginLeft: '24px' } : {}}
                                             >
-                                                {item.text} {shouldStrike && "(국내여행 불필요)"}
+                                                {item.text} {shouldHideCheckbox && "(국내여행 불필요)"}
                                             </span>
                                         </label>
                                     );

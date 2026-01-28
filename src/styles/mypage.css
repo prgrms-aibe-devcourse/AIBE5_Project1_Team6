@@ -659,27 +659,19 @@
 
     /* Persona / Travel Style Section */
     .persona-card {
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
-        border: 1px solid rgba(139, 92, 246, 0.3);
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
         border-radius: 1.5rem;
         padding: 3rem;
         margin-bottom: 2.5rem;
         text-align: center;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 10px 40px -10px rgba(124, 58, 237, 0.3);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
     .persona-bg-glow {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 300px;
-        height: 300px;
-        background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
-        z-index: 0;
-        pointer-events: none;
+        display: none;
     }
 
     .persona-content {
@@ -691,18 +683,19 @@
         font-size: 5rem;
         margin-bottom: 1.5rem;
         display: inline-block;
-        animation: float 3s ease-in-out infinite;
-        filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.4));
+        /* animation: float 3s ease-in-out infinite; */
+        filter: none;
     }
 
     .persona-title {
         font-size: 2.5rem;
         font-weight: 800;
         margin-bottom: 1rem;
-        background: linear-gradient(to right, #60a5fa, #c084fc, #f472b6);
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #1e293b;
+        background: none;
+        -webkit-background-clip: unset;
+        background-clip: unset;
+        -webkit-text-fill-color: initial;
     }
 
     .persona-tag-container {
@@ -714,12 +707,13 @@
     }
 
     .persona-tag {
-        background: rgba(255, 255, 255, 0.1);
+        background: white;
         padding: 0.4rem 1rem;
         border-radius: 2rem;
         font-size: 0.9rem;
-        color: #e2e8f0;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #4b5563;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
     .persona-desc {
@@ -1614,6 +1608,70 @@
     .noti-delete-btn:hover {
         background: #fee2e2;
         color: #ef4444;
+    }
+
+    /* Standardized Empty State Styling */
+    .empty-state-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 24px;
+        text-align: center;
+        background: white;
+        border-radius: 24px;
+        width: 100%;
+        min-height: 280px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+        margin: 10px 0;
+    }
+
+    .empty-icon-box {
+        font-size: 4.5rem;
+        margin-bottom: 20px;
+        filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.08));
+        animation: floatIcon 3s ease-in-out infinite;
+    }
+
+    .empty-title-text {
+        font-size: 1.3rem;
+        font-weight: 850;
+        color: #1a1a1a;
+        margin: 0 0 10px 0;
+        letter-spacing: -0.02em;
+    }
+
+    .empty-desc-text {
+        font-size: 0.95rem;
+        color: #6b7280;
+        max-width: 240px;
+        margin: 0 auto 24px auto;
+        line-height: 1.6;
+        word-break: keep-all;
+    }
+
+    .empty-action-box {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .empty-action-box .primary-btn.small {
+        width: auto;
+        padding: 10px 24px;
+        font-size: 0.95rem;
+    }
+
+    @keyframes floatIcon {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-12px);
+        }
     }
 }
 

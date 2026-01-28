@@ -362,7 +362,7 @@
 
 /* Multi-Option Selection Styles */
 .instantRouteModal.multiOption {
-    width: min(1100px, 95vw);
+    width: min(1600px, 98vw);
 }
 
 .routeOptions {
@@ -392,202 +392,198 @@
     color: #666;
 }
 
-.optionsGrid {
+.instantRouteModal .optionsGrid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    padding: 32px;
-    background: #fcfcfc;
+    gap: 12px;
+    padding: 12px;
+    background: #fbfbfb;
 }
 
-
 .optionCard {
-    border: 1px solid #e0e0e0;
+    border: 1px solid #e2e8f0;
     border-radius: 16px;
     background: #ffffff;
     overflow: hidden;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: none;
-    /* ✅ Flex Column for Height Management */
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
-/* ✅ Blue Hover Effect as requested */
 .optionCard:hover {
-    border-color: #5C94FF;
+    border-color: #3b82f6;
     transform: translateY(-4px);
-    box-shadow: none;
+    box-shadow: 0 12px 24px rgba(59, 130, 246, 0.1);
 }
 
 .optionCard.selected {
-    border-color: #5C94FF;
+    border-color: #3b82f6;
     border-width: 2px;
-    background: #fff;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
     transform: translateY(-4px);
-    box-shadow: none;
 }
 
 .optionHeader {
-    padding: 24px 20px;
+    padding: 16px 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    border-bottom: 1px solid #f0f0f0;
-    /* Soft pastel backgrounds will be set inline, but we can default */
-    background: #f8f9fa;
+    gap: 8px;
+    border-bottom: 1px solid #f1f5f9;
 }
 
 .optionEmojis {
-    font-size: 40px;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    font-size: 32px;
+    display: flex;
+    gap: 8px;
 }
 
 .optionBadge {
-    padding: 6px 14px;
+    padding: 4px 12px;
     border-radius: 20px;
     background: #fff;
-    box-shadow: none;
     font-size: 13px;
     font-weight: 700;
-    color: #333;
+    color: #475569;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .optionBody {
-    padding: 24px 20px;
-    position: relative;
-    /* ✅ Grow and Flex Column for Bottom Alignment */
-    flex: 1;
+    padding: 12px 8px;
     display: flex;
     flex-direction: column;
+    flex: 1;
+    overflow: hidden;
 }
 
 .optionTitle {
-    margin: 0 0 8px;
-    font-size: 18px;
-    font-weight: 700;
-    color: #1a1a1a;
+    margin: 0 0 4px;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #1e293b;
+    text-align: center;
 }
 
 .optionSubtitle {
-    margin: 0 0 12px;
-    font-size: 14px;
-    color: #666;
+    margin: 0 0 16px;
+    font-size: 0.9rem;
+    color: #64748b;
+    text-align: center;
 }
 
 .optionDescription {
-    margin: 0 0 20px;
-    font-size: 13px;
-    color: #555;
+    margin: 0 0 16px;
+    font-size: 0.8rem;
+    color: #475569;
     line-height: 1.5;
     padding: 12px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #f0f0f0;
+    background: #f8fafc;
+    border-radius: 12px;
+    text-align: center;
 }
 
 .optionDays {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    /* ✅ Allow days to push indicator down */
-    margin-bottom: 16px;
+    gap: 12px;
+    margin-bottom: 24px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.optionDays::-webkit-scrollbar {
+    width: 4px;
+}
+
+.optionDays::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.optionDays::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 4px;
 }
 
 .dayPreview {
-    padding: 10px;
+    padding: 8px;
     background: #fff;
-    border-radius: 8px;
-    border: 1px solid #eee;
-    box-shadow: none;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
 }
 
 .dayTitle {
-    font-size: 13px;
+    font-size: 0.8rem;
     font-weight: 700;
-    color: #5C94FF;
+    color: #3b82f6;
     margin-bottom: 8px;
+    text-align: center;
 }
 
 .daySpots {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    align-items: center;
+    justify-content: center;
 }
 
 .spotMini {
-    padding: 4px 8px;
-    background: #f5f5f5;
+    padding: 3px 6px;
+    background: #f1f5f9;
     border-radius: 6px;
-    font-size: 12px;
-    color: #555;
+    font-size: 0.7rem;
+    color: #475569;
 }
 
 .spotMore {
-    font-size: 11px;
-    color: #5C94FF;
-    padding: 4px 6px;
-    background: #f0f7ff;
-    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #3b82f6;
+    padding: 4px 8px;
+    background: #eff6ff;
+    border-radius: 6px;
+    font-weight: 600;
 }
 
 .selectedIndicator {
     margin-top: auto;
-    /* ✅ Pushes to bottom */
-    padding: 12px;
-    background: #5C94FF;
+    padding: 10px;
+    background: #3b82f6;
     border-radius: 8px;
     text-align: center;
     font-weight: 700;
     color: #fff;
-    font-size: 14px;
-    animation: pulse 1s ease infinite;
-    box-shadow: none;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .optionsFooter {
     display: flex;
     gap: 12px;
-    padding: 20px 32px;
-    border-top: 1px solid #eef2f6;
+    padding: 16px 24px;
+    border-top: 1px solid #f1f5f9;
     background: #fff;
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.98);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-.fadeIn {
-    animation: fadeIn 0.4s ease;
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.85;
-    }
-}
-
 @media (max-width: 1024px) {
-    .optionsGrid {
-        grid-template-columns: 1fr;
-        gap: 16px;
+    .instantRouteModal.multiOption {
+        width: 95vw;
+    }
+}
+
+@media (max-width: 768px) {
+    .instantRouteModal .optionsGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .instantRouteModal.multiOption {
+        padding: 0;
     }
 }

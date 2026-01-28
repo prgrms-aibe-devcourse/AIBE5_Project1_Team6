@@ -53,8 +53,8 @@
     padding: 0 24px;
     border-radius: 40px;
     border: none;
-    background: #1a1a1a;
-    /* Dark button for contrast "Initial design" */
+    background: #3b82f6;
+    /* Blue button for modern look */
     color: #fff;
     cursor: pointer;
     font-weight: bold;
@@ -63,7 +63,7 @@
 }
 
 .searchBtn:hover {
-    background: #333;
+    background: #2563eb;
     transform: translateY(-1px);
 }
 

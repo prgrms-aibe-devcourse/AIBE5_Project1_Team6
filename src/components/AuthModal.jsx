@@ -117,23 +117,29 @@ export default function AuthModal({ onClose, onSuccess }) {
           {errorMsg && <div className="authError">{errorMsg}</div>}
 
           <motion.button 
-            className="authBtn" 
+            key={isLogin ? "login-btn" : "signup-btn"}
             type="submit" 
             disabled={loading}
             whileTap={{ scale: 0.98 }}
+            style={{
+              width: '100%',
+              padding: '24px',
+              backgroundColor: '#3B82F6',
+              color: '#ffffff',
+              fontSize: '1.2rem',
+              fontWeight: '900',
+              borderRadius: '16px',
+              border: 'none',
+              marginTop: '24px',
+              boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'block'
+            }}
           >
             {loading ? "처리 중..." : (isLogin ? "로그인" : "회원가입")}
           </motion.button>
         </form>
 
-        <div className="divider"><span>또는 소셜 계정으로 계속</span></div>
-
-        <button className="socialBtn google" onClick={() => handleSocialLogin('google')}>
-          <FcGoogle size={20} /> Google로 계속하기
-        </button>
-        <button className="socialBtn kakao" onClick={() => handleSocialLogin('kakao')}>
-          <RiKakaoTalkFill size={20} /> 카카오로 계속하기
-        </button>
 
         <div className="authSwitch">
           {isLogin ? "계정이 없으신가요?" : "이미 계정이 있으신가요?"}

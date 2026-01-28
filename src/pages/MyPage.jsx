@@ -1,20 +1,44 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useTripStore } from '../stores/tripStore';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import '../styles/mypage.css';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { loadPlans, removePlan } from '../services/plansStorage';
 import { loadSchedules } from '../services/schedulesStorage';
-import { getMemories, getNotifications, getUserBadges, initializeUserBadgesIfEmpty, markNotificationAsRead, createTripNotifications } from '../services/mypageService';
+import { getSavedPlaces, deletePlace } from '../services/savedPlacesService';
+import { getMemories, getNotifications, getUserBadges, initializeUserBadgesIfEmpty, markNotificationAsRead, getProfile, markAllNotificationsAsRead, deleteAllNotifications, deleteNotification, createNotification } from '../services/mypageService';
 import { communityService } from '../services/communityService';
+import ReviewDetailModal from '../components/community/ReviewDetailModal';
 import TravelBiorhythm from '../components/TravelBiorhythm';
 import TravelStyleAnalysis from '../components/TravelStyleAnalysis';
-import { FaChevronRight, FaChevronLeft, FaMapMarkedAlt, FaPen, FaHeart, FaBell, FaCog, FaSignOutAlt, FaUserSlash, FaRobot, FaChartPie, FaCalendarAlt, FaUserFriends, FaStar, FaCheckDouble, FaTrash, FaPlane, FaCommentDots } from 'react-icons/fa';
+import RecommendationCard from '../components/RecommendationCard';
+import TripDetailDrawer from '../components/TripDetailDrawer';
+import ScheduleDetailView from '../components/ScheduleDetailView';
+import { improvePlanText } from '../services/aiPlanner';
+import { simpleDiff } from '../services/diff';
+import { addPlan } from '../services/plansStorage';
+import { addSchedule } from '../services/schedulesStorage';
+import { FaChevronRight, FaChevronLeft, FaMapMarkedAlt, FaPen, FaHeart, FaRegHeart, FaBell, FaCog, FaSignOutAlt, FaUserSlash, FaRobot, FaChartPie, FaCalendarAlt, FaUserFriends, FaStar, FaCheckDouble, FaTrash, FaPlane, FaCommentDots, FaComment } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ... (Keep Helpers)
+// --- Helpers ---
+const EmptyState = ({ icon, title, description, children }) => (
+    <motion.div 
+        className="empty-state-container"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+    >
+        <div className="empty-icon-box">{icon}</div>
+        <h3 className="empty-title-text">{title}</h3>
+        {description && <p className="empty-desc-text">{description}</p>}
+        {children && <div className="empty-action-box">{children}</div>}
+    </motion.div>
+);
+
 const formatNoise = (val) => {
     if (!val && val !== 0) return '정보 없음';
     const num = Number(val);
@@ -31,9 +55,17 @@ const formatLight = (val) => {
 
 export default function MyPage() {
     const { user, setUser, signOut } = useAuthStore();
+    const { mood: currentMood } = useTripStore();
     const nav = useNavigate();
-    const [activeTab, setActiveTab] = useState('main'); // Default to Main Dashboard
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'main'; // Default to Main Dashboard
     const queryClient = useQueryClient();
+
+    // Helper to change tab
+    // push: true adds to history (default behavior of setSearchParams), allowing back button
+    const setActiveTab = (tab) => {
+        setSearchParams({ tab });
+    };
 
     // Modals State
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -44,36 +76,121 @@ export default function MyPage() {
     // Review Detail State
     const [selectedReview, setSelectedReview] = useState(null);
 
-    // Data Queries
-    const { data: myPlans = [] } = useQuery({ queryKey: ['plans'], queryFn: loadPlans });
-    const { data: aiSchedules = [] } = useQuery({ queryKey: ['schedules'], queryFn: loadSchedules });
+    // 상세 보기 (Drawer) 관련 상태
+    const [selectedPlace, setSelectedPlace] = useState(null);
+    const [drawerNights, setDrawerNights] = useState(1);
+    const [drawerPeople, setDrawerPeople] = useState(2);
+    const [drawerPlanText, setDrawerPlanText] = useState("");
+    const [drawerDiffResult, setDrawerDiffResult] = useState(null);
+    const [selectedScheduleForDetail, setSelectedScheduleForDetail] = useState(null);
 
-    // Fetch user's reviews from community
-    const { data: userReviews = [] } = useQuery({
-        queryKey: ['userReviews', user?.id],
-        queryFn: async () => {
-            if (!user?.id) return [];
-            const { data, error } = await communityService.getPosts('review', 'latest', { type: '', keyword: '' }, { mood: null, themes: [] }, user.id);
-            if (error) {
-                console.error('Failed to fetch user reviews:', error);
-                return [];
-            }
-            // Filter to only show posts by current user
-            return data.filter(post => post.user_id === user.id);
-        },
-        enabled: !!user?.id
+    // --- Queries ---
+    const { data: profile } = useQuery({
+        queryKey: ['profile', user?.id],
+        queryFn: () => getProfile(user?.id),
+        enabled: !!user
     });
 
-    // Fetch user's notifications from database
-    const { data: dbNotifications = [], refetch: refetchNotifications } = useQuery({
+    // Notifications Query
+    const { data: notifications = [] } = useQuery({
         queryKey: ['notifications', user?.id],
-        queryFn: async () => {
-            if (!user?.id) return [];
-            const data = await getNotifications(user.id);
-            return data;
-        },
+        queryFn: () => getNotifications(user?.id),
+        enabled: !!user,
+        select: (data) => data.map(n => ({
+            id: n.id,
+            type: n.type,
+            text: n.message,
+            time: new Date(n.created_at).toLocaleString(),
+            isRead: n.is_read,
+            link: n.link
+        }))
+    });
+
+    const { data: myPlans = [] } = useQuery({ queryKey: ['plans'], queryFn: loadPlans });
+
+    // Saved Places Query (from Walk/Traffic/Airplane pages)
+    const { data: savedPlaces = [] } = useQuery({
+        queryKey: ['savedPlaces', user?.id],
+        queryFn: () => getSavedPlaces(user?.id),
         enabled: !!user?.id,
-        refetchInterval: 30000 // Refetch every 30 seconds
+    });
+
+    // Filter for Liked places (exclude bookmarks)
+    const likedPlaces = savedPlaces.filter(p => !p.place_data?.savedType || p.place_data?.savedType === 'like');
+
+    const handleDeleteSavedPlace = async (placeId) => {
+        try {
+            await deletePlace(placeId);
+            queryClient.invalidateQueries(['savedPlaces']);
+            toast.success("저장된 장소가 삭제되었습니다.");
+        } catch (error) {
+            toast.error("삭제에 실패했습니다.");
+        }
+    };
+
+    const { data: memories = [] } = useQuery({
+        queryKey: ['memories', user?.id],
+        queryFn: getMemories,
+        enabled: !!user
+    });
+    const { data: aiSchedules = [] } = useQuery({ queryKey: ['schedules'], queryFn: loadSchedules });
+    
+    // Fetch User Reviews
+    const { data: myReviews = [] } = useQuery({
+        queryKey: ['myReviews', user?.id],
+        queryFn: async () => {
+             if (!user) return [];
+             const { data } = await communityService.getPosts(
+                 'review', 
+                 'latest', 
+                 { type: '', keyword: '' }, 
+                 { mood: null, themes: [] }, 
+                 user.id, 
+                 user.id // filterUserId
+             );
+             
+             // Map to MyPage format
+             return data.map(post => {
+                 // Force author info to current user since this IS "My Page"
+                 const authorName = post.profiles?.username || user.user_metadata?.full_name || user.email?.split('@')[0] || '익명';
+                 const authorAvatar = post.profiles?.avatar_url || user.user_metadata?.avatar_url || '';
+
+                 return {
+                    id: post.id,
+                    title: post.title,
+                    date: new Date(post.created_at).toLocaleDateString(),
+                    rating: post.rating || 0,
+                    content: post.body?.substring(0, 100) + (post.body?.length > 100 ? '...' : '') || '',
+                    fullContent: post.body,
+                    thumb: post.media && post.media.length > 0 
+                        ? (typeof post.media[0] === 'string' ? post.media[0] : post.media[0].url)
+                        : 'https://via.placeholder.com/150',
+                    tags: [post.mood, ...(post.themes || [])].filter(Boolean),
+                    likes: post.likes || 0,
+                    comments: post.comments || post.comment_count || 0, // Ensure we get the count
+                    
+                    // Fields for ReviewDetailModal
+                    is_liked: post.is_liked,
+                    author_name: authorName,
+                    author_avatar: authorAvatar,
+                    destination: post.destination,
+                    created_at: post.created_at,
+                    mood: post.mood,
+                    themes: post.themes,
+                    media: post.media,
+                    body: post.body,
+                    user_id: user.id,
+
+                    originalPost: {
+                        ...post,
+                        author_name: authorName,
+                        author_avatar: authorAvatar,
+                        user_id: user.id
+                    } 
+                 };
+             });
+        },
+        enabled: !!user
     });
 
     // Date Classification Logic
@@ -96,6 +213,93 @@ export default function MyPage() {
         return end < today;
     });
 
+    // Prevent duplicate notifications in the same session
+    const processedSchedulesRef = useRef(new Set());
+
+    // --- Automated D-Day Notifications ---
+    useEffect(() => {
+        if (!user || aiSchedules.length === 0) return;
+
+        const checkDDayNotifications = async () => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            
+            for (const sch of aiSchedules) {
+                if (!sch.startDate) continue;
+                
+                const start = new Date(sch.startDate);
+                start.setHours(0,0,0,0);
+                const diffTime = start - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let type = "";
+                let message = "";
+                // Handle potential object title
+                const title = typeof sch.title === 'object' ? (sch.title.name || sch.title.title || "여행") : (sch.title || "여행");
+                
+                if (diffDays === 0) {
+                    type = "d-day";
+                    message = `📅 오늘은 [${title}] 여행이 시작되는 날입니다! 즐거운 여행 되세요! (D-Day)`;
+                } else if (diffDays === 1) {
+                    type = "d-1";
+                    message = `🔔 내일은 [${title}] 여행이 시작되는 날입니다! 미리 짐을 챙겨보세요. (D-1)`;
+                }
+
+                if (type && message) {
+                    // 1. Session-level duplicate check (fast in-memory)
+                    const sessionKey = `${sch.id}-${type}-${todayStr}`;
+                    if (processedSchedulesRef.current.has(sessionKey)) continue;
+
+                    // 2. Browser Storage check (persist across reloads/deletions)
+                    const storageKey = `dday-sent:${sessionKey}`;
+                    if (localStorage.getItem(storageKey)) {
+                         // Already sent today (even if deleted from DB), skip it
+                         processedSchedulesRef.current.add(sessionKey);
+                         continue;
+                    }
+
+                    // 3. Server-level duplicate check (DB existence)
+                    const exists = notifications.some(n => 
+                        n.text.includes(title) && 
+                        n.text.includes(type === "d-day" ? "D-Day" : "D-1") &&
+                        new Date(n.time).toDateString() === new Date().toDateString()
+                    );
+
+                    if (!exists) {
+                        // Mark as processed immediately
+                        processedSchedulesRef.current.add(sessionKey);
+                        
+                        try {
+                            await createNotification({
+                                user_id: user.id,
+                                sender_id: null,
+                                type: 'system',
+                                message: message,
+                                link: '/plans'
+                            });
+                            
+                            // Mark as sent in storage to prevent re-creation after deletion
+                            localStorage.setItem(storageKey, 'true');
+
+                            // Invalidate to refresh UI
+                            queryClient.invalidateQueries(['notifications', user.id]);
+                        } catch (e) {
+                            console.error("Failed to create D-Day notification:", e);
+                            processedSchedulesRef.current.delete(sessionKey);
+                        }
+                    } else {
+                        // Already exists in DB, ensure local state matches
+                        processedSchedulesRef.current.add(sessionKey);
+                        // Also sync storage for consistency
+                        localStorage.setItem(storageKey, 'true');
+                    }
+                }
+            }
+        };
+
+        checkDDayNotifications();
+    }, [user, aiSchedules, queryClient]); // Removed notifications.length dependency
+
+
     const aiUpcomingSchedules = aiSchedules.filter(item => {
         const end = item.endDate ? new Date(item.endDate) : (item.startDate ? new Date(item.startDate) : null);
         if (!end) return false;
@@ -113,25 +317,98 @@ export default function MyPage() {
     // Mutations (Delete Plan)
     const deleteMutation = useMutation({
         mutationFn: removePlan,
-        onSuccess: () => { toast.success("일정이 삭제되었습니다."); queryClient.invalidateQueries(['plans']); },
-        onError: (err) => toast.error("삭제 실패: " + err.message)
+        onSuccess: () => {
+            queryClient.invalidateQueries(['plans']);
+            toast.success("플랜이 삭제되었습니다.");
+        }
     });
 
+    const addScheduleMutation = useMutation({
+        mutationFn: addSchedule,
+        onSuccess: () => {
+            queryClient.invalidateQueries(['schedules']);
+        }
+    });
+
+    // 상세 보기 (Drawer) 핸들러
+    const handlePlaceClick = (place) => {
+        const rawData = place.place_data || {};
+        const mergedItem = {
+            ...rawData,
+            title: place.title,
+            firstimage: place.image,
+            addr1: place.description,
+            category: place.category,
+            savedPlaceId: place.id // 삭제를 위해 원본 ID 저장
+        };
+        
+        setSelectedPlace(mergedItem);
+        setDrawerNights(1);
+        setDrawerPeople(2);
+        setDrawerPlanText(mergedItem.planText || "");
+        setDrawerDiffResult(null);
+    };
+
+    const handleImprovePlace = (detail) => {
+        if (!selectedPlace) return;
+        const improved = improvePlanText({
+            title: selectedPlace.title,
+            nights: drawerNights,
+            people: drawerPeople,
+            planText: drawerPlanText,
+            stays: selectedPlace.stays ?? [],
+            foods: selectedPlace.foods ?? [],
+            theme: 'healing',
+            category: selectedPlace.category || 'walk',
+            detail
+        });
+        setDrawerDiffResult(simpleDiff(drawerPlanText, improved));
+        setDrawerPlanText(improved);
+    };
+
+    const onSaveFromDrawer = async (payload) => {
+        try {
+            // 저장된 장소를 실제 일정(Schedule)으로 변환하여 추가
+            const scheduleData = {
+                title: payload.title,
+                description: payload.subtitle || "저장된 장소로부터 생성된 일정",
+                startDate: new Date().toISOString().split('T')[0],
+                endDate: new Date().toISOString().split('T')[0],
+                people: payload.people || 2,
+                scheduleText: payload.planText || "",
+                items: payload.items || [],
+                totalCost: payload.totalCost || 0,
+                moodData: {
+                    mood: 'refresh',
+                    destination: payload.title,
+                    style: 'relaxed'
+                }
+            };
+            
+            await addScheduleMutation.mutateAsync(scheduleData);
+
+            // 핵심: '저장된 장소' -> '일정'으로 이동 (삭제 처리)
+            if (selectedPlace?.savedPlaceId) {
+                await deletePlace(selectedPlace.savedPlaceId);
+                queryClient.invalidateQueries(['savedPlaces']);
+            }
+
+            toast.success(`"${payload.title}" 일정이 추가되었습니다! [나의 여행 계획]에서 확인하세요.`);
+            setSelectedPlace(null);
+            
+            // 일정관리 탭으로 이동할지 여부는 사용자 선택이지만, 일단 마이페이지에 유지
+        } catch (e) {
+            toast.error("일정 추가 실패: " + e.message);
+        }
+    };
     const handleDelete = (e, id) => {
         e.stopPropagation();
         if (window.confirm("정말 이 일정을 삭제하시겠습니까?")) deleteMutation.mutate(id);
     };
 
-    // New: Handle Plan Click to Navigate to Result Page
+    // Handle Plan Click to show Schedule Detail View
     const handlePlanClick = (plan) => {
-        // Map category to route
-        // Default to /walk if category is missing or 'walk'
-        let route = '/walk';
-        if (plan.category === 'flight' || plan.category === 'airplane') route = '/airplane';
-        if (plan.category === 'traffic') route = '/traffic';
-
-        // Navigate
-        nav(route);
+        setSelectedScheduleForDetail(plan);
     };
 
     // Profile State
@@ -152,21 +429,6 @@ export default function MyPage() {
             initializeUserBadgesIfEmpty(user.id);
         }
     }, [user]);
-
-    // Create trip notifications for upcoming schedules (with duplicate prevention)
-    const notificationCreatedRef = useRef(false);
-
-    useEffect(() => {
-        // Only run once when data is loaded
-        if (user?.id && (myPlans.length > 0 || aiSchedules.length > 0) && !notificationCreatedRef.current) {
-            notificationCreatedRef.current = true;
-            const allSchedules = [...myPlans, ...aiSchedules];
-            createTripNotifications(user.id, allSchedules).then(() => {
-                // Refetch notifications after creating trip notifications
-                refetchNotifications();
-            });
-        }
-    }, [user?.id, myPlans.length, aiSchedules.length]);
 
     // Handlers
     const handleLogout = async () => {
@@ -198,10 +460,29 @@ export default function MyPage() {
         setSaving(true);
         try {
             const avatarUrlToSave = previewImage || user.user_metadata?.avatar_url;
+
+            // 1. Update Auth Metadata
             const { data, error } = await supabase.auth.updateUser({
                 data: { full_name: profileName, bio: profileDesc, avatar_url: avatarUrlToSave }
             });
             if (error) throw error;
+
+            // 2. Update Public Profiles Table (Sync)
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update({
+                    username: profileName,
+                    introduction: profileDesc,
+                    avatar_url: avatarUrlToSave,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', user.id);
+
+            if (profileError) {
+                console.error('Profile sync error:', profileError);
+                throw new Error('프로필 동기화 실패: ' + profileError.message);
+            }
+
             setUser(data.user);
             toast.success("프로필이 저장되었습니다.");
         } catch (error) {
@@ -227,71 +508,45 @@ export default function MyPage() {
         { id: 2, title: '루브르 박물관 가이드 투어', category: '액티비티', rating: 4.9, cover: 'https://images.unsplash.com/photo-1499856871940-b625a4aa4e53' },
     ];
 
-    // Calculate unread count from database notifications
-    const unreadCount = dbNotifications.filter(n => !n.is_read).length;
+    const unreadCount = notifications.filter(n => !n.isRead).length;
 
     const handleDeleteNotification = async (id) => {
-        const { error } = await supabase
-            .from('notifications')
-            .delete()
-            .eq('id', id);
-
-        if (!error) {
-            toast.success("알림이 삭제되었습니다.");
-            refetchNotifications();
-        } else {
-            toast.error("알림 삭제에 실패했습니다.");
+        try {
+            await deleteNotification(id);
+            queryClient.invalidateQueries(['notifications']);
+            toast.success('알림이 삭제되었습니다.');
+        } catch (error) {
+            console.error('삭제 실패:', error);
+            toast.error('삭제에 실패했습니다.');
         }
     };
 
     const handleClearAllNotifications = async () => {
-        if (window.confirm("모든 알림을 삭제하시겠습니까?")) {
-            const { error } = await supabase
-                .from('notifications')
-                .delete()
-                .eq('user_id', user?.id);
-
-            if (!error) {
-                toast.success("모든 알림이 삭제되었습니다.");
-                refetchNotifications();
-            } else {
-                toast.error("알림 삭제에 실패했습니다.");
-            }
+        if (!user) return;
+        try {
+            await deleteAllNotifications(user.id);
+            queryClient.invalidateQueries(['notifications']);
+            toast.success("모든 알림이 삭제되었습니다.");
+        } catch (error) {
+            toast.error("삭제 실패");
         }
     };
 
-    const handleMarkAsRead = async (id) => {
-        await markNotificationAsRead(id);
-        refetchNotifications();
+    const handleMarkAsRead = (id) => {
+        markNotificationAsRead(id).then(() => {
+             queryClient.invalidateQueries(['notifications']);
+        });
     };
 
     const handleMarkAllAsRead = async () => {
-        const unreadNotifications = dbNotifications.filter(n => !n.is_read);
-
-        for (const notification of unreadNotifications) {
-            await markNotificationAsRead(notification.id);
+        if (!user) return;
+        try {
+            await markAllNotificationsAsRead(user.id);
+            queryClient.invalidateQueries(['notifications']);
+            toast.success("모든 알림을 읽음 처리했습니다.");
+        } catch (error) {
+            toast.error("처리 실패");
         }
-
-        toast.success("모든 알림을 읽음 처리했습니다.");
-        refetchNotifications();
-    };
-
-    // Helper function to format notification time
-    const formatNotificationTime = (createdAt) => {
-        if (!createdAt) return '';
-
-        const now = new Date();
-        const created = new Date(createdAt);
-        const diffMs = now - created;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return '방금 전';
-        if (diffMins < 60) return `${diffMins}분 전`;
-        if (diffHours < 24) return `${diffHours}시간 전`;
-        if (diffDays < 7) return `${diffDays}일 전`;
-        return created.toLocaleDateString('ko-KR');
     };
 
 
@@ -323,10 +578,51 @@ export default function MyPage() {
                     <div className="stat-value">{upcomingCount} <span className="unit">건</span></div>
                 </div>
                 <div className="stat-card pink" onClick={() => setActiveTab('past')} style={{ cursor: 'pointer' }}>
-                    <div className="stat-label">✈️ 지난 여행</div>
+                    <div className="stat-label">📅 지난 여행</div>
                     <div className="stat-value">{pastCount} <span className="unit">건</span></div>
                 </div>
             </div>
+
+            {/* Biorhythm Section */}
+            {(() => {
+                // Aggregate mood data from all schedules (past + upcoming)
+                
+                // Map mood labels to unified keys
+                const moodLabelToKey = {
+                    '번아웃': 'burnout',
+                    '번아웃 케어': 'burnout',
+                    '활력 충전': 'energy',
+                    '리프레시': 'energy',
+                    '에너지 충전': 'energy',
+                    '힐링': 'healing',
+                    '고요한 휴식': 'healing',
+                    '모험': 'adventure'
+                };
+                
+                // Extract mood data from schedules
+                const plansWithMood = allSchedules
+                    .filter(s => s.moodData?.mood)
+                    .map(s => {
+                        const moodLabel = typeof s.moodData.mood === 'string' 
+                            ? s.moodData.mood 
+                            : s.moodData.mood.label;
+                        
+                        const moodKey = moodLabelToKey[moodLabel] || 'healing'; // Default to healing
+                        
+                        return {
+                            mood: moodKey,
+                            title: s.title,
+                            date: s.startDate
+                        };
+                    });
+                
+                return (
+                    <TravelBiorhythm 
+                        plans={plansWithMood}
+                        currentMood={currentMood}
+                    />
+                );
+            })()}
 
             {/* Menu Group 1 */}
             <div className="menu-group">
@@ -381,30 +677,66 @@ export default function MyPage() {
         const renderContent = () => {
             switch (activeTab) {
                 case 'plans': return (
-                    <div className="content-grid">
-                        {myPlans.length > 0 ? myPlans.map(item => (
-                            <div key={item.id} className="feature-card" onClick={() => handlePlanClick(item)} style={{ cursor: 'pointer', position: 'relative' }}>
-                                <div className="card-img-wrapper">
-                                    <img src={item.heroImage || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80"} alt={item.title} className="card-img" />
-                                    <span className="card-badge">{item.mood ? '#' + item.mood.toUpperCase() : '#TRIP'}</span>
-                                    <button onClick={(e) => handleDelete(e, item.id)} className="card-delete-btn">✕</button>
+                    <div className="content-grid" style={{ 
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                        gap: '12px',
+                        padding: '10px 4px 20px 4px'
+                    }}>
+                        {likedPlaces.length > 0 ? likedPlaces.map(place => (
+                            <div key={place.id} style={{ 
+                                position: 'relative',
+                                height: 'auto'
+                            }}>
+                                <div style={{ 
+                                    transform: 'scale(0.85)', 
+                                    transformOrigin: 'top left',
+                                    width: '117.6%',
+                                    marginBottom: '-15%'
+                                }}>
+                                    <RecommendationCard
+                                        title={place.title}
+                                        country={place.place_data?.addr1?.split(' ')[0] || place.country}
+                                        tag={place.tag}
+                                        desc={place.place_data?.addr1 || place.description}
+                                        image={place.image || "https://images.unsplash.com/photo-1533658280665-224492bf552f?auto=format&fit=crop&w=800&q=80"}
+                                        showMatchScore={false}
+                                        onClick={() => handlePlaceClick(place)}
+                                    />
                                 </div>
-                                <div className="card-body">
-                                    <h3 className="card-title">{item.title}</h3>
-                                    <div className="card-meta">
-                                        <span>📅 {new Date(item.createdAt).toLocaleDateString()}</span>
-                                        <span>👥 {item.people}명</span>
-                                    </div>
-                                    {item.wellness && (
-                                        <div className="wellness-mini-info">
-                                            <span>🔊 {formatNoise(item.wellness.noise)}</span>
-                                            <span>|</span>
-                                            <span>💡 {formatLight(item.wellness.light)}</span>
-                                        </div>
-                                    )}
-                                </div>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteSavedPlace(place.id); }}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '4px',
+                                        right: '4px',
+                                        background: 'rgba(255,255,255,0.92)',
+                                        border: 'none',
+                                        borderRadius: '50%',
+                                        width: '22px',
+                                        height: '22px',
+                                        cursor: 'pointer',
+                                        fontSize: '11px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                                        zIndex: 10
+                                    }}
+                                    title="삭제"
+                                >
+                                    ✕
+                                </button>
                             </div>
-                        )) : <div className="empty-state">저장된 일정이 없습니다.</div>}
+                        )) : (
+                            <div style={{ gridColumn: '1 / -1', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                                <EmptyState 
+                                    icon="📍" 
+                                    title="저장된 장소가 없습니다" 
+                                    description="여행하고 싶은 장소를 하트로 찜해보세요."
+                                />
+                            </div>
+                        )}
                     </div>
                 );
                 case 'ai_plans': return (
@@ -429,16 +761,17 @@ export default function MyPage() {
                                 <div className="content-grid">
                                     {aiUpcomingSchedules.length > 0 ? aiUpcomingSchedules.map(item => (
                                         <div key={item.id} className="feature-card ai-card" onClick={() => handlePlanClick(item)}>
-                                            <div className="card-img-wrapper">
-                                                <img src={item.heroImage || "https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?auto=format&fit=crop&w=800&q=80"} alt="Upcoming Trip" className="card-img" />
-                                                <span className="card-badge d-day">D-{Math.ceil((new Date(item.startDate) - new Date()) / (1000 * 60 * 60 * 24))}</span>
-                                            </div>
-                                            <div className="card-body">
+                                            <div className="card-body" style={{ width: '100%' }}>
                                                 <div className="card-header-row">
-                                                    <h3 className="card-title">{item.title}</h3>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <h3 className="card-title" style={{ marginBottom: 0 }}>{item.title}</h3>
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                                                            D-{Math.ceil((new Date(item.startDate) - new Date()) / (1000 * 60 * 60 * 24))}
+                                                        </span>
+                                                    </div>
                                                     <span className="ai-tag">AI Plan</span>
                                                 </div>
-                                                <div className="card-meta">
+                                                <div className="card-meta" style={{ marginTop: '8px' }}>
                                                     <span className="meta-item">📅 {new Date(item.startDate).toLocaleDateString()} 출발</span>
                                                     <span className="meta-item">👥 {item.people}명</span>
                                                 </div>
@@ -449,11 +782,13 @@ export default function MyPage() {
                                             </div>
                                         </div>
                                     )) : (
-                                        <div className="empty-state">
-                                            <div className="empty-icon">🏖️</div>
-                                            <p>예정된 여행 일정이 없습니다.</p>
+                                        <EmptyState 
+                                            icon="🏜️" 
+                                            title="예정된 일정이 없습니다" 
+                                            description="새로운 여행 계획을 세워보시는건 어떨까요?"
+                                        >
                                             <button className="primary-btn small" onClick={() => nav('/planlab')}>+ 새 일정 만들기</button>
-                                        </div>
+                                        </EmptyState>
                                     )}
                                 </div>
                             )}
@@ -462,23 +797,32 @@ export default function MyPage() {
                                 <div className="content-grid">
                                     {aiPastSchedules.length > 0 ? aiPastSchedules.map(item => (
                                         <div key={item.id} className="feature-card ai-card past" onClick={() => handlePlanClick(item)}>
-                                            <div className="card-img-wrapper">
-                                                <img src={item.heroImage || "https://images.unsplash.com/photo-1522881451255-f59ad836fbc5?auto=format&fit=crop&w=800&q=80"} alt="Past Trip" className="card-img" />
-                                                <span className="card-badge finished">종료됨</span>
-                                            </div>
-                                            <div className="card-body">
-                                                <h3 className="card-title">{item.title}</h3>
-                                                <div className="card-meta">
-                                                    <span className="meta-item">📅 {new Date(item.endDate).toLocaleDateString()} 다녀옴</span>
+                                            <div className="card-body" style={{ width: '100%' }}>
+                                                <div className="card-header-row">
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <h3 className="card-title" style={{ marginBottom: 0, color: '#6b7280' }}>{item.title}</h3>
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px' }}>
+                                                            종료됨
+                                                        </span>
+                                                    </div>
+                                                    <span className="ai-tag past">AI Plan</span>
                                                 </div>
-                                                <p className="card-desc">{item.description || "즐거운 추억을 남기셨나요?"}</p>
+                                                <div className="card-meta" style={{ marginTop: '8px' }}>
+                                                    <span className="meta-item">📅 {new Date(item.endDate).toLocaleDateString()} 다녀옴</span>
+                                                    <span className="meta-item">👥 {item.people}명</span>
+                                                </div>
+                                                <p className="card-desc">{item.description || "기록된 추억이 없습니다."}</p>
+                                                <div className="card-action-row">
+                                                    <button className="small-action-btn">상세보기</button>
+                                                </div>
                                             </div>
                                         </div>
                                     )) : (
-                                        <div className="empty-state">
-                                            <div className="empty-icon">🎒</div>
-                                            <p>지난 여행 기록이 없습니다.</p>
-                                        </div>
+                                        <EmptyState 
+                                            icon="🎬" 
+                                            title="지난 여행이 없습니다" 
+                                            description="모든 여행의 끝은 새로운 시작입니다."
+                                        />
                                     )}
                                 </div>
                             )}
@@ -488,109 +832,137 @@ export default function MyPage() {
                 case 'upcoming': return (
                     <div className="content-grid">
                         {upcomingSchedules.length > 0 ? upcomingSchedules.map(item => (
-                            <div key={item.id} className="feature-card" style={{ cursor: 'pointer', position: 'relative' }}>
-                                <div className="card-img-wrapper">
-                                    <img src={item.heroImage || "https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?auto=format&fit=crop&w=800&q=80"} alt="Upcoming Trip" className="card-img" />
-                                    <span className="card-badge" style={{ background: '#3b82f6', color: 'white' }}>D-{Math.ceil((new Date(item.startDate) - new Date()) / (1000 * 60 * 60 * 24))}</span>
-                                </div>
-                                <div className="card-body">
-                                    <h3 className="card-title">{item.title}</h3>
+                            <div key={item.id} className="feature-card" style={{ cursor: 'pointer', position: 'relative' }} onClick={() => setSelectedScheduleForDetail(item)}>
+                                <div className="card-body" style={{ width: '100%' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                        <h3 className="card-title" style={{ margin: 0 }}>{item.title}</h3>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                                            D-{Math.ceil((new Date(item.startDate) - new Date()) / (1000 * 60 * 60 * 24))}
+                                        </span>
+                                    </div>
                                     <div className="card-meta">
                                         <span>📅 {new Date(item.startDate).toLocaleDateString()} 출발</span>
                                     </div>
                                     <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '4px' }}>{item.description || item.subtitle || "설명 없음"}</p>
                                 </div>
                             </div>
-                        )) : <div className="empty-state">다가오는 여행 계획이 없습니다.</div>}
+                        )) : (
+                            <EmptyState 
+                                icon="📅" 
+                                title="다가오는 계획이 없습니다" 
+                                description="달력에 설렘을 채워보세요!"
+                            />
+                        )}
                     </div>
                 );
                 case 'past': return (
                     <div className="content-grid">
                         {pastSchedules.length > 0 ? pastSchedules.map(item => (
-                            <div key={item.id} className="feature-card" style={{ cursor: 'pointer', position: 'relative' }}>
-                                <div className="card-img-wrapper">
-                                    <img src={item.heroImage || "https://images.unsplash.com/photo-1522881451255-f59ad836fbc5?auto=format&fit=crop&w=800&q=80"} alt="Past Trip" className="card-img" style={{ filter: 'grayscale(0.8)' }} />
-                                    <span className="card-badge" style={{ background: '#6b7280', color: 'white' }}>종료됨</span>
-                                </div>
-                                <div className="card-body">
-                                    <h3 className="card-title" style={{ color: '#666' }}>{item.title}</h3>
+                            <div key={item.id} className="feature-card" style={{ cursor: 'pointer', position: 'relative' }} onClick={() => setSelectedScheduleForDetail(item)}>
+                                <div className="card-body" style={{ width: '100%' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                        <h3 className="card-title" style={{ margin: 0, color: '#666' }}>{item.title}</h3>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px' }}>
+                                            종료됨
+                                        </span>
+                                    </div>
                                     <div className="card-meta">
                                         <span>📅 {new Date(item.endDate).toLocaleDateString()} 종료</span>
                                     </div>
                                     <p style={{ fontSize: '0.9rem', color: '#888', marginTop: '4px' }}>{item.description || item.subtitle || "설명 없음"}</p>
                                 </div>
                             </div>
-                        )) : <div className="empty-state">지난 여행 기록이 없습니다.</div>}
+                        )) : (
+                            <EmptyState 
+                                icon="🧳" 
+                                title="지난 기록이 없습니다" 
+                                description="여행의 추억을 간직해보세요."
+                            />
+                        )}
                     </div>
                 );
                 case 'analysis': return (
-                    <TravelStyleAnalysis schedules={[...myPlans, ...aiSchedules]} />
+                    <TravelStyleAnalysis 
+                        savedPlaces={savedPlaces} 
+                        upcomingSchedules={upcomingSchedules} 
+                        pastSchedules={pastSchedules} 
+                        currentMood={currentMood}
+                    />
                 );
                 case 'reviews': return (
                     <div className="reviews-container">
-                        {selectedReview ? (
-                            <div className="review-detail-view">
-                                <button className="review-back-btn" onClick={() => setSelectedReview(null)}>
-                                    <FaChevronLeft /> 목록으로 돌아가기
-                                </button>
-                                <div className="review-detail-content">
-                                    <div className="review-detail-header">
-                                        <h2 className="review-detail-title">{selectedReview.title}</h2>
-                                        <div className="review-detail-meta">
-                                            <span>📅 {new Date(selectedReview.created_at).toLocaleDateString('ko-KR')}</span>
-                                            <span className="star-rating">{'★'.repeat(selectedReview.rating || 5)}</span>
-                                        </div>
+                        {selectedReview && (
+                            <ReviewDetailModal
+                                review={selectedReview}
+                                onClose={() => setSelectedReview(null)}
+                                onLike={async (id) => {
+                                    const { liked } = await communityService.toggleLike(id, user.id);
+                                    const updateData = (prev) => prev.map(p => p.id === id ? { ...p, is_liked: liked, likes: (p.likes || 0) + (liked ? 1 : -1) } : p);
+                                    queryClient.setQueryData(['myReviews', user?.id], updateData);
+                                    setSelectedReview(prev => prev.id === id ? { ...prev, is_liked: liked, likes: (prev.likes || 0) + (liked ? 1 : -1) } : prev);
+                                }}
+                                onEdit={(post) => {
+                                    toast('수정 기능은 커뮤니티 페이지에서 이용해주세요.', { icon: 'ℹ️' });
+                                }}
+                                onDelete={(id) => {
+                                    toast.promise(
+                                        (async () => {
+                                            await communityService.deletePost(id);
+                                            queryClient.invalidateQueries(['myReviews', user?.id]);
+                                            setSelectedReview(null);
+                                        })(),
+                                        {
+                                            loading: '삭제 중...',
+                                            success: '삭제되었습니다.',
+                                            error: '삭제 실패',
+                                        }
+                                    );
+                                }}
+                                onUpdatePost={(updatedPost) => {
+                                    queryClient.setQueryData(['myReviews', user?.id], (old) => {
+                                        return old ? old.map(p => p.id === updatedPost.id ? { ...p, ...updatedPost } : p) : [];
+                                    });
+                                    setSelectedReview(prev => prev && prev.id === updatedPost.id ? { ...prev, ...updatedPost } : prev);
+                                }}
+                            />
+                        )}
+                        <div className="reviews-list">
+                            {myReviews.length > 0 ? myReviews.map(item => (
+                                <div key={item.id} className="review-card" onClick={() => setSelectedReview(item)}>
+                                    <div className="review-card-thumb">
+                                        <img src={item.thumb} alt={item.title} onError={(e) => e.target.src='https://via.placeholder.com/150'} />
                                     </div>
-                                    {selectedReview.media && selectedReview.media.length > 0 && (
-                                        <div className="review-detail-img-wrapper">
-                                            <img src={selectedReview.media[0]} alt={selectedReview.title} className="review-detail-img" />
+                                    <div className="review-card-content">
+                                        <div className="review-card-rating-wrapper" style={{ marginBottom: '4px' }}>
+                                            <div className="review-card-rating" style={{ display: 'flex', gap: '2px' }}>
+                                                {[...Array(5)].map((_, i) => (
+                                                    <FaStar key={i} color={i < (item.rating || 0) ? "#fbbf24" : "#e5e7eb"} size={14} />
+                                                ))}
+                                            </div>
                                         </div>
-                                    )}
-                                    <div className="review-tags">
-                                        {selectedReview.destination && <span className="review-tag">#{selectedReview.destination}</span>}
-                                        {selectedReview.mood && <span className="review-tag">#{selectedReview.mood}</span>}
-                                        {selectedReview.theme && <span className="review-tag">#{selectedReview.theme}</span>}
-                                    </div>
-                                    <p className="review-body-text">{selectedReview.body || selectedReview.content}</p>
-                                    <div className="review-interactions">
-                                        <div className="interaction-item red">
-                                            <FaHeart /> {selectedReview.likes || 0}
-                                        </div>
-                                        <div className="interaction-item blue">
-                                            <FaUserFriends /> {selectedReview.comments || 0}
+                                        <h3 className="review-card-title" style={{ marginTop: 0 }}>{item.title}</h3>
+                                        <p className="review-card-snippet">{item.content}</p>
+                                        <div className="review-card-footer">
+                                            <span className="review-date">{item.date}</span>
+                                            <div className="review-card-stats" style={{ display: 'flex', gap: '10px' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: item.is_liked ? '#ef4444' : '#9ca3af' }}>
+                                                    {item.is_liked ? <FaHeart /> : <FaRegHeart />} {item.likes}
+                                                </span>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#9ca3af' }}>
+                                                    <FaComment /> {item.comments}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="reviews-list">
-                                {userReviews.map(item => (
-                                    <div key={item.id} className="review-card" onClick={() => setSelectedReview(item)}>
-                                        <div className="review-card-thumb">
-                                            <img
-                                                src={item.media && item.media.length > 0 ? item.media[0] : 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=800&q=80'}
-                                                alt={item.title}
-                                            />
-                                        </div>
-                                        <div className="review-card-content">
-                                            <div className="review-card-header">
-                                                <h3 className="review-card-title">{item.title}</h3>
-                                                <span className="review-card-rating">⭐ {item.rating || 5}</span>
-                                            </div>
-                                            <p className="review-card-snippet">{item.body?.substring(0, 100) || item.content?.substring(0, 100)}...</p>
-                                            <div className="review-card-footer">
-                                                <span className="review-date">{new Date(item.created_at).toLocaleDateString('ko-KR')}</span>
-                                                <div className="review-card-stats">
-                                                    <span>❤️ {item.likes || 0}</span>
-                                                    <span>💬 {item.comments || 0}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                                {userReviews.length === 0 && <div className="empty-state">작성한 후기가 없습니다.</div>}
-                            </div>
-                        )}
+                            )) : (
+                                <EmptyState 
+                                    icon="✍️" 
+                                    title="작성한 후기가 없습니다" 
+                                    description="여행의 솔직한 이야기를 들려주세요."
+                                />
+                            )}
+                        </div>
                     </div>
                 );
                 case 'wishlist': return (
@@ -613,7 +985,7 @@ export default function MyPage() {
 
                     <div className="notification-list-container">
                         <div className="notification-header-actions">
-                            <span className="noti-count-label">총 {dbNotifications.length}개</span>
+                            <span className="noti-count-label">총 {notifications.length}개</span>
                             <div className="noti-actions">
                                 <button className="action-pill-btn" onClick={handleMarkAllAsRead}>
                                     <FaCheckDouble /> 모두 읽음
@@ -624,24 +996,26 @@ export default function MyPage() {
                             </div>
                         </div>
 
-                        {dbNotifications.map(noti => {
+                        {notifications.map(noti => {
                             let Icon = FaBell;
                             let colorClass = 'gray';
                             if (noti.type === 'like') { Icon = FaHeart; colorClass = 'red'; }
                             if (noti.type === 'schedule') { Icon = FaCalendarAlt; colorClass = 'blue'; }
                             if (noti.type === 'comment') { Icon = FaCommentDots; colorClass = 'green'; }
+                            if (noti.type === 'save') { Icon = FaHeart; colorClass = 'pink'; }
+                            if (noti.type === 'post') { Icon = FaPen; colorClass = 'blue'; } // Added post icon // Added save icon
 
                             return (
-                                <div key={noti.id} className={`notification-card ${!noti.is_read ? 'unread' : ''}`} onClick={() => handleMarkAsRead(noti.id)}>
+                                <div key={noti.id} className={`notification-card ${!noti.isRead ? 'unread' : ''}`} onClick={() => handleMarkAsRead(noti.id)}>
                                     <div className={`noti-icon-box ${colorClass}`}>
                                         <Icon />
                                     </div>
                                     <div className="noti-content-wrapper">
-                                        <p className="noti-message">{noti.message}</p>
-                                        <span className="noti-time">{formatNotificationTime(noti.created_at)}</span>
+                                        <p className="noti-message">{noti.text}</p>
+                                        <span className="noti-time">{noti.time}</span>
                                     </div>
                                     <div className="noti-right-actions">
-                                        {!noti.is_read && <div className="noti-unread-dot"></div>}
+                                        {!noti.isRead && <div className="noti-unread-dot"></div>}
                                         <button
                                             className="noti-delete-btn"
                                             onClick={(e) => { e.stopPropagation(); handleDeleteNotification(noti.id); }}
@@ -653,11 +1027,12 @@ export default function MyPage() {
                                 </div>
                             );
                         })}
-                        {dbNotifications.length === 0 && (
-                            <div className="empty-state">
-                                <div className="empty-icon">🔕</div>
-                                새로운 알림이 없습니다.
-                            </div>
+                        {notifications.length === 0 && (
+                            <EmptyState 
+                                icon="✉️" 
+                                title="새로운 알림이 없습니다" 
+                                description="소식이 오면 알려드릴게요!"
+                            />
                         )}
                     </div>
                 );
@@ -688,12 +1063,13 @@ export default function MyPage() {
         };
 
         const titles = {
-            plans: '저장된 장소',
-            ai_plans: '나의 여행 일정',
+            plans: '내 여행 플랜',
+            ai_plans: 'AI 여행 계획',
             upcoming: '다가오는 여행',
             past: '지난 여행',
             analysis: '내 여행 성향',
-            reviews: '나의 후기',
+            reviews: '내가 쓴 글',
+            wishlist: '저장한 장소',
             notifications: '알림',
             settings: '설정'
         };
@@ -714,6 +1090,8 @@ export default function MyPage() {
         );
     };
 
+
+
     return (
         <div className="mypage-wrapper">
             {activeTab === 'main' ? renderMainDashboard() : renderSubPage()}
@@ -731,11 +1109,13 @@ export default function MyPage() {
                             initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
                             onClick={e => e.stopPropagation()}
                         >
-                            <h3 className="modal-title">로그아웃</h3>
-                            <p className="modal-text">정말 로그아웃 하시겠습니까?</p>
+                            <h3 className="modal-title">벌써 가시려구요? 😢</h3>
+                            <p className="modal-text">가실거에요? 더 둘러보고 가세요</p>
                             <div className="modal-actions">
-                                <button className="modal-btn cancel" onClick={() => setShowLogoutModal(false)}>취소</button>
-                                <button className="modal-btn confirm" onClick={handleLogout}>확인</button>
+                                {/* Gray button for actual logout (Secondary action) */}
+                                <button className="modal-btn cancel" onClick={handleLogout}>로그아웃하기</button>
+                                {/* Blue button to stay (Primary action) */}
+                                <button className="modal-btn confirm" onClick={() => setShowLogoutModal(false)}>좀더 보고가기</button>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -743,6 +1123,83 @@ export default function MyPage() {
             </AnimatePresence>
 
 
+            {/* 저장된 장소 상세 보기 Drawer */}
+            <TripDetailDrawer
+                open={!!selectedPlace}
+                onClose={() => setSelectedPlace(null)}
+                item={selectedPlace}
+                nights={drawerNights}
+                setNights={setDrawerNights}
+                people={drawerPeople}
+                setPeople={setDrawerPeople}
+                planText={drawerPlanText}
+                setPlanText={setDrawerPlanText}
+                diffResult={drawerDiffResult}
+                onImprove={handleImprovePlace}
+                onSave={onSaveFromDrawer}
+                improveLabel="AI 자동 제안"
+                hideRegisterButton={true}
+            />
+            {/* 일정 세부일정 상세 보기 Modal */}
+            <AnimatePresence>
+                {selectedScheduleForDetail && (
+                    <motion.div
+                        className="modal-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{ zIndex: 1100 }}
+                        onClick={() => setSelectedScheduleForDetail(null)}
+                    >
+                        <motion.div
+                            className="modal-content full"
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ 
+                                width: '95%', 
+                                maxWidth: '800px', 
+                                height: '90vh', 
+                                padding: 0, 
+                                overflow: 'hidden',
+                                borderRadius: '24px 24px 0 0',
+                                position: 'absolute',
+                                bottom: 0
+                            }}
+                        >
+                            <div className="modal-header-sticky" style={{ 
+                                padding: '16px 20px', 
+                                borderBottom: '1px solid #eee',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: 'white'
+                            }}>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem' }}>여행 세부일정</h3>
+                                <button 
+                                    onClick={() => setSelectedScheduleForDetail(null)}
+                                    style={{ 
+                                        background: '#f3f4f6', 
+                                        border: 'none', 
+                                        borderRadius: '50%', 
+                                        width: '32px', 
+                                        height: '32px', 
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >✕</button>
+                            </div>
+                            <div style={{ height: 'calc(100% - 65px)', overflowY: 'auto', padding: '0 0 40px 0' }}>
+                                <ScheduleDetailView schedule={selectedScheduleForDetail} />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

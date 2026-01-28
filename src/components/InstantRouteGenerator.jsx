@@ -323,7 +323,7 @@ const generateMockRoutes = (selections) => {
     }));
 };
 
-export default function InstantRouteGenerator({ selections, onComplete, onCancel }) {
+export default function InstantRouteGenerator({ selections, onComplete, onCancel, preGeneratedPlans }) {
     const [loading, setLoading] = useState(true);
     const [routes, setRoutes] = useState([]);
     const [selectedRoute, setSelectedRoute] = useState(null);
@@ -334,7 +334,21 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
         let isCancelled = false;
 
         const loadRoutes = async () => {
-            // 로딩 애니메이션 시작
+            // If plans are already generated (passed from parent), skip loading and API call
+            if (preGeneratedPlans) {
+                const generatedRoutes = [
+                    preGeneratedPlans.relaxed,
+                    preGeneratedPlans.balanced,
+                    preGeneratedPlans.active
+                ];
+                setRoutes(generatedRoutes);
+                setUsingMockData(false);
+                setLoading(false);
+                setProgress(100);
+                return;
+            }
+
+            // 로딩 애니메이션 시작 (Fallback or standalone usage)
             const progressInterval = setInterval(() => {
                 setProgress((prev) => {
                     if (prev >= 95) {
@@ -404,32 +418,26 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
         return () => {
             isCancelled = true;
         };
-    }, [selections]);
+    }, [selections, preGeneratedPlans]);
 
     const handleSelectRoute = (route) => {
         setSelectedRoute(route);
+        // Do NOT auto-confirm anymore (User request)
     };
 
-    const handleConfirm = () => {
-        if (selectedRoute) {
+    const handleConfirm = (routeToConfirm = selectedRoute) => {
+        if (routeToConfirm) {
             // 전체 일정을 텍스트로 변환
-            const scheduleText = selectedRoute.dailyItinerary
-                .map(dayData => {
-                    const dayHeader = `[Day ${dayData.day}]`;
-                    const daySpots = dayData.spots
-                        .map(spot => `${spot.time} - ${spot.emoji} ${spot.spot}\n  ${spot.activity}`)
-                        .join("\n\n");
-                    return `${dayHeader}\n${daySpots}`;
-                })
-                .join("\n\n");
+            // 전체 일정을 JSON 텍스트로 변환 (구조 및 비용 정보 보존)
+            const scheduleText = JSON.stringify(routeToConfirm.dailyItinerary);
 
             onComplete({
                 ...selections,
-                route: selectedRoute,
-                title: selectedRoute.title,
-                description: selectedRoute.subtitle,
+                route: routeToConfirm,
+                title: routeToConfirm.title,
+                description: routeToConfirm.subtitle,
                 scheduleText,
-                dailyItinerary: selectedRoute.dailyItinerary, // 구조화된 데이터도 저장
+                dailyItinerary: routeToConfirm.dailyItinerary, // 구조화된 데이터도 저장
             });
         }
     };
@@ -465,7 +473,7 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
                                 {nights}박 {nights + 1}일, 당신을 위한 3가지 여행 플랜 🎯
                             </h2>
                             <p className="optionsSubtitle">
-                                가장 마음에 드는 일정을 선택해주세요
+                                가장 마음에 드는 일정을 선택하면 <b>즉시 저장</b>됩니다
                             </p>
                         </div>
 
@@ -475,6 +483,17 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
                                     key={route.id}
                                     className={`optionCard ${selectedRoute?.id === route.id ? "selected" : ""}`}
                                     onClick={() => handleSelectRoute(route)}
+                                    style={{
+                                        '--hover-color': route.color.replace('0.3', '0.8') // Make border color vivid on hover
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = route.color.replace('0.3', '0.8');
+                                        e.currentTarget.style.transform = 'translateY(-4px)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = selectedRoute?.id === route.id ? '#5C94FF' : '#e0e0e0';
+                                        e.currentTarget.style.transform = selectedRoute?.id === route.id ? 'translateY(-4px)' : 'translateY(0)';
+                                    }}
                                 >
                                     <div className="optionHeader" style={{ background: route.color }}>
                                         <div className="optionEmojis">
@@ -493,16 +512,11 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
                                                 <div key={index} className="dayPreview">
                                                     <div className="dayTitle">Day {dayData.day}</div>
                                                     <div className="daySpots">
-                                                        {dayData.spots.slice(0, 2).map((spot, spotIndex) => (
+                                                        {dayData.spots.map((spot, spotIndex) => (
                                                             <span key={spotIndex} className="spotMini">
                                                                 {spot.emoji} {spot.spot}
                                                             </span>
                                                         ))}
-                                                        {dayData.spots.length > 2 && (
-                                                            <span className="spotMore">
-                                                                +{dayData.spots.length - 2}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -519,15 +533,20 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
                         </div>
 
                         <div className="optionsFooter">
-                            <button className="secondaryBtn" onClick={onCancel}>
+                            <button className="secondaryBtn" onClick={onCancel} style={{ flex: 1 }}>
                                 다시 선택하기
                             </button>
-                            <button
-                                className="primaryBtn"
-                                onClick={handleConfirm}
+                            <button 
+                                className="primaryBtn" 
+                                onClick={() => handleConfirm()}
                                 disabled={!selectedRoute}
+                                style={{ 
+                                    flex: 1,
+                                    background: selectedRoute ? '#3b82f6' : '#e2e8f0',
+                                    cursor: selectedRoute ? 'pointer' : 'not-allowed'
+                                }}
                             >
-                                ✓ 선택한 플랜으로 저장하기
+                                ✓ {selectedRoute ? "선택한 플랜으로 저장하기" : "플랜을 선택해주세요"}
                             </button>
                         </div>
                     </div>

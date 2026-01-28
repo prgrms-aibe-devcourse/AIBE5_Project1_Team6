@@ -60,7 +60,7 @@ export async function savePlace(userId, placeData) {
             tag: placeData.tag,
             category: placeData.category, // 'walk', 'traffic', 'airplane'
             match_score: placeData.matchScore || 95,
-            place_data: placeData // 전체 데이터 JSON으로 저장
+            place_data: { ...placeData, savedType: placeData.savedType || 'like' } // Default to 'like' if not specified
         })
         .select()
         .single();
@@ -95,7 +95,25 @@ export async function isPlaceSaved(userId, title) {
 }
 
 /**
- * 저장된 장소 삭제
+ * 저장된 장소 삭제 (userId, title 기준)
+ */
+export async function removePlace(userId, title) {
+    const { error } = await supabase
+        .from('saved_places')
+        .delete()
+        .eq('user_id', userId)
+        .eq('title', title);
+    
+    if (error) {
+        console.error('장소 삭제 실패:', error);
+        throw error;
+    }
+    
+    return true;
+}
+
+/**
+ * 저장된 장소 삭제 (ID 기준)
  */
 export async function deletePlace(placeId) {
     const { error } = await supabase

@@ -7,7 +7,7 @@ import { useAuthStore } from '../../stores/authStore';
 import toast from 'react-hot-toast';
 
 export default function FreeBoardDetailModal({ post, onClose, onLike, onEdit, onDelete, focusComment, onUpdatePost }) {
-    const { user } = useAuthStore();
+    const { user, setShowLoginPrompt } = useAuthStore();
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
     const mediaList = post.media || [];
     const [comments, setComments] = useState([]);
@@ -64,7 +64,7 @@ export default function FreeBoardDetailModal({ post, onClose, onLike, onEdit, on
         e.preventDefault();
         if (!newComment.trim()) return;
         if (!user) {
-            toast.error('로그인이 필요합니다.');
+            setShowLoginPrompt(true);
             return;
         }
 
@@ -383,7 +383,16 @@ export default function FreeBoardDetailModal({ post, onClose, onLike, onEdit, on
                                         type="text"
                                         placeholder={replyingTo ? "답글을 입력하세요..." : "따뜻한 댓글을 남겨주세요..."}
                                         value={newComment}
-                                        onChange={(e) => setNewComment(e.target.value)}
+                                        onChange={(e) => {
+                                            if (!user) {
+                                                setShowLoginPrompt(true);
+                                                return;
+                                            }
+                                            setNewComment(e.target.value);
+                                        }}
+                                        onClick={() => {
+                                            if (!user) setShowLoginPrompt(true);
+                                        }}
                                         style={{
                                             border: 'none',
                                             background: 'transparent',

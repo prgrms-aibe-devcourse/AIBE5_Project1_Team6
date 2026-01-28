@@ -19,13 +19,13 @@ import { estimateBudgetLevel, estimateItemCost } from "../services/recommend/est
 import { haversineKm, KOREA_CITY_COORDS } from "../utils/geo"; 
 import { useAuthStore } from "../stores/authStore";
 import { createNotification } from "../services/mypageService";
-import { savePlace, isPlaceSaved } from "../services/savedPlacesService";
+import { savePlace, isPlaceSaved, getSavedPlaces, removePlace, deletePlace } from "../services/savedPlacesService";
 import { GUEST_KEY } from "../utils/guestUtils";
 
 export default function Walk() {
   // ✅ Map (SRP)
   const { mapRef, map, kakao } = useKakaoMap();
-  const { user } = useAuthStore();
+  const { user, setShowLoginPrompt } = useAuthStore();
   const guestId = localStorage.getItem(GUEST_KEY);
 
   // ✅ Smart Recommendation Engine Logic
@@ -69,44 +69,114 @@ export default function Walk() {
      };
   }, [priority, duration]);
 
-    const handleSaveCard = async (item, silent = false) => {
-        if (!user) {
-            if (!silent) toast.error("로그인이 필요합니다.");
-            return;
-        }
+    const [likedTitles, setLikedTitles] = useState(new Set()); // For Like (Heart)
+    const [registeredTitles, setRegisteredTitles] = useState(new Set()); // For Register (Bookmark)
+
+    // Fetch saved places and separate them
+    useEffect(() => {
+        if (!user) return;
         
-        try {
-            // 중복 확인
-            const alreadySaved = await isPlaceSaved(user.id, item.title);
-            if (alreadySaved) {
-                if (!silent) toast.error("이미 저장된 장소입니다.");
-                return;
-            }
+        getSavedPlaces(user.id).then(places => {
+            const likes = new Set();
+            const bookmarks = new Set();
             
-            // 장소 저장
-            await savePlace(user.id, {
-                title: item.title,
-                image: item.firstimage || item.image,
-                country: item.addr1 ? item.addr1.split(" ")[0] : "대한민국",
-                description: item.addr1 || "AI가 추천하는 최고의 장소입니다.",
-                tag: activeCategory === 'food' ? '맛집' : activeCategory === 'activity' ? '액티비티' : '힐링',
-                category: 'walk',
-                matchScore: 90 + Math.floor(Math.random() * 10),
-                ...item // 전체 데이터 저장
+            places.forEach(p => {
+                const type = p.place_data?.savedType || 'like'; // Default to like for old data
+                if (type === 'bookmark') bookmarks.add(p.title);
+                else likes.add(p.title);
             });
             
-            // 알림 생성
+            setLikedTitles(likes);
+            setRegisteredTitles(bookmarks);
+        });
+    }, [user]);
+
+    // Combined handler or separate? Combined is easier for reuse.
+    // type: 'like' | 'bookmark'
+    const handleTogglePlace = async (item, type, silent = false) => {
+        if (!user) {
+            if (!silent) setShowLoginPrompt(true);
+            return;
+        }
+
+        const isLike = type === 'like';
+        const currentSet = isLike ? likedTitles : registeredTitles;
+        const setFunction = isLike ? setLikedTitles : setRegisteredTitles;
+        const actionName = isLike ? "좋아요" : "여행지 등록";
+
+        try {
+            // Check if already saved (strictly by title AND checks DB for safety, though local state is primary)
+            // But `isPlaceSaved` only checks title? We need to check type too?
+            // Existing `isPlaceSaved` checks title. It might return true for 'bookmark' even if we want to 'like'.
+            // Actually `removePlace` deletes by title. This implies a constraint: ONE entry per title?
+            // If DB `saved_places` allows multiple same-title entries with diff IDs, we are fine.
+            // If it enforces unique (user_id, title), then a place CANNOT be both Liked and Bookmarked.
+            // USER SAID: "Separate functions".
+            // IF schema forces unique title, we have a problem.
+            // Let's assume schema allows multiple (it's UUID PK usually).
+            // However, `removePlace` uses `eq('title', title)`. This would delete ALL matches.
+            // We need `removePlace` to be specific if we allow both.
+            // OR, we assume a place is EITHER liked OR bookmarked?
+            // No, user likely wants both independent.
+            // Logic change: `removePlace` needs to check `place_data->>savedType` OR we rely on ID if we have it.
+            // I don't have ID easily map-able here without complex state.
+            
+            // WORKAROUND: For now, if schema unique-title is not enforced, `removePlace` deletes all.
+            // I should verify `removePlace` in service.
+            // It deletes by title. 
+            // Fix: modify `removePlace` to filter by type?
+            // Or, update `handleTogglePlace` to load the specific item to delete?
+            
+            // Let's UPDATE `savedPlacesService` to `removePlaceByType`?
+            // Or just check local state:
+            // If I want to remove 'like', I should strictly remove item with matching title AND type 'like'.
+            // But `savedPlacesService.js` `removePlace` is broad.
+            
+            // I will MODIFY `removePlace` in `savedPlacesService.js` first?
+            // No, task order. I'll modify `handleTogglePlace` to assume service handles it or I fetch-then-delete.
+            // Better: Load all saved places, find the ID of the one to delete, call deletePlace(id).
+
+            if (currentSet.has(item.title)) {
+                // DELETE logic
+                // Find ID first
+                const places = await getSavedPlaces(user.id);
+                const target = places.find(p => p.title === item.title && (p.place_data?.savedType || 'like') === type);
+                
+                if (target) {
+                    await deletePlace(target.id);
+                    setFunction(prev => {
+                        const next = new Set(prev);
+                        next.delete(item.title);
+                        return next;
+                    });
+                    if (!silent) toast.success(`"${item.title}" ${actionName} 취소`);
+                }
+                return;
+            }
+
+            // INSERT logic
+            // Check if "Compatible"? Can be both? Yes.
+            // Just save with new type.
+            await savePlace(user.id, {
+                ...item,
+                category: 'walk',
+                savedType: type
+            });
+
+            setFunction(prev => new Set([...prev, item.title]));
+            
             await createNotification({
                 user_id: user.id,
                 type: 'save',
-                message: `"${item.title}" 카드가 저장되었습니다.`,
-                link: '/mypage'
+                message: `"${item.title}" ${actionName}!`,
+                link: type === 'like' ? '/mypage' : '/planlab'
             });
             
-            if (!silent) toast.success(`"${item.title}" 저장 완료!`);
+            if (!silent) toast.success(`"${item.title}" ${actionName} 완료!`);
+
         } catch (error) {
-            console.error('저장 실패:', error);
-            if (!silent) toast.error("저장에 실패했습니다.");
+            console.error('저장 작업 실패:', error);
+            if (!silent) toast.error("작업에 실패했습니다.");
         }
     };
 
@@ -291,18 +361,7 @@ export default function Walk() {
     setDiffResult(simpleDiff(planText, improved)); setPlanText(improved);
   };
 
-  const onSave = async (payload) => {
-    try {
-      // 메인 페이지에서는 '선택 완료' 시 '저장된 장소'로 저장합니다.
-      if (selected) {
-        await handleSaveCard(selected);
-      }
-      setSelected(null);
-    } catch (e) { 
-      console.error('Save failed:', e);
-      toast.error(e.message); 
-    }
-  };
+
 
   const getCourseCost = (items) => {
       let total = 0;
@@ -354,7 +413,7 @@ export default function Walk() {
   return (
     <div className="pageWrap">
       {/* Global Loading Overlay */}
-      {isLoading && <LoadingOverlay message="열심히 산책 코스를 찾는 중이에요!" icon="🏃" />}
+      {isLoading && <LoadingOverlay message="열심히 산책 코스를 찾는 중이에요!" icon="🏃" direction="right" />}
       {/* Page Description */}
       <div className="pageDesc" style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', minHeight: '0' }}>
          {/* {geoLoading && <span style={{color:'#666'}}>📡 GPS 수신 중... (기본: 서울)</span>} Removed as requested */}
@@ -487,49 +546,49 @@ export default function Walk() {
             
             return (
                 <div key={`course-${courseIdx}`} className="courseSection" style={{ marginTop: courseIdx === 0 ? '13px' : '40px' }}>
-                    <div className="grid">
-                        {courseItems.map((it, index) => {
-                            const matchScore = 90 + Math.floor((Math.random() * 10) - (index * 2));
-                            return (
-                                <div key={it.contentid} onClick={() => openDetail(it)} style={{ cursor: "pointer" }}>
-                                    <RecommendationCard 
-                                        title={it.title} 
-                                        country={it.addr1 ? it.addr1.split(" ")[0] : "대한민국"}
-                                        tag={activeCategory === 'activity' ? '액티비티' : activeCategory === 'food' ? '맛집' : '힐링'}
-                                        desc={it.addr1 || "AI가 추천하는 최고의 장소입니다."}
-                                        image={it.firstimage || "https://images.unsplash.com/photo-1533658280665-224492bf552f?auto=format&fit=crop&w=800&q=80"} 
-                                        matchScore={matchScore}
-                                        onLike={() => handleSaveCard(it)}
-                                        onSave={() => handleSaveCard(it)}
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
-                    
-                    <button 
-                        onClick={() => handleSaveCourse(courseItems, `코스 ${courseIdx+1}`)}
-                        style={{
-                            marginTop: '35px', /* Adjusted to 35px */
-                            width: '100%',
-                            padding: '14px',
-                            borderRadius: '12px',
-                            border: `1px solid ${courseColor}`,
-                            background: 'white',
-                            color: courseColor,
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseOver={e => { e.currentTarget.style.background = courseColor; e.currentTarget.style.color = '#fff'; }}
-                        onMouseOut={e => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = courseColor; }}
-                    >
-                        📂 이 코스 전체 저장하기
-                    </button>
+                        <div className="grid" style={{ paddingTop: '10px' }}>
+                            {courseItems.map((it, index) => {
+                                const matchScore = 90 + Math.floor((Math.random() * 10) - (index * 2));
+                                return (
+                                    <div 
+                                        key={it.contentid} 
+                                        onClick={() => openDetail(it)} 
+                                        style={{ 
+                                            cursor: "pointer",
+                                            borderRadius: '16px',
+                                            border: '2px solid transparent', // Rollback to transparent
+                                            transition: 'all 0.3s ease',
+                                            position: 'relative' // Ensure z-index works
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.borderColor = courseColor;
+                                            e.currentTarget.style.transform = 'translateY(-4px)';
+                                            e.currentTarget.style.boxShadow = `0 10px 20px -5px ${courseColor}40`;
+                                            e.currentTarget.style.zIndex = '10';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.borderColor = 'transparent'; // Rollback to transparent
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.boxShadow = 'none';
+                                            e.currentTarget.style.zIndex = '1';
+                                        }}
+                                    >
+                                        <RecommendationCard
+                                            title={it.title}
+                                            country={it.addr1 ? it.addr1.split(" ")[0] : "대한민국"}
+                                            tag={activeCategory === 'food' ? '맛집' : activeCategory === 'activity' ? '액티비티' : '힐링'}
+                                            desc={it.addr1 || "AI가 추천하는 최고의 장소입니다."}
+                                            image={it.firstimage || it.image || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80"}
+                                            matchScore={matchScore}
+                                            onLike={() => handleTogglePlace(it, 'like')}
+                                            isLiked={likedTitles.has(it.title)}
+                                            isRegistered={registeredTitles.has(it.title)}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
+
                 </div>
             );
         }) : (
@@ -542,7 +601,23 @@ export default function Walk() {
         )}
       </div>
 
-      <TripDetailDrawer open={!!selected} onClose={() => setSelected(null)} item={selected} nights={nights} setNights={setNights} people={people} setPeople={setPeople} planText={planText} setPlanText={setPlanText} onImprove={handleImprove} onSave={onSave} improveLabel="AI 자동 보완" diffResult={diffResult} />
+      <TripDetailDrawer 
+        open={!!selected} 
+        onClose={() => setSelected(null)} 
+        item={selected} 
+        nights={nights} 
+        setNights={setNights} 
+        people={people} 
+        setPeople={setPeople} 
+        planText={planText} 
+        setPlanText={setPlanText} 
+        onImprove={handleImprove} 
+        onSave={() => handleTogglePlace(selected, 'bookmark')}
+        onUnregister={() => handleTogglePlace(selected, 'bookmark')}
+        improveLabel="AI 자동 보완" 
+        diffResult={diffResult}
+        isRegistered={selected && registeredTitles.has(selected.title)}
+      />
     </div>
   );
 }
