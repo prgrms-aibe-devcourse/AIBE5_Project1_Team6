@@ -22,11 +22,16 @@ function MapUpdater({ center, zoom }) {
   const map = useMap();
   useEffect(() => {
     map.setView(center, zoom ?? map.getZoom());
+    // Fix for map rendering issues (gray space or wrong center on init)
+    const timeout = setTimeout(() => {
+        map.invalidateSize();
+    }, 100);
+    return () => clearTimeout(timeout);
   }, [center, zoom, map]);
   return null;
 }
 
-export default function OSMMap({ lat, lon, title, style, className, zoom = 13 }) {
+export default function OSMMap({ lat, lon, title, style, className, zoom = 13, showMarker = true }) {
   const position = [lat, lon];
   const containerStyle = {
       width: "100%", 
@@ -51,13 +56,16 @@ export default function OSMMap({ lat, lon, title, style, className, zoom = 13 })
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {/* Only show marker if title is provided or if we assume single marker map */}
-        <Marker position={position}>
-          {title && (
-            <Popup>
-                <span style={{ fontWeight: 600 }}>{title}</span>
-            </Popup>
-          )}
-        </Marker>
+        {/* Only show marker if showMarker is true */}
+        {showMarker && (
+            <Marker position={position}>
+              {title && (
+                <Popup>
+                    <span style={{ fontWeight: 600 }}>{title}</span>
+                </Popup>
+              )}
+            </Marker>
+        )}
         <MapUpdater center={position} zoom={zoom} />
       </MapContainer>
     </div>

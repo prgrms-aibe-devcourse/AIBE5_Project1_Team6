@@ -11,27 +11,49 @@ body,
   height: 100%;
 }
 
+/* ===== Global (Light) ===== */
 body {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: #ffffff;
+  color: #111111;
 }
 
 .appShell {
   min-height: 100vh;
-  background: #0b1020;
-  color: #fff;
+  background: #ffffff;
+  color: #111111;
 }
 
+/* (Layout.jsx에서 topbar를 inline style로 흰색/보더 처리하지만,
+   혹시 다른 곳에서 topbar를 쓸 수 있어 기본값도 Light로 맞춤) */
 .topbar {
   position: sticky;
   top: 0;
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1px solid #f0f0f0;
+  z-index: 1000;
+  /* Increased z-index to be safe */
+}
+
+.topbar-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
-  background: rgba(0, 0, 0, 0.35);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  z-index: 5;
+  width: 100%;
+  height: 64px;
+  /* Fixed height for consistency */
+  padding: 0 40px;
+  /* Padding removed as requested */
+  max-width: 1200px;
+  /* Match global layout max-width */
+  margin: 0 auto;
+  /* Center the inner content */
+}
+
+/* Force override global-layout-container's padding for the topbar */
+.topbar-inner.global-layout-container {
+  padding: 0 40px !important;
 }
 
 .brand {
@@ -48,18 +70,51 @@ body {
 .navBtn {
   padding: 8px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  border: 1px solid #e6e6e6;
+  background: transparent;
+  color: #1a1a1a;
   cursor: pointer;
 }
 
 .navBtn.active {
-  background: rgba(255, 255, 255, 0.16);
+  background: #f5f5f5;
+}
+
+.authBtn {
+  background-color: #ffffff;
+  color: #1a1a1a !important;
+  border: 1px solid #e5e7eb;
+  padding: 4px 4px;
+  /* Even tighter horizontal padding */
+  /* Reduced from 8px 18px */
+  border-radius: 10px;
+  /* More rounded/pill shape for "pretty" look */
+  font-weight: 500;
+  /* Reduced from 600 */
+  font-size: 0.85rem;
+  /* Reduced from 0.9rem */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+  position: relative;
+  top: -7px;
+  /* Raised further as requested */
+}
+
+.authBtn:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+  transform: none;
+  /* Prevent movement on hover */
+  box-shadow: none;
 }
 
 .content {
   padding: 26px 18px 80px;
+  background: #ffffff;
 }
 
 .centerPage {
@@ -68,12 +123,15 @@ body {
   place-items: center;
 }
 
+/* ===== Home / Hero ===== */
 .heroCard {
-  width: min(920px, 100%);
-  padding: 56px 28px;
+  width: min(820px, 90%);
+  padding: 40px 24px;
+  /* Slightly reduced padding */
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: #ffffff;
+  border: 1px solid #eeeeee;
+  box-shadow: none;
 }
 
 .heroTitle {
@@ -81,6 +139,7 @@ body {
   font-size: clamp(28px, 4vw, 46px);
   font-weight: 900;
   margin-bottom: 22px;
+  color: #111111;
 }
 
 .heroButtons {
@@ -94,12 +153,18 @@ body {
   min-width: 180px;
   padding: 14px 18px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  border: 1px solid #e6e6e6;
+  background: #ffffff;
+  color: #111111;
   font-size: 18px;
   font-weight: 800;
   cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.heroBtn:hover {
+  transform: translateY(-1px);
+  background: #f7f7f7;
 }
 
 .heroBtn:disabled {
@@ -108,11 +173,11 @@ body {
 }
 
 .heroBtn.active {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: #f0f7ff;
+  border-color: rgba(92, 148, 255, 0.45);
 }
 
-/* Funnel (Toss-style Q&A) */
+/* ===== Funnel (Toss-style Q&A) ===== */
 .funnelTop {
   display: flex;
   align-items: center;
@@ -123,10 +188,14 @@ body {
 .funnelBackBtn {
   padding: 8px 10px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  border: 1px solid #e6e6e6;
+  background: #ffffff;
+  color: #111111;
   cursor: pointer;
+}
+
+.funnelBackBtn:hover {
+  background: #f7f7f7;
 }
 
 .funnelProgress {
@@ -136,12 +205,14 @@ body {
 
 .funnelTitle {
   margin-bottom: 10px;
+  color: #111111;
 }
 
 .funnelSubtitle {
   text-align: center;
   opacity: 0.8;
   margin: -6px 0 16px;
+  color: #555555;
 }
 
 .funnelCtaRow {
@@ -158,6 +229,7 @@ body {
   margin-top: 14px;
   text-align: center;
   opacity: 0.75;
+  color: #666666;
 }
 
 .funnelSummary {
@@ -165,8 +237,10 @@ body {
   opacity: 0.9;
   margin: 10px 0 6px;
   line-height: 1.6;
+  color: #333333;
 }
 
+/* ===== Common Page Wrapper ===== */
 .pageWrap {
   width: min(1200px, 100%);
   margin: 0 auto;
@@ -176,11 +250,13 @@ body {
   font-size: 26px;
   font-weight: 900;
   margin: 10px 0 6px;
+  color: #111111;
 }
 
 .pageDesc {
-  opacity: 0.8;
+  opacity: 0.85;
   margin-bottom: 16px;
+  color: #555555;
 }
 
 .filters {
@@ -192,11 +268,12 @@ body {
 select {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  border: 1px solid #e6e6e6;
+  background: #ffffff;
+  color: #111111;
 }
 
+/* Save Step: 버튼 줄 */
 .saveActionButtons {
   display: flex;
   gap: 12px;
@@ -240,10 +317,10 @@ select {
 .selectionCard {
   padding: 14px 16px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.98);
   color: #111;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+  box-shadow: none;
   cursor: pointer;
 
   /* ✅ 너무 작게 눌리지 않게 높이 확보 */
@@ -276,4 +353,47 @@ select {
     grid-template-columns: 1fr;
     width: min(360px, 92vw);
   }
+}
+
+/* Airplane Page Mobile Layout */
+@media (max-width: 768px) {
+  .airplane-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .airplane-layout>div {
+    /* Map Container */
+    min-height: 240px;
+  }
+}
+
+/* Global Layout for Non-Home Pages */
+/* Global Layout for Non-Home Pages */
+.global-layout-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  /* Added horizontal padding for responsiveness */
+}
+
+/* Responsive Navigation */
+@media (max-width: 768px) {
+  .topbar-inner {
+    padding: 0;
+  }
+
+  .global-layout-container {
+    padding: 0 16px;
+  }
+
+  /* Hide strict text labels or adjust if needed */
+  .mode-tab-label {
+    display: none;
+  }
+
+  /* Or maybe we want a bottom nav for mobile? 
+     For now, we'll keep it simple as requested: "responsive".
+     The tabs might crowd the logo on very small screens.
+  */
 }

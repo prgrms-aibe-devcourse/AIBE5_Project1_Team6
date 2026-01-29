@@ -7,18 +7,20 @@ function toDb(plan) {
     // id: plan.id, // Supabase generates ID
     title: plan.title,
     subtitle: plan.subtitle,
-    hero_image: plan.image || plan.heroImage, 
+    hero_image: plan.image || plan.heroImage,
     nights: plan.nights,
     people: plan.people,
     plan_text: plan.planText,
     // lat: plan.lat, 
     category: plan.category || 'walk',
-    
+
     // Start New Fields
     items: plan.items || [], // Expecting Supabase to have 'items' jsonb
     total_cost: plan.totalCost || 0,
     wellness: plan.wellness || {}, // { noise, light, crowd }
-    created_at: plan.createdAt
+    created_at: plan.createdAt,
+    start_date: plan.startDate,
+    end_date: plan.endDate
   };
 }
 
@@ -34,11 +36,13 @@ function fromDb(row) {
     planText: row.plan_text,
     category: row.category,
     createdAt: row.created_at,
-    
+
     // Start New Fields
     items: row.items || [], // JSONB for course items
     totalCost: row.total_cost || 0,
     wellness: row.wellness || {},
+    startDate: row.start_date,
+    endDate: row.end_date,
   };
 }
 
@@ -49,7 +53,7 @@ export async function loadPlans() {
       .from("plans")
       .select("*")
       .order("created_at", { ascending: false });
-    
+
     if (error) {
       console.error("Failed to load plans:", error);
       return [];
@@ -85,7 +89,7 @@ export async function updatePlan(plan) {
       .update(payload)
       .eq("id", plan.id)
       .select();
-      
+
     if (error) throw error;
     return fromDb(data[0]);
   } else {

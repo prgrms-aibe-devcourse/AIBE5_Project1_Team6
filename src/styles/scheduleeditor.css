@@ -6,7 +6,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(4px);
     z-index: 1000;
     display: flex;
@@ -17,15 +17,16 @@
 }
 
 .editorModal {
-    background: #1a1f35;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
     border-radius: 20px;
     width: min(900px, 100%);
     max-height: 90vh;
-    overflow: hidden;
+    overflow-y: auto;
+    /* Enable global scroll */
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
 }
 
 /* Header */
@@ -34,15 +35,19 @@
     justify-content: space-between;
     align-items: center;
     padding: 24px 32px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: linear-gradient(135deg, rgba(102, 187, 106, 0.1) 0%, rgba(79, 195, 247, 0.1) 100%);
+    border-bottom: 1px solid #f0f0f0;
+    background: #fff;
+    /* Remove sticky header to allow natural flow if desired, or keep it sticky */
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .editorTitle {
     margin: 0;
     font-size: 24px;
     font-weight: 800;
-    color: #fff;
+    color: #1a1a1a;
 }
 
 .editorCloseBtn {
@@ -50,8 +55,8 @@
     height: 36px;
     border-radius: 50%;
     border: none;
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: #f0f2f5;
+    color: #666;
     font-size: 20px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -61,14 +66,14 @@
 }
 
 .editorCloseBtn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: #e4e7eb;
     transform: rotate(90deg);
 }
 
 /* Basic Info */
 .editorBasicInfo {
     padding: 24px 32px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .editorFormGroup {
@@ -84,17 +89,17 @@
     margin-bottom: 8px;
     font-size: 14px;
     font-weight: 600;
-    color: #e0e0e0;
+    color: #444;
 }
 
 .editorInput,
 .editorTextarea {
     width: 100%;
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
-    color: #fff;
+    color: #333;
     font-size: 14px;
     font-family: inherit;
     transition: all 0.2s ease;
@@ -103,8 +108,9 @@
 .editorInput:focus,
 .editorTextarea:focus {
     outline: none;
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(102, 187, 106, 0.5);
+    background: #fff;
+    border-color: #5C94FF;
+    box-shadow: none;
 }
 
 .editorTextarea {
@@ -125,7 +131,8 @@
 /* Timeline Section */
 .editorTimeline {
     flex: 1;
-    overflow-y: auto;
+    overflow: visible;
+    /* Remove inner scroll */
     padding: 24px 32px;
 }
 
@@ -133,7 +140,7 @@
     margin: 0 0 20px;
     font-size: 18px;
     font-weight: 700;
-    color: #66bb6a;
+    color: #5C94FF;
 }
 
 /* Day Tabs */
@@ -141,16 +148,13 @@
     display: flex;
     gap: 8px;
     margin-bottom: 20px;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 2px solid #f0f0f0;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
-    /* Firefox - thin scrollbar */
-    scrollbar-color: rgba(102, 187, 106, 0.3) transparent;
-    /* Firefox - thumb and track color */
+    scrollbar-color: #5C94FF transparent;
 }
 
-/* Webkit browsers (Chrome, Safari, Edge) - thin custom scrollbar */
 .editorDayTabs::-webkit-scrollbar {
     height: 4px;
 }
@@ -160,12 +164,12 @@
 }
 
 .editorDayTabs::-webkit-scrollbar-thumb {
-    background: rgba(102, 187, 106, 0.3);
+    background: rgba(92, 148, 255, 0.3);
     border-radius: 2px;
 }
 
 .editorDayTabs::-webkit-scrollbar-thumb:hover {
-    background: rgba(102, 187, 106, 0.5);
+    background: rgba(92, 148, 255, 0.5);
 }
 
 .editorDayTab {
@@ -173,7 +177,7 @@
     background: transparent;
     border: none;
     border-bottom: 3px solid transparent;
-    color: rgba(255, 255, 255, 0.6);
+    color: #888;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -183,13 +187,13 @@
 }
 
 .editorDayTab:hover {
-    color: rgba(255, 255, 255, 0.9);
-    background: rgba(255, 255, 255, 0.05);
+    color: #555;
+    background: #f8f9fa;
 }
 
 .editorDayTab.active {
-    color: #66bb6a;
-    border-bottom-color: #66bb6a;
+    color: #5C94FF;
+    border-bottom-color: #5C94FF;
 }
 
 /* Timeline Items */
@@ -217,26 +221,27 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #66bb6a 0%, #4fc3f7 100%);
-    border: 3px solid #1a1f35;
+    background: #5C94FF;
+    border: 3px solid #fff;
+    box-shadow: none;
     z-index: 2;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(102, 187, 106, 0.4);
 }
 
 .editorConnector {
     width: 2px;
     flex: 1;
     min-height: 100%;
-    background: linear-gradient(180deg, rgba(102, 187, 106, 0.5) 0%, rgba(79, 195, 247, 0.3) 100%);
+    background: #e0e0e0;
     margin-top: 4px;
 }
 
 .editorTimelineCard {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #fff;
+    border: 1px solid #e0e0e0;
     border-radius: 12px;
     padding: 16px;
+    box-shadow: none;
 }
 
 .editorTimelineTime {
@@ -246,7 +251,7 @@
     margin-bottom: 12px;
     font-size: 14px;
     font-weight: 700;
-    color: #4fc3f7;
+    color: #5C94FF;
 }
 
 .editorTimeIcon {
@@ -276,23 +281,22 @@
 .editorCardTitleText {
     font-size: 16px;
     font-weight: 700;
-    color: #fff;
+    color: #333;
 }
 
 .editorCardDescription {
     margin: 0;
     font-size: 14px;
     line-height: 1.6;
-    color: #e0e0e0;
-    opacity: 0.8;
+    color: #666;
 }
 
 /* Advanced Editor */
 .editorAdvanced {
     margin-top: 24px;
     padding: 16px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
     border-radius: 12px;
 }
 
@@ -300,12 +304,12 @@
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
-    color: #4fc3f7;
+    color: #5C94FF;
     user-select: none;
 }
 
 .editorAdvancedSummary:hover {
-    color: #66bb6a;
+    color: #4B7DDE;
 }
 
 .editorAdvanced[open] .editorAdvancedSummary {
@@ -315,7 +319,7 @@
 .editorHint {
     margin: 8px 0 0;
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
+    color: #888;
     line-height: 1.6;
 }
 
@@ -325,8 +329,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px 32px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid #f0f0f0;
+    background: #fff;
 }
 
 .editorFooterRight {
@@ -348,87 +352,88 @@
 }
 
 .editorDiffBtn {
-    background: rgba(255, 193, 7, 0.15);
-    border: 1px solid rgba(255, 193, 7, 0.3);
-    color: #FFC107;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    color: #ffb300;
 }
 
 .editorDiffBtn:hover {
-    background: rgba(255, 193, 7, 0.25);
-    border-color: rgba(255, 193, 7, 0.5);
+    background: #ffecb3;
 }
 
 .editorDeleteBtn {
-    background: rgba(244, 67, 54, 0.15);
-    border: 1px solid rgba(244, 67, 54, 0.3);
-    color: #f44336;
+    background: #fff;
+    border: 1px solid #ff5252;
+    color: #ff5252;
 }
 
 .editorDeleteBtn:hover {
-    background: rgba(244, 67, 54, 0.25);
-    border-color: rgba(244, 67, 54, 0.5);
+    background: #fff5f5;
+    transform: translateY(-2px);
+    box-shadow: none;
 }
 
 .editorCancelBtn {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #e0e0e0;
+    background: #f0f2f5;
+    border: 1px solid #e0e0e0;
+    color: #666;
 }
 
 .editorCancelBtn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: #e4e7eb;
 }
 
 .editorSaveBtn {
-    background: linear-gradient(135deg, #66bb6a 0%, #4fc3f7 100%);
+    background: #5C94FF;
     border: none;
     color: #fff;
-    box-shadow: 0 4px 16px rgba(102, 187, 106, 0.3);
+    box-shadow: none;
 }
 
 .editorSaveBtn:hover {
+    background: #4B7DDE;
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 187, 106, 0.4);
-}
+    box-shadow: none;
 
-/* Responsive */
-@media (max-width: 768px) {
-    .editorModal {
-        width: 100%;
-        max-height: 100vh;
-        border-radius: 0;
-    }
+    /* Responsive */
+    @media (max-width: 768px) {
+        .editorModal {
+            width: 100%;
+            max-height: 100vh;
+            border-radius: 0;
+        }
 
-    .editorHeader,
-    .editorBasicInfo,
-    .editorTimeline,
-    .editorFooter {
-        padding-left: 20px;
-        padding-right: 20px;
-    }
+        .editorHeader,
+        .editorBasicInfo,
+        .editorTimeline,
+        .editorFooter {
+            padding-left: 20px;
+            padding-right: 20px;
+        }
 
-    .editorFormRow {
-        grid-template-columns: 1fr;
-    }
+        .editorFormRow {
+            grid-template-columns: 1fr;
+        }
 
-    .editorTimelineItem {
-        grid-template-columns: 30px 1fr;
-        gap: 12px;
-    }
+        .editorTimelineItem {
+            grid-template-columns: 30px 1fr;
+            gap: 12px;
+        }
 
-    .editorFooter {
-        flex-direction: column;
-        gap: 12px;
-        align-items: stretch;
-    }
+        .editorFooter {
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
+        }
 
-    .editorFooterRight {
-        width: 100%;
-    }
+        .editorFooterRight {
+            width: 100%;
+        }
 
-    .editorDeleteBtn,
-    .editorCancelBtn,
-    .editorSaveBtn {
-        flex: 1;
+        .editorDeleteBtn,
+        .editorCancelBtn,
+        .editorSaveBtn {
+            flex: 1;
+        }
     }
 }

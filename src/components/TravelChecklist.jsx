@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "../services/supabase";
+import { useAuthStore } from "../stores/authStore";
 import "../styles/checklist.css";
 
 const DEFAULT_CHECKLIST = [
@@ -55,8 +57,103 @@ const DEFAULT_CHECKLIST = [
     }
 ];
 
-export default function TravelChecklist({ checklistData = DEFAULT_CHECKLIST, onChange }) {
+export default function TravelChecklist({ checklistData = DEFAULT_CHECKLIST, onChange, destination, scheduleId }) {
+    const { user } = useAuthStore();
     const [checklist, setChecklist] = useState(checklistData);
+    const [loading, setLoading] = useState(false);
+    const [checklistId, setChecklistId] = useState(null);
+
+    // State for manual domestic toggle
+    const [isManualDomestic, setIsManualDomestic] = useState(false);
+
+    // 사용자 변경 시 상태 초기화 (로그아웃/로그인)
+    useEffect(() => {
+        if (!user?.id) {
+            // 로그아웃 시 초기화
+            setChecklist(checklistData);
+            setChecklistId(null);
+            setLoading(false);
+            setIsManualDomestic(false);
+        }
+    }, [user?.id, checklistData]);
+
+    // Supabase에서 체크리스트 불러오기
+    useEffect(() => {
+        const fetchChecklist = async () => {
+            if (!user?.id || !scheduleId) return;
+
+            setLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('travel_checklists')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .eq('schedule_id', scheduleId)
+                    .maybeSingle();
+
+                if (error) {
+                    console.error('체크리스트 불러오기 실패:', error);
+                } else if (data) {
+                    setChecklist(data.checklist_data);
+                    setChecklistId(data.id);
+                    if (onChange) onChange(data.checklist_data);
+                } else {
+                    // 저장된 데이터가 없으면 기본값 사용
+                    setChecklist(checklistData);
+                    setChecklistId(null);
+                    if (onChange) onChange(checklistData);
+                }
+            } catch (err) {
+                console.error('체크리스트 fetch 오류:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchChecklist();
+    }, [user?.id, scheduleId, checklistData]);
+
+    // 체크리스트 저장 (debounced)
+    const saveChecklist = useCallback(async (newChecklist) => {
+        if (!user?.id || !scheduleId) return;
+
+        try {
+            if (checklistId) {
+                // 기존 데이터 업데이트
+                await supabase
+                    .from('travel_checklists')
+                    .update({ checklist_data: newChecklist, updated_at: new Date().toISOString() })
+                    .eq('id', checklistId);
+            } else {
+                // 새 데이터 삽입
+                const { data, error } = await supabase
+                    .from('travel_checklists')
+                    .insert({
+                        user_id: user.id,
+                        schedule_id: scheduleId,
+                        checklist_data: newChecklist
+                    })
+                    .select()
+                    .single();
+
+                if (!error && data) {
+                    setChecklistId(data.id);
+                }
+            }
+        } catch (err) {
+            console.error('체크리스트 저장 실패:', err);
+        }
+    }, [user?.id, scheduleId, checklistId]);
+
+    const totalItems = checklist.reduce((sum, category) => sum + category.items.length, 0);
+    const checkedItems = checklist.reduce((sum, category) => 
+        sum + category.items.filter(item => item.checked).length, 0);
+    
+    const progress = {
+        total: totalItems,
+        checked: checkedItems,
+        percentage: totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0
+    };
 
     const handleToggle = (categoryIdx, itemId) => {
         const newChecklist = checklist.map((category, catIdx) => {
@@ -72,17 +169,20 @@ export default function TravelChecklist({ checklistData = DEFAULT_CHECKLIST, onC
         });
         setChecklist(newChecklist);
         if (onChange) onChange(newChecklist);
+        saveChecklist(newChecklist);
     };
 
-    const getTotalProgress = () => {
-        const total = checklist.reduce((sum, cat) => sum + cat.items.length, 0);
-        const checked = checklist.reduce((sum, cat) =>
-            sum + cat.items.filter(item => item.checked).length, 0
+    // 로딩 중 표시
+    if (loading) {
+        return (
+            <div className="checklistContainer">
+                <div className="checklistHeader">
+                    <h3 className="checklistTitle">✅ 여행 준비 체크리스트</h3>
+                    <p style={{ color: '#666', fontSize: '14px' }}>불러오는 중...</p>
+                </div>
+            </div>
         );
-        return { total, checked, percentage: Math.round((checked / total) * 100) };
-    };
-
-    const progress = getTotalProgress();
+    }
 
     return (
         <div className="checklistContainer">
@@ -99,6 +199,11 @@ export default function TravelChecklist({ checklistData = DEFAULT_CHECKLIST, onC
                         {progress.checked}/{progress.total} ({progress.percentage}%)
                     </span>
                 </div>
+                {!user && (
+                    <p style={{ color: '#999', fontSize: '12px', marginTop: '8px' }}>
+                        💡 로그인하면 체크리스트가 자동 저장됩니다
+                    </p>
+                )}
             </div>
 
             <div className="checklistCategories">
@@ -107,29 +212,45 @@ export default function TravelChecklist({ checklistData = DEFAULT_CHECKLIST, onC
                         total: category.items.length,
                         checked: category.items.filter(item => item.checked).length
                     };
+                    
+                    const isRequiredDocs = category.category === "필수 서류" || category.category === "필수 서류(해외일 경우)";
 
                     return (
                         <div key={catIdx} className="checklistCategory">
-                            <h4 className="categoryTitle">
-                                {category.category}
-                                <span className="categoryCount">
+                            <div className="categoryHeader" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <h4 className="categoryTitle">
+                                        {isRequiredDocs ? "필수 서류(해외일 경우)" : category.category}
+                                    </h4>
+                            </div>
+                            <div className="checklistItems">
+                                {category.items.map(item => {
+                                    const isTargetItem = item.text.includes("여권") || item.text.includes("여행자 보험") || item.text.includes("항공권");
+                                    const shouldHideCheckbox = isManualDomestic && isTargetItem;
+
+                                    return (
+                                        <label key={item.id} className="checklistItem">
+                                            {!shouldHideCheckbox && (
+                                                <input
+                                                    type="checkbox"
+                                                    checked={item.checked}
+                                                    onChange={() => handleToggle(catIdx, item.id)}
+                                                    className="checklistCheckbox"
+                                                />
+                                            )}
+                                            <span 
+                                                className={item.checked ? "itemText checked" : "itemText"}
+                                                style={shouldHideCheckbox ? { color: '#ccc', fontStyle: 'italic', marginLeft: '24px' } : {}}
+                                            >
+                                                {item.text} {shouldHideCheckbox && "(국내여행 불필요)"}
+                                            </span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                            <div className="categoryFooter" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                                <span className="categoryCount" style={{ fontSize: '13px', color: '#5C94FF', fontWeight: 600 }}>
                                     {categoryProgress.checked}/{categoryProgress.total}
                                 </span>
-                            </h4>
-                            <div className="checklistItems">
-                                {category.items.map(item => (
-                                    <label key={item.id} className="checklistItem">
-                                        <input
-                                            type="checkbox"
-                                            checked={item.checked}
-                                            onChange={() => handleToggle(catIdx, item.id)}
-                                            className="checklistCheckbox"
-                                        />
-                                        <span className={item.checked ? "itemText checked" : "itemText"}>
-                                            {item.text}
-                                        </span>
-                                    </label>
-                                ))}
                             </div>
                         </div>
                     );

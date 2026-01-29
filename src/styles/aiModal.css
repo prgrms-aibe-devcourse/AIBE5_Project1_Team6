@@ -1,0 +1,345 @@
+/* AI Options Modal Styles */
+.ai-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2100;
+    /* Must be higher than Drawer (1300) */
+}
+
+.ai-modal-container {
+    background: #fff;
+    width: 90%;
+    max-width: 600px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.ai-modal-header {
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    position: relative;
+}
+
+.ai-modal-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-modal-header p {
+    margin: 8px 0 0;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.close-btn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #999;
+}
+
+.ai-modal-body {
+    padding: 24px;
+    background: #fafafa;
+}
+
+.modal-section {
+    margin-bottom: 24px;
+}
+
+.modal-section h4 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    color: #333;
+}
+
+.duration-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #fff;
+    padding: 12px 8px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    width: 100%;
+}
+
+.duration-text {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #3b82f6;
+    min-width: 80px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.circle-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.circle-btn:hover:not(:disabled) {
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.circle-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.places-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.places-list {
+    background: #fff;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    min-height: 80px;
+}
+
+.list-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.empty-placeholder {
+    font-size: 0.9rem;
+    color: #bbb;
+    text-align: center;
+    padding: 10px;
+}
+
+.place-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    margin: 4px;
+    transition: all 0.2s;
+}
+
+.place-chip.active {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    padding-right: 8px;
+}
+
+.place-chip.active button {
+    background: none;
+    border: none;
+    margin-left: 6px;
+    color: #1e40af;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.place-chip.active button:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.chips-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.place-chip.available {
+    background: #fbfbfb;
+    border: 1px dashed #ccc;
+    color: #555;
+    cursor: pointer;
+}
+
+.place-chip.available:hover {
+    background: #fff;
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.ai-modal-footer {
+    padding: 16px 24px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+}
+
+.cancel-btn {
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: none;
+    background: #f5f5f5;
+    color: #666;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.cancel-btn:hover {
+    background: #ebebeb;
+}
+
+.generate-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    transition: all 0.2s;
+}
+
+.generate-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.generate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #ccc;
+    box-shadow: none;
+}
+
+.ai-request-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    resize: vertical;
+    font-family: inherit;
+    transition: all 0.2s;
+    background: #fff;
+}
+
+.ai-request-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Progress Bar */
+.ai-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #f1f5f9;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.ai-progress-fill {
+    height: 100%;
+    background: #10b981;
+    /* Green to match saved places theme */
+    border-radius: 3px;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-indicator {
+    text-align: right;
+    font-size: 0.85rem;
+    color: #10b981;
+    font-weight: 600;
+    margin-top: -16px;
+    margin-bottom: 20px;
+}
+
+/* Option Grid (Styled like MoodPalette but scoped) */
+.ai-options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px;
+}
+
+.ai-option-card {
+    padding: 20px 12px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+}
+
+.ai-option-card:hover {
+    border-color: #10b981;
+    background: #f0fdf9;
+    transform: translateY(-2px);
+}
+
+.ai-option-card.selected {
+    border-color: #10b981;
+    background: #ecfdf5;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.ai-option-emoji {
+    font-size: 2rem;
+    margin-bottom: 4px;
+}
+
+.ai-option-label {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.ai-option-desc {
+    font-size: 0.8rem;
+    color: #64748b;
+}

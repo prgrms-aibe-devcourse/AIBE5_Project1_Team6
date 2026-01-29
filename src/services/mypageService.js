@@ -14,14 +14,37 @@ export const getMemories = async () => {
 
 // --- Notifications (알림) ---
 
-export const getNotifications = async () => {
+export const getNotifications = async (userId) => {
+    if (!userId) return [];
     const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data;
+};
+
+export const markAllNotificationsAsRead = async (userId) => {
+    if (!userId) return;
+    const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', userId)
+        .eq('is_read', false);
+
+    if (error) throw error;
+};
+
+export const deleteAllNotifications = async (userId) => {
+    if (!userId) return;
+    const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId);
+
+    if (error) throw error;
 };
 
 export const markNotificationAsRead = async (id) => {
@@ -32,6 +55,49 @@ export const markNotificationAsRead = async (id) => {
         .select();
 
     if (error) throw error;
+    return data;
+};
+
+export const deleteNotification = async (id) => {
+    const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
+};
+
+// --- Profile (프로필) ---
+
+export const getProfile = async (userId) => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+    }
+    return data;
+};
+
+export const createNotification = async ({ user_id, sender_id, type, message, link }) => {
+    const { data, error } = await supabase
+        .from('notifications')
+        .insert([{
+            user_id,
+            sender_id,
+            type,
+            message,
+            link
+        }]);
+
+    if (error) {
+        console.error('Error creating notification:', error);
+        return null;
+    }
     return data;
 };
 

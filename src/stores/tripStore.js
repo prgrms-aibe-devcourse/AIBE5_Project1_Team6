@@ -16,7 +16,9 @@ export const useTripStore = create(
       companion: null,
       destination: null,
       trafficOption: null,
+      trafficOption: null,
       budgetAmount: null,
+      budgetLevel: null,
 
       setStep: (step) => set({ step }),
       nextStep: () => set((state) => ({ step: state.step + 1 })),
@@ -33,7 +35,9 @@ export const useTripStore = create(
       setCompanion: (companion) => set({ companion }),
       setDestination: (destination) => set({ destination }),
       setTrafficOption: (trafficOption) => set({ trafficOption }),
+      setTrafficOption: (trafficOption) => set({ trafficOption }),
       setBudgetAmount: (budgetAmount) => set({ budgetAmount }),
+      setBudgetLevel: (budgetLevel) => set({ budgetLevel }),
       
       reset: () => set({ 
         step: 0, 
@@ -46,7 +50,8 @@ export const useTripStore = create(
         companion: null,
         destination: null,
         trafficOption: null,
-        budgetAmount: null
+        budgetAmount: null,
+        budgetLevel: null
       }),
     }),
     {

@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
+import { generateAllTravelPlans } from "../services/geminiTravelPlanner";
 import "../styles/instantroute.css";
 
 // Calculate number of nights
@@ -321,61 +323,121 @@ const generateMockRoutes = (selections) => {
     }));
 };
 
-export default function InstantRouteGenerator({ selections, onComplete, onCancel }) {
+export default function InstantRouteGenerator({ selections, onComplete, onCancel, preGeneratedPlans }) {
     const [loading, setLoading] = useState(true);
     const [routes, setRoutes] = useState([]);
     const [selectedRoute, setSelectedRoute] = useState(null);
     const [progress, setProgress] = useState(0);
+    const [usingMockData, setUsingMockData] = useState(false);
 
     useEffect(() => {
-        // 로딩 애니메이션 (1초 목표)
-        const progressInterval = setInterval(() => {
-            setProgress((prev) => {
-                if (prev >= 100) {
-                    clearInterval(progressInterval);
-                    return 100;
-                }
-                return prev + 10;
-            });
-        }, 80);
+        let isCancelled = false;
 
-        // Mock AI 응답 시뮬레이션 - 3개 플랜 생성
-        const timer = setTimeout(() => {
-            const generatedRoutes = generateMockRoutes(selections);
-            setRoutes(generatedRoutes);
-            setLoading(false);
-        }, 1000); // 1초
+        const loadRoutes = async () => {
+            // If plans are already generated (passed from parent), skip loading and API call
+            if (preGeneratedPlans) {
+                const generatedRoutes = [
+                    preGeneratedPlans.relaxed,
+                    preGeneratedPlans.balanced,
+                    preGeneratedPlans.active
+                ];
+                setRoutes(generatedRoutes);
+                setUsingMockData(false);
+                setLoading(false);
+                setProgress(100);
+                return;
+            }
+
+            // 로딩 애니메이션 시작 (Fallback or standalone usage)
+            const progressInterval = setInterval(() => {
+                setProgress((prev) => {
+                    if (prev >= 95) {
+                        clearInterval(progressInterval);
+                        return 95;
+                    }
+                    return prev + 5;
+                });
+            }, 100);
+
+            try {
+                console.log("[InstantRoute] AI 플랜 생성 시작...");
+
+                // Gemini API로 일정 생성 시도
+                const aiPlans = await generateAllTravelPlans(selections);
+
+                if (isCancelled) return;
+
+                if (aiPlans) {
+                    // AI 플랜 성공
+                    console.log("[InstantRoute] AI 플랜 생성 성공!");
+                    const generatedRoutes = [
+                        aiPlans.relaxed,
+                        aiPlans.balanced,
+                        aiPlans.active
+                    ];
+                    setRoutes(generatedRoutes);
+                    setUsingMockData(false);
+                    toast.success("✨ AI가 완벽한 여행 플랜을 생성했어요!");
+                } else {
+                    // AI 플랜 실패 -> Mock 데이터 사용
+                    console.warn("[InstantRoute] AI 플랜 생성 실패. Mock 데이터 사용.");
+                    const mockRoutes = generateMockRoutes(selections);
+                    setRoutes(mockRoutes);
+                    setUsingMockData(true);
+                    toast("💡 샘플 플랜을 보여드려요. API 키를 설정하면 더 정확한 플랜을 받을 수 있어요!", {
+                        icon: "ℹ️",
+                        duration: 4000,
+                    });
+                }
+            } catch (err) {
+                console.error("[InstantRoute] 플랜 생성 중 오류:", err);
+
+                if (isCancelled) return;
+
+                // 오류 발생 시에도 Mock 데이터 사용
+                const mockRoutes = generateMockRoutes(selections);
+                setRoutes(mockRoutes);
+                setUsingMockData(true);
+                toast.error("일정 생성 중 문제가 발생했어요. 샘플 플랜을 보여드릴게요.");
+            } finally {
+                if (!isCancelled) {
+                    clearInterval(progressInterval);
+                    setProgress(100);
+                    // 약간의 지연 후 로딩 완료
+                    setTimeout(() => {
+                        if (!isCancelled) {
+                            setLoading(false);
+                        }
+                    }, 300);
+                }
+            }
+        };
+
+        loadRoutes();
 
         return () => {
-            clearTimeout(timer);
-            clearInterval(progressInterval);
+            isCancelled = true;
         };
-    }, [selections]);
+    }, [selections, preGeneratedPlans]);
 
     const handleSelectRoute = (route) => {
         setSelectedRoute(route);
+        // Do NOT auto-confirm anymore (User request)
     };
 
-    const handleConfirm = () => {
-        if (selectedRoute) {
+    const handleConfirm = (routeToConfirm = selectedRoute) => {
+        if (routeToConfirm) {
             // 전체 일정을 텍스트로 변환
-            const scheduleText = selectedRoute.dailyItinerary
-                .map(dayData => {
-                    const dayHeader = `[Day ${dayData.day}]`;
-                    const daySpots = dayData.spots
-                        .map(spot => `${spot.time} - ${spot.emoji} ${spot.spot}\n  ${spot.activity}`)
-                        .join("\n\n");
-                    return `${dayHeader}\n${daySpots}`;
-                })
-                .join("\n\n");
+            // 전체 일정을 JSON 텍스트로 변환 (구조 및 비용 정보 보존)
+            const scheduleText = JSON.stringify(routeToConfirm.dailyItinerary);
 
             onComplete({
                 ...selections,
-                route: selectedRoute,
-                title: selectedRoute.title,
-                description: selectedRoute.subtitle,
+                route: routeToConfirm,
+                title: routeToConfirm.title,
+                description: routeToConfirm.subtitle,
                 scheduleText,
-                dailyItinerary: selectedRoute.dailyItinerary, // 구조화된 데이터도 저장
+                dailyItinerary: routeToConfirm.dailyItinerary, // 구조화된 데이터도 저장
             });
         }
     };
@@ -411,7 +473,7 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
                                 {nights}박 {nights + 1}일, 당신을 위한 3가지 여행 플랜 🎯
                             </h2>
                             <p className="optionsSubtitle">
-                                가장 마음에 드는 일정을 선택해주세요
+                                가장 마음에 드는 일정을 선택하면 <b>즉시 저장</b>됩니다
                             </p>
                         </div>
 
@@ -421,6 +483,17 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
                                     key={route.id}
                                     className={`optionCard ${selectedRoute?.id === route.id ? "selected" : ""}`}
                                     onClick={() => handleSelectRoute(route)}
+                                    style={{
+                                        '--hover-color': route.color.replace('0.3', '0.8') // Make border color vivid on hover
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = route.color.replace('0.3', '0.8');
+                                        e.currentTarget.style.transform = 'translateY(-4px)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = selectedRoute?.id === route.id ? '#5C94FF' : '#e0e0e0';
+                                        e.currentTarget.style.transform = selectedRoute?.id === route.id ? 'translateY(-4px)' : 'translateY(0)';
+                                    }}
                                 >
                                     <div className="optionHeader" style={{ background: route.color }}>
                                         <div className="optionEmojis">
@@ -439,16 +512,11 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
                                                 <div key={index} className="dayPreview">
                                                     <div className="dayTitle">Day {dayData.day}</div>
                                                     <div className="daySpots">
-                                                        {dayData.spots.slice(0, 2).map((spot, spotIndex) => (
+                                                        {dayData.spots.map((spot, spotIndex) => (
                                                             <span key={spotIndex} className="spotMini">
                                                                 {spot.emoji} {spot.spot}
                                                             </span>
                                                         ))}
-                                                        {dayData.spots.length > 2 && (
-                                                            <span className="spotMore">
-                                                                +{dayData.spots.length - 2}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -465,15 +533,20 @@ export default function InstantRouteGenerator({ selections, onComplete, onCancel
                         </div>
 
                         <div className="optionsFooter">
-                            <button className="secondaryBtn" onClick={onCancel}>
+                            <button className="secondaryBtn" onClick={onCancel} style={{ flex: 1 }}>
                                 다시 선택하기
                             </button>
-                            <button
-                                className="primaryBtn"
-                                onClick={handleConfirm}
+                            <button 
+                                className="primaryBtn" 
+                                onClick={() => handleConfirm()}
                                 disabled={!selectedRoute}
+                                style={{ 
+                                    flex: 1,
+                                    background: selectedRoute ? '#3b82f6' : '#e2e8f0',
+                                    cursor: selectedRoute ? 'pointer' : 'not-allowed'
+                                }}
                             >
-                                ✓ 선택한 플랜으로 저장하기
+                                ✓ {selectedRoute ? "선택한 플랜으로 저장하기" : "플랜을 선택해주세요"}
                             </button>
                         </div>
                     </div>

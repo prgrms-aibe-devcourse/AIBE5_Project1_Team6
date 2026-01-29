@@ -16,7 +16,7 @@ export default function AuthModal({ onClose, onSuccess }) {
 
   const translateError = (msg) => {
     if (!msg) return "알 수 없는 오류가 발생했습니다.";
-    if (msg.includes("Invalid login credentials")) return "아이디 또는 비밀번호가 잘못되었습니다.";
+    if (msg.includes("Invalid login credentials")) return "아이디/비밀번호가 틀렸습니다.";
     if (msg.includes("User already registered")) return "이미 가입된 이메일입니다.";
     if (msg.includes("Password should be")) return "비밀번호는 최소 6자 이상이어야 합니다.";
     if (msg.includes("Email not confirmed")) return "이메일 인증이 필요합니다. 메일함을 확인해주세요.";
@@ -32,7 +32,7 @@ export default function AuthModal({ onClose, onSuccess }) {
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success("로그인 성공!");
+
         if (onSuccess) onSuccess(data.user);
         onClose();
       } else {
@@ -43,7 +43,7 @@ export default function AuthModal({ onClose, onSuccess }) {
         if (data.user && !data.session) {
             toast("가입 인증 메일을 보냈습니다! 메일함을 확인해주세요.", { icon: "📧", duration: 5000 });
         } else {
-            toast.success("가입이 완료되었습니다!");
+
             if (onSuccess) onSuccess(data.user);
             onClose();
         }
@@ -80,7 +80,7 @@ export default function AuthModal({ onClose, onSuccess }) {
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.2 }}
       >
-        <button className="closeBtn" onClick={onClose}><IoClose /></button>
+        <button className="closeBtn" onClick={onClose} style={{ color: '#000' }}><IoClose size={24} /></button>
         
         <div className="authHeader">
           <motion.h2 
@@ -89,7 +89,7 @@ export default function AuthModal({ onClose, onSuccess }) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            {isLogin ? "Welcome Back" : "Create Account"}
+            {isLogin ? "Welcome." : "Create Account"}
           </motion.h2>
           <p className="authSubtitle">
             {isLogin ? "여행 계획을 위해 로그인해주세요." : "나만의 여행 플랜을 시작해보세요."}
@@ -117,23 +117,29 @@ export default function AuthModal({ onClose, onSuccess }) {
           {errorMsg && <div className="authError">{errorMsg}</div>}
 
           <motion.button 
-            className="authBtn" 
+            key={isLogin ? "login-btn" : "signup-btn"}
             type="submit" 
             disabled={loading}
             whileTap={{ scale: 0.98 }}
+            style={{
+              width: '100%',
+              padding: '24px',
+              backgroundColor: '#3B82F6',
+              color: '#ffffff',
+              fontSize: '1.2rem',
+              fontWeight: '900',
+              borderRadius: '16px',
+              border: 'none',
+              marginTop: '24px',
+              boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'block'
+            }}
           >
             {loading ? "처리 중..." : (isLogin ? "로그인" : "회원가입")}
           </motion.button>
         </form>
 
-        <div className="divider"><span>또는 소셜 계정으로 계속</span></div>
-
-        <button className="socialBtn google" onClick={() => handleSocialLogin('google')}>
-          <FcGoogle size={20} /> Google로 계속하기
-        </button>
-        <button className="socialBtn kakao" onClick={() => handleSocialLogin('kakao')}>
-          <RiKakaoTalkFill size={20} /> 카카오로 계속하기
-        </button>
 
         <div className="authSwitch">
           {isLogin ? "계정이 없으신가요?" : "이미 계정이 있으신가요?"}

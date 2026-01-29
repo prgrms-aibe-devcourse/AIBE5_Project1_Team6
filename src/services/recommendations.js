@@ -3,31 +3,31 @@ export const getCountryRecommendations = (countryCode) => {
     const db = {
       // 🇺🇸 미국 (US)
       "US": [
-        { id: 1, title: "Grand Canyon Meditation", category: "Nature & Healing", desc: "그랜드 캐년의 웅장한 대자연 속에서 즐기는 명상과 요가." },
-        { id: 2, title: "Sedona Vortex Tour", category: "Wellness", desc: "붉은 사암의 도시 세도나에서 기(Vortex)를 느끼며 힐링하기." },
-        { id: 3, title: "Central Park Walk", category: "City Walk", desc: "뉴욕의 허파 센트럴 파크에서 즐기는 여유로운 산책과 피크닉." },
-        { id: 4, title: "Hawaii Beach Yoga", category: "Wellness", desc: "와이키키 해변의 파도 소리를 들으며 몸과 마음을 정화하는 시간." }
+        { id: 1, title: "Grand Canyon Meditation", category: "Nature & Healing", desc: "그랜드 캐년의 웅장한 대자연 속에서 즐기는 명상과 요가.", image: "/images/유타주 브라이스 캐니언.jpg" },
+        { id: 2, title: "Sedona Vortex Tour", category: "Wellness", desc: "붉은 사암의 도시 세도나에서 기(Vortex)를 느끼며 힐링하기.", image: "/images/sedona.jpg" },
+        { id: 3, title: "Central Park Walk", category: "City Walk", desc: "뉴욕의 허파 센트럴 파크에서 즐기는 여유로운 산책과 피크닉.", image: "/images/central-park-sheep-meadow-credit-maureen-plainfield.jpg" },
+        { id: 4, title: "Times Square Experience", category: "City Landmark", desc: "뉴욕의 심장, 타임스퀘어에서 느끼는 도심 속 활기와 브로드웨이 뮤지컬.", image: "/images/New_york_times_square-terabass.jpg" }
       ],
       // 🇯🇵 일본 (JP)
       "JP": [
-        { id: 1, title: "Hakone Onsen", category: "Wellness", desc: "후지산을 바라보며 즐기는 료칸 온천욕과 가이세키 요리." },
-        { id: 2, title: "Kyoto Temple Stay", category: "Culture", desc: "고즈넉한 교토 사찰에서 체험하는 다도와 선(Zen) 명상." },
-        { id: 3, title: "Okinawa Ocean Spa", category: "Healing", desc: "에메랄드빛 바다를 보며 즐기는 오키나와 해양 심층수 스파." },
-        { id: 4, title: "Arashiyama Bamboo Forest", category: "Nature", desc: "치무(대나무 숲)의 바람 소리를 들으며 걷는 힐링 산책로." }
+        { id: 1, title: "Hakone Onsen", category: "Wellness", desc: "후지산을 바라보며 즐기는 료칸 온천욕과 가이세키 요리.", image: "/images/hakone.jpg" },
+        { id: 2, title: "Kyoto Temple Stay", category: "Culture", desc: "고즈넉한 교토 사찰에서 체험하는 다도와 선(Zen) 명상.", image: "/images/kyoto.jpg" },
+        { id: 3, title: "Okinawa Ocean Spa", category: "Healing", desc: "에메랄드빛 바다를 보며 즐기는 오키나와 해양 심층수 스파.", image: "/images/okinawa.jpg" },
+        { id: 4, title: "Arashiyama Bamboo Forest", category: "Nature", desc: "치무(대나무 숲)의 바람 소리를 들으며 걷는 힐링 산책로.", image: "/images/bamboo.jpg" }
       ],
       // 🇻🇳 베트남 (VN)
       "VN": [
-        { id: 1, title: "Ha Long Bay Cruise", category: "Nature", desc: "신비로운 섬들 사이를 유유자적하게 누비는 1박 2일 크루즈." },
-        { id: 2, title: "Da Nang Beach Yoga", category: "Wellness", desc: "미케 비치의 일출과 함께하는 아침 요가 클래스." },
-        { id: 3, title: "Hoi An Lantern Walk", category: "Romance", desc: "형형색색의 등불이 켜진 호이안 올드타운 밤거리 산책." },
-        { id: 4, title: "Sapa Trekking", category: "Activity", desc: "계단식 논과 소수민족 마을을 탐방하는 힐링 트레킹." }
+        { id: 1, title: "Ha Long Bay Cruise", category: "Nature", desc: "신비로운 섬들 사이를 유유자적하게 누비는 1박 2일 크루즈." ,image: "/images/f7.jpg"},
+        { id: 2, title: "Da Nang Beach Yoga", category: "Wellness", desc: "미케 비치의 일출과 함께하는 아침 요가 클래스." ,image: "/images/danang.jpg"},
+        { id: 3, title: "Hoi An Lantern Walk", category: "Romance", desc: "형형색색의 등불이 켜진 호이안 올드타운 밤거리 산책.", image: "/images/bamboo.jpg" },
+        { id: 4, title: "Sapa Trekking", category: "Activity", desc: "계단식 논과 소수민족 마을을 탐방하는 힐링 트레킹.", image: "/images/caption.jpg" }
       ],
       // 🇬🇧 영국 (GB)
       "GB": [
-        { id: 1, title: "Cotswolds Village", category: "Healing", desc: "동화 속 세상 같은 코츠월드 시골 마을에서 즐기는 티타임." },
-        { id: 2, title: "Hyde Park Picnic", category: "City Wellness", desc: "런던 도심 속 하이드 파크에서 즐기는 여유로운 오후." },
-        { id: 3, title: "Bath Thermae Spa", category: "Wellness", desc: "로마 시대 유적지 바스(Bath)에서 즐기는 천연 온천욕." },
-        { id: 4, title: "Scottish Highlands", category: "Nature", desc: "스코틀랜드의 광활한 자연과 호수를 감상하는 로드트립." }
+        { id: 1, title: "Cotswolds Village", category: "Healing", desc: "동화 속 세상 같은 코츠월드 시골 마을에서 즐기는 티타임.", image: "/images/castle.jpg" },
+        { id: 2, title: "Hyde Park Picnic", category: "City Wellness", desc: "런던 도심 속 하이드 파크에서 즐기는 여유로운 오후.", image: "/images/Hyde.jpg" },
+        { id: 3, title: "Bath Thermae Spa", category: "Wellness", desc: "로마 시대 유적지 바스(Bath)에서 즐기는 천연 온천욕.", image: "/images/다운로드.jpg" },
+        { id: 4, title: "Scottish Highlands", category: "Nature", desc: "스코틀랜드의 광활한 자연과 호수를 감상하는 로드트립.", image: "/images/skye.jpg" }
       ],
       // 🇫🇷 프랑스 (FR)
       "FR": [
@@ -59,10 +59,10 @@ export const getCountryRecommendations = (countryCode) => {
       ],
       // 🇮🇹 이탈리아 (IT)
       "IT": [
-        { id: 1, title: "Tuscany Winery Tour", category: "Gourmet", desc: "토스카나의 황금빛 들판을 보며 즐기는 와인 테이스팅." },
-        { id: 2, title: "Amalfi Coast Drive", category: "Scenery", desc: "지중해의 보석 아말피 해안도로 드라이브." },
-        { id: 3, title: "Dolomites Trekking", category: "Nature", desc: "알프스의 웅장함을 느끼는 돌로미티 트레킹." },
-        { id: 4, title: "Rome Gelato Tour", category: "Gourmet", desc: "로마 골목골목 숨은 젤라또 맛집 탐방." }
+        { id: 1, title: "Tuscany Winery Tour", category: "Gourmet", desc: "토스카나의 황금빛 들판을 보며 즐기는 와인 테이스팅." , image: "/images/tuscany.jpg"},
+        { id: 2, title: "Amalfi Coast Drive", category: "Scenery", desc: "지중해의 보석 아말피 해안도로 드라이브." , image: "/images/Driving.jpg"},
+        { id: 3, title: "Dolomites Trekking", category: "Nature", desc: "알프스의 웅장함을 느끼는 돌로미티 트레킹.", image: "/images/Cad.jpg" },
+        { id: 4, title: "Rome Gelato Tour", category: "Gourmet", desc: "로마 골목골목 숨은 젤라또 맛집 탐방.", image: "/images/acda6.jpg" }
       ],
        // 🇷🇺 러시아 (RU) -> 경보 3단계라 UI에서 안 나오지만 데이터는 둠
        "RU": [
@@ -96,17 +96,17 @@ export const getCountryRecommendations = (countryCode) => {
       ],
       // 🇨🇦 캐나다 (CA)
       "CA": [
-          { id: 1, title: "Banff National Park", category: "Nature", desc: "로키산맥의 보석 밴프와 레이크 루이스의 에메랄드 물빛." },
-          { id: 2, title: "Yellowknife Aurora", category: "Nature", desc: "나사가 선정한 세계 최고의 오로라 관측지 옐로나이프." },
-          { id: 3, title: "Niagara Falls", category: "Scenery", desc: "압도적인 스케일의 나이아가라 폭포 크루즈." },
-          { id: 4, title: "Quebec Old Town", category: "Romance", desc: "드라마 도깨비 촬영지 퀘벡 올드타운의 낭만." }
+          { id: 1, title: "Banff National Park", category: "Nature", desc: "로키산맥의 보석 밴프와 레이크 루이스의 에메랄드 물빛." , image: "/images/1.jpg"},
+          { id: 2, title: "Yellowknife Aurora", category: "Nature", desc: "나사가 선정한 세계 최고의 오로라 관측지 옐로나이프.", image: "/images/2.jpg" },
+          { id: 3, title: "Niagara Falls", category: "Scenery", desc: "압도적인 스케일의 나이아가라 폭포 크루즈." , image: "/images/3.jpg"},
+          { id: 4, title: "Quebec Old Town", category: "Romance", desc: "드라마 도깨비 촬영지 퀘벡 올드타운의 낭만.", image: "/images/4.jpg" }
       ],
       // 🇨🇳 중국 (CN)
       "CN": [
-          { id: 1, title: "Great Wall Hiking", category: "History", desc: "만리장성 위를 걸으며 느끼는 대륙의 웅장함." },
-          { id: 2, title: "Zhangjiajie Avatar Tour", category: "Nature", desc: "영화 아바타의 모티브가 된 장가계의 비경." },
-          { id: 3, title: "Shanghai The Bund", category: "City", desc: "상해 와이탄에서 바라보는 화려한 마천루 야경." },
-          { id: 4, title: "Chengdu Panda Base", category: "Healing", desc: "귀여운 자이언트 판다들과 함께하는 힐링 타임." }
+          { id: 1, title: "Great Wall Hiking", category: "History", desc: "만리장성 위를 걸으며 느끼는 대륙의 웅장함." , image: "/images/5.jpg"},
+          { id: 2, title: "Zhangjiajie Avatar Tour", category: "Nature", desc: "영화 아바타의 모티브가 된 장가계의 비경." , image: "/images/6.jpg"},
+          { id: 3, title: "Shanghai The Bund", category: "City", desc: "상해 와이탄에서 바라보는 화려한 마천루 야경." , image: "/images/7.jpg"},
+          { id: 4, title: "Chengdu Panda Base", category: "Healing", desc: "귀여운 자이언트 판다들과 함께하는 힐링 타임." , image: "/images/8.jpg"}
       ],
       // 🇨🇭 스위스 (CH)
       "CH": [
@@ -172,7 +172,14 @@ export const getCountryRecommendations = (countryCode) => {
           { id: 4, title: "Cabo Polonio", category: "Nature", desc: "전기 없는 오지 마을 카보 폴로니오에서의 디지털 디톡스." }
       ],
       // 🇭🇹 아이티 (HT) -> 경보 4단계
-      "HT": []
+      "HT": [],
+      // 🏝️ 제주도 (JEJU)
+      "JEJU": [
+        { id: 1, title: "Seongsan Sunrise Peak", category: "Nature", desc: "세계자연유산 성산일출봉에서 맞이하는 벅찬 감동의 일출." , image: "/images/9.jpg"},
+        { id: 2, title: "Udo Island Bike", category: "Leisure", desc: "에메랄드빛 우도 바다를 따라 달리는 낭만적인 자전거 여행." , image: "/images/10.jpg"},
+        { id: 3, title: "Camellia Hill", category: "Healing", desc: "동백꽃 만발한 숲속 정원에서 즐기는 향기로운 산책.", image: "/images/11.jpg" },
+        { id: 4, title: "Jeju Stone Park", category: "Culture", desc: "제주의 신화와 역사가 살아 숨 쉬는 돌문화공원 탐방." , image: "/images/12.jpg"}
+      ]
     };
   
     return db[code] || [];

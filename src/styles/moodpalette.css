@@ -1,4 +1,4 @@
-/* Mood Palette Styles - Wellness Theme */
+/* Mood Palette Styles - Wellness Theme (White Version) */
 
 .moodPaletteOverlay {
     position: fixed;
@@ -6,8 +6,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.5);
+    /* Lighter overlay */
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -17,14 +18,14 @@
 }
 
 .moodPaletteModal {
-    background: linear-gradient(135deg, #1a1f35 0%, #1e2840 100%);
-    border: 2px solid rgba(102, 187, 106, 0.3);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 24px;
     padding: 0;
     width: min(700px, 95vw);
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
 }
 
 .moodPaletteHeader {
@@ -32,42 +33,44 @@
     justify-content: space-between;
     align-items: flex-start;
     padding: 32px 32px 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: linear-gradient(135deg, rgba(102, 187, 106, 0.1) 0%, rgba(79, 195, 247, 0.1) 100%);
+    border-bottom: 1px solid #f1f5f9;
+    background: #fff;
+    flex-shrink: 0;
 }
 
 .moodPaletteTitle {
     margin: 0 0 8px;
     font-size: 26px;
     font-weight: 800;
-    background: linear-gradient(135deg, #66bb6a 0%, #4fc3f7 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #1a1a1a;
 }
 
 .moodPaletteSubtitle {
     margin: 0;
     font-size: 15px;
-    opacity: 0.8;
-    color: #e0e0e0;
+    opacity: 0.7;
+    color: #64748b;
 }
 
 .moodPaletteClose {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    border: none;
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
     font-size: 20px;
     cursor: pointer;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .moodPaletteClose:hover {
-    background: rgba(255, 100, 100, 0.2);
+    background: #f1f5f9;
+    color: #ef4444;
     transform: rotate(90deg);
 }
 
@@ -77,19 +80,22 @@
     display: flex;
     align-items: center;
     gap: 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
 }
 
 .progressBar {
     flex: 1;
     height: 8px;
-    background: rgba(255, 255, 255, 0.1);
+    background: #e2e8f0;
     border-radius: 10px;
     overflow: hidden;
 }
 
 .progressFill {
     height: 100%;
-    background: linear-gradient(90deg, #66bb6a 0%, #4fc3f7 100%);
+    background: #3b82f6;
     border-radius: 10px;
     transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -97,7 +103,7 @@
 .progressText {
     font-size: 14px;
     font-weight: 700;
-    color: #4fc3f7;
+    color: #3b82f6;
 }
 
 /* Step Container */
@@ -111,60 +117,98 @@
     font-size: 22px;
     font-weight: 700;
     text-align: center;
-    color: #fff;
+    color: #1e293b;
+    flex-shrink: 0;
 }
 
 /* Options Grid */
-.optionsGrid {
+.moodPaletteModal .optionsGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 16px;
     margin-bottom: 24px;
 }
 
-.optionCard {
+.moodPaletteModal .moodGrid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.moodPaletteModal .budgetGrid {
+    grid-template-columns: repeat(3, 1fr) !important;
+}
+
+.moodPaletteModal .optionCard {
     padding: 24px 16px;
     border-radius: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.04);
-    color: #fff;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #1e293b;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    box-shadow: none;
+    min-height: auto;
+}
+
+/* Premium large styles ONLY for Mood (Step 1) */
+.moodPaletteModal .moodGrid .optionCard {
+    padding: 40px 24px;
+    min-height: 220px;
+    border-radius: 24px;
+    gap: 14px;
+    justify-content: center;
 }
 
 .optionCard:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(102, 187, 106, 0.4);
+    background: #f8fafc;
+    border-color: #3b82f6;
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(102, 187, 106, 0.2);
+    box-shadow: none;
 }
 
 .optionCard.selected {
-    background: linear-gradient(135deg, rgba(102, 187, 106, 0.2) 0%, rgba(79, 195, 247, 0.2) 100%);
-    border-color: #66bb6a;
-    border-width: 3px;
-    transform: scale(1.05);
+    background: #eff6ff;
+    border-color: #3b82f6;
+    border-width: 2px;
+    transform: scale(1.02);
+    box-shadow: none;
 }
 
-.optionEmoji {
+.moodPaletteModal .optionEmoji {
     font-size: 48px;
     margin-bottom: 8px;
 }
 
-.optionLabel {
-    font-size: 16px;
-    font-weight: 700;
+.moodPaletteModal .moodGrid .optionEmoji {
+    font-size: 80px;
+    margin-bottom: 12px;
 }
 
-.optionDesc,
-.optionType {
+.moodPaletteModal .optionLabel {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.moodPaletteModal .moodGrid .optionLabel {
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.moodPaletteModal .optionDesc,
+.moodPaletteModal .optionType {
     font-size: 13px;
-    opacity: 0.7;
+    color: #64748b;
+}
+
+.moodPaletteModal .moodGrid .optionDesc {
+    font-size: 15px;
 }
 
 /* Custom Destination Input Toggle */
@@ -172,9 +216,9 @@
     width: 100%;
     padding: 16px 24px;
     border-radius: 12px;
-    border: 2px dashed rgba(102, 187, 106, 0.4);
-    background: linear-gradient(135deg, rgba(102, 187, 106, 0.08) 0%, rgba(79, 195, 247, 0.08) 100%);
-    color: #fff;
+    border: 1px dashed #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -184,20 +228,21 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .customInputToggle:hover {
-    background: linear-gradient(135deg, rgba(102, 187, 106, 0.15) 0%, rgba(79, 195, 247, 0.15) 100%);
-    border-color: rgba(102, 187, 106, 0.6);
+    background: #f1f5f9;
+    border-color: #3b82f6;
+    color: #3b82f6;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 187, 106, 0.2);
 }
 
 /* Custom Destination Input Form */
 .customDestinationInput {
     padding: 28px;
-    background: linear-gradient(135deg, rgba(102, 187, 106, 0.08) 0%, rgba(79, 195, 247, 0.08) 100%);
-    border: 1px solid rgba(102, 187, 106, 0.3);
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 16px;
     margin-bottom: 20px;
     animation: fadeIn 0.3s ease;
@@ -208,16 +253,16 @@
     margin-bottom: 12px;
     font-size: 15px;
     font-weight: 700;
-    color: #66bb6a;
+    color: #334155;
 }
 
 .customDestinationInput input {
     width: 100%;
     padding: 16px 20px;
     border-radius: 12px;
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #1e293b;
     font-size: 16px;
     margin-bottom: 16px;
     transition: all 0.2s ease;
@@ -225,13 +270,13 @@
 
 .customDestinationInput input:focus {
     outline: none;
-    border-color: rgba(102, 187, 106, 0.6);
-    background: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.1);
+    border-color: #3b82f6;
+    background: #fff;
+    box-shadow: none;
 }
 
 .customDestinationInput input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: #94a3b8;
 }
 
 .customDestActions {
@@ -252,25 +297,24 @@
 }
 
 .customDestCancel {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.9);
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
 }
 
 .customDestCancel:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
+    background: #f1f5f9;
 }
 
 .customDestSubmit {
-    background: linear-gradient(135deg, #66bb6a 0%, #4fc3f7 100%);
+    background: #3b82f6;
     color: #fff;
-    box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+    box-shadow: none;
 }
 
 .customDestSubmit:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(102, 187, 106, 0.4);
+    transform: translateY(-2px);
+    box-shadow: none;
 }
 
 /* Details Form */
@@ -295,15 +339,15 @@
 .formGroup label {
     font-size: 14px;
     font-weight: 600;
-    color: #e0e0e0;
+    color: #475569;
 }
 
 .formGroup input[type="date"] {
     padding: 12px 16px;
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #1e293b;
     font-size: 15px;
     font-family: inherit;
     outline: none;
@@ -311,9 +355,8 @@
 }
 
 .formGroup input[type="date"]:focus {
-    border-color: #66bb6a;
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.1);
+    border-color: #3b82f6;
+    box-shadow: none;
 }
 
 /* People Selector */
@@ -326,9 +369,9 @@
 .peopleBtn {
     padding: 12px 20px;
     border-radius: 10px;
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.05);
-    color: #fff;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -336,40 +379,42 @@
 }
 
 .peopleBtn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(102, 187, 106, 0.4);
+    background: #f8fafc;
+    border-color: #cbd5e1;
 }
 
 .peopleBtn.selected {
-    background: linear-gradient(135deg, #66bb6a 0%, #4fc3f7 100%);
-    border-color: #66bb6a;
+    background: #eff6ff;
+    border-color: #3b82f6;
+    border-width: 2px;
     transform: scale(1.05);
+    box-shadow: none;
 }
 
 /* Summary Box */
 .summaryBox {
     padding: 20px;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(102, 187, 106, 0.15) 0%, rgba(79, 195, 247, 0.15) 100%);
-    border: 2px solid rgba(102, 187, 106, 0.3);
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
 }
 
 .summaryBox h4 {
     margin: 0 0 12px;
     font-size: 16px;
     font-weight: 700;
-    color: #66bb6a;
+    color: #0284c7;
 }
 
 .summaryBox p {
     margin: 0;
     line-height: 1.6;
     font-size: 15px;
-    color: #e0e0e0;
+    color: #334155;
 }
 
 .summaryBox strong {
-    color: #4fc3f7;
+    color: #0369a1;
 }
 
 /* Form Actions */
@@ -382,9 +427,9 @@
 .backBtn {
     padding: 12px 24px;
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.05);
-    color: #fff;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -392,7 +437,7 @@
 }
 
 .backBtn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: #f1f5f9;
 }
 
 .submitBtn {
@@ -400,18 +445,18 @@
     padding: 14px 32px;
     border-radius: 12px;
     border: none;
-    background: linear-gradient(135deg, #66bb6a 0%, #4fc3f7 100%);
+    background: #3b82f6;
     color: #fff;
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 16px rgba(102, 187, 106, 0.3);
+    box-shadow: none;
 }
 
 .submitBtn:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(102, 187, 106, 0.5);
+    box-shadow: none;
 }
 
 .submitBtn:active {
@@ -482,4 +527,49 @@
     .submitBtn {
         order: 1;
     }
+}
+
+/* ------------------------------------------------------------------ */
+/* COMPACT MODE FOR STEP 2 (Destination) ONLY */
+/* ------------------------------------------------------------------ */
+
+.compact-step {
+    padding: 20px 24px;
+}
+
+.compact-step .stepTitle {
+    margin: 0 0 20px;
+    font-size: 18px;
+}
+
+.compact-step .optionsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.compact-step .optionCard {
+    padding: 16px 10px;
+    gap: 4px;
+}
+
+.compact-step .optionEmoji {
+    font-size: 32px;
+    margin-bottom: 4px;
+}
+
+.compact-step .optionLabel {
+    font-size: 14px;
+}
+
+.compact-step .optionDesc,
+.compact-step .optionType {
+    font-size: 11px;
+}
+
+.compact-step .customInputToggle {
+    padding: 12px 16px;
+    font-size: 13px;
+    margin-bottom: 16px;
 }

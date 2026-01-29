@@ -1,109 +1,427 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useTripStore } from '../stores/tripStore';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import '../styles/mypage.css';
-import { useQuery } from '@tanstack/react-query';
-import { loadPlans } from '../services/plansStorage';
-import { getMemories, getNotifications, getUserBadges, initializeUserBadgesIfEmpty, markNotificationAsRead } from '../services/mypageService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { loadPlans, removePlan } from '../services/plansStorage';
+import { loadSchedules } from '../services/schedulesStorage';
+import { getSavedPlaces, deletePlace } from '../services/savedPlacesService';
+import { getMemories, getNotifications, getUserBadges, initializeUserBadgesIfEmpty, markNotificationAsRead, getProfile, markAllNotificationsAsRead, deleteAllNotifications, deleteNotification, createNotification } from '../services/mypageService';
+import { communityService } from '../services/communityService';
+import ReviewDetailModal from '../components/community/ReviewDetailModal';
 import TravelBiorhythm from '../components/TravelBiorhythm';
+import TravelStyleAnalysis from '../components/TravelStyleAnalysis';
+import RecommendationCard from '../components/RecommendationCard';
+import TripDetailDrawer from '../components/TripDetailDrawer';
+import ScheduleDetailView from '../components/ScheduleDetailView';
+import { improvePlanText } from '../services/aiPlanner';
+import { simpleDiff } from '../services/diff';
+import { addPlan } from '../services/plansStorage';
+import { addSchedule } from '../services/schedulesStorage';
+import { FaChevronRight, FaChevronLeft, FaMapMarkedAlt, FaPen, FaHeart, FaRegHeart, FaBell, FaCog, FaSignOutAlt, FaUserSlash, FaRobot, FaChartPie, FaCalendarAlt, FaUserFriends, FaStar, FaCheckDouble, FaTrash, FaPlane, FaCommentDots, FaComment } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// ✅ Helpers for Human-Readable Wellness
+// --- Helpers ---
+const EmptyState = ({ icon, title, description, children }) => (
+    <motion.div 
+        className="empty-state-container"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+    >
+        <div className="empty-icon-box">{icon}</div>
+        <h3 className="empty-title-text">{title}</h3>
+        {description && <p className="empty-desc-text">{description}</p>}
+        {children && <div className="empty-action-box">{children}</div>}
+    </motion.div>
+);
+
 const formatNoise = (val) => {
     if (!val && val !== 0) return '정보 없음';
     const num = Number(val);
-    // If level (1-5)
-    if (num <= 5) {
-        if (num <= 1) return '매우 조용함';
-        if (num <= 2) return '조용함';
-        if (num <= 3) return '보통';
-        if (num <= 4) return '다소 시끄러움';
-        return '시끄러움';
-    }
-    // If dB (30-100)
-    if (num < 40) return '조용함 (ASMR급)';
-    if (num < 60) return '적당한 대화';
-    return '북적이는 소음';
+    if (num <= 5) return num <= 1 ? '매우 조용함' : num <= 2 ? '조용함' : num <= 3 ? '보통' : num <= 4 ? '다소 시끄러움' : '시끄러움';
+    return num < 40 ? '조용함 (ASMR급)' : num < 60 ? '적당한 대화' : '북적이는 소음';
 };
 
 const formatLight = (val) => {
     if (!val && val !== 0) return '정보 없음';
     const num = Number(val);
-    // If level (1-5)
-    if (num <= 5) {
-        if (num <= 2) return '은은한 무드';
-        if (num <= 3) return '적당한 밝기';
-        return '화사하고 밝음';
-    }
-    // If lux (100-2000)
-    if (num < 300) return '아늑한 분위기';
-    if (num < 1000) return '일상적인 밝기';
-    return '햇살 가득한 밝기';
+    if (num <= 5) return num <= 2 ? '은은한 무드' : num <= 3 ? '적당한 밝기' : '화사하고 밝음';
+    return num < 300 ? '아늑한 분위기' : num < 1000 ? '일상적인 밝기' : '햇살 가득한 밝기';
 };
 
 export default function MyPage() {
-    const { user, setUser } = useAuthStore();
+    const { user, setUser, signOut } = useAuthStore();
+    const { mood: currentMood } = useTripStore();
     const nav = useNavigate();
-    const [activeTab, setActiveTab] = useState('schedules');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'main'; // Default to Main Dashboard
     const queryClient = useQueryClient();
 
-    // ✅ Delete Plan Mutation
-    const deleteMutation = useMutation({
-        mutationFn: removePlan,
-        onSuccess: () => {
-            toast.success("일정이 삭제되었습니다.");
-            queryClient.invalidateQueries(['plans']);
-        },
-        onError: (err) => {
-            toast.error("삭제 실패: " + err.message);
-        }
+    // Helper to change tab
+    // push: true adds to history (default behavior of setSearchParams), allowing back button
+    const setActiveTab = (tab) => {
+        setSearchParams({ tab });
+    };
+
+    // Modals State
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    // AI Plans Tab State
+    const [aiTab, setAiTab] = useState('upcoming');
+
+    // Review Detail State
+    const [selectedReview, setSelectedReview] = useState(null);
+
+    // 상세 보기 (Drawer) 관련 상태
+    const [selectedPlace, setSelectedPlace] = useState(null);
+    const [drawerNights, setDrawerNights] = useState(1);
+    const [drawerPeople, setDrawerPeople] = useState(2);
+    const [drawerPlanText, setDrawerPlanText] = useState("");
+    const [drawerDiffResult, setDrawerDiffResult] = useState(null);
+    const [selectedScheduleForDetail, setSelectedScheduleForDetail] = useState(null);
+
+    // --- Queries ---
+    const { data: profile } = useQuery({
+        queryKey: ['profile', user?.id],
+        queryFn: () => getProfile(user?.id),
+        enabled: !!user
     });
 
-    const handleDelete = (e, id) => {
-        e.stopPropagation(); // prevent card click
-        if (window.confirm("정말 이 일정을 삭제하시겠습니까?")) {
-            deleteMutation.mutate(id);
+    // Notifications Query
+    const { data: notifications = [] } = useQuery({
+        queryKey: ['notifications', user?.id],
+        queryFn: () => getNotifications(user?.id),
+        enabled: !!user,
+        select: (data) => data.map(n => ({
+            id: n.id,
+            type: n.type,
+            text: n.message,
+            time: new Date(n.created_at).toLocaleString(),
+            isRead: n.is_read,
+            link: n.link
+        }))
+    });
+
+    const { data: myPlans = [] } = useQuery({ queryKey: ['plans'], queryFn: loadPlans });
+
+    // Saved Places Query (from Walk/Traffic/Airplane pages)
+    const { data: savedPlaces = [] } = useQuery({
+        queryKey: ['savedPlaces', user?.id],
+        queryFn: () => getSavedPlaces(user?.id),
+        enabled: !!user?.id,
+    });
+
+    // Filter for Liked places (exclude bookmarks)
+    const likedPlaces = savedPlaces.filter(p => !p.place_data?.savedType || p.place_data?.savedType === 'like');
+
+    const handleDeleteSavedPlace = async (placeId) => {
+        try {
+            await deletePlace(placeId);
+            queryClient.invalidateQueries(['savedPlaces']);
+            toast.success("저장된 장소가 삭제되었습니다.");
+        } catch (error) {
+            toast.error("삭제에 실패했습니다.");
         }
     };
 
-    // Profile State
-    const [profileName, setProfileName] = useState('');
-    const [profileDesc, setProfileDesc] = useState('');
-    const [profileImage, setProfileImage] = useState(null);
-    const [previewImage, setPreviewImage] = useState(null);
-    const [saving, setSaving] = useState(false);
-
-    // ✅ Fetch Real Plans
-    const { data: myPlans = [] } = useQuery({
-        queryKey: ['plans'],
-        queryFn: loadPlans
-    });
-
-    // ✅ Fetch Memories
     const { data: memories = [] } = useQuery({
         queryKey: ['memories', user?.id],
         queryFn: getMemories,
         enabled: !!user
     });
+    const { data: aiSchedules = [] } = useQuery({ queryKey: ['schedules'], queryFn: loadSchedules });
+    
+    // Fetch User Reviews
+    const { data: myReviews = [] } = useQuery({
+        queryKey: ['myReviews', user?.id],
+        queryFn: async () => {
+             if (!user) return [];
+             const { data } = await communityService.getPosts(
+                 'review', 
+                 'latest', 
+                 { type: '', keyword: '' }, 
+                 { mood: null, themes: [] }, 
+                 user.id, 
+                 user.id // filterUserId
+             );
+             
+             // Map to MyPage format
+             return data.map(post => {
+                 // Force author info to current user since this IS "My Page"
+                 const authorName = post.profiles?.username || user.user_metadata?.full_name || user.email?.split('@')[0] || '익명';
+                 const authorAvatar = post.profiles?.avatar_url || user.user_metadata?.avatar_url || '';
 
-    // ✅ Fetch Notifications
-    const { data: notifications = [] } = useQuery({
-        queryKey: ['notifications', user?.id],
-        queryFn: getNotifications,
+                 return {
+                    id: post.id,
+                    title: post.title,
+                    date: new Date(post.created_at).toLocaleDateString(),
+                    rating: post.rating || 0,
+                    content: post.body?.substring(0, 100) + (post.body?.length > 100 ? '...' : '') || '',
+                    fullContent: post.body,
+                    thumb: post.media && post.media.length > 0 
+                        ? (typeof post.media[0] === 'string' ? post.media[0] : post.media[0].url)
+                        : 'https://via.placeholder.com/150',
+                    tags: [post.mood, ...(post.themes || [])].filter(Boolean),
+                    likes: post.likes || 0,
+                    comments: post.comments || post.comment_count || 0, // Ensure we get the count
+                    
+                    // Fields for ReviewDetailModal
+                    is_liked: post.is_liked,
+                    author_name: authorName,
+                    author_avatar: authorAvatar,
+                    destination: post.destination,
+                    created_at: post.created_at,
+                    mood: post.mood,
+                    themes: post.themes,
+                    media: post.media,
+                    body: post.body,
+                    user_id: user.id,
+
+                    originalPost: {
+                        ...post,
+                        author_name: authorName,
+                        author_avatar: authorAvatar,
+                        user_id: user.id
+                    } 
+                 };
+             });
+        },
         enabled: !!user
     });
 
-    // ✅ Fetch Badges
-    const { data: badges = [] } = useQuery({
-        queryKey: ['badges', user?.id],
-        queryFn: () => getUserBadges(user?.id),
-        enabled: !!user
+    // Date Classification Logic
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const allSchedules = [...aiSchedules, ...myPlans];
+
+    const upcomingSchedules = allSchedules.filter(item => {
+        const end = item.endDate ? new Date(item.endDate) : (item.startDate ? new Date(item.startDate) : null);
+        if (!end) return false;
+        end.setHours(23, 59, 59, 999);
+        return end >= today;
     });
+
+    const pastSchedules = allSchedules.filter(item => {
+        const end = item.endDate ? new Date(item.endDate) : (item.startDate ? new Date(item.startDate) : null);
+        if (!end) return false;
+        end.setHours(23, 59, 59, 999);
+        return end < today;
+    });
+
+    // Prevent duplicate notifications in the same session
+    const processedSchedulesRef = useRef(new Set());
+
+    // --- Automated D-Day Notifications ---
+    useEffect(() => {
+        if (!user || aiSchedules.length === 0) return;
+
+        const checkDDayNotifications = async () => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            
+            for (const sch of aiSchedules) {
+                if (!sch.startDate) continue;
+                
+                const start = new Date(sch.startDate);
+                start.setHours(0,0,0,0);
+                const diffTime = start - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let type = "";
+                let message = "";
+                // Handle potential object title
+                const title = typeof sch.title === 'object' ? (sch.title.name || sch.title.title || "여행") : (sch.title || "여행");
+                
+                if (diffDays === 0) {
+                    type = "d-day";
+                    message = `📅 오늘은 [${title}] 여행이 시작되는 날입니다! 즐거운 여행 되세요! (D-Day)`;
+                } else if (diffDays === 1) {
+                    type = "d-1";
+                    message = `🔔 내일은 [${title}] 여행이 시작되는 날입니다! 미리 짐을 챙겨보세요. (D-1)`;
+                }
+
+                if (type && message) {
+                    // 1. Session-level duplicate check (fast in-memory)
+                    const sessionKey = `${sch.id}-${type}-${todayStr}`;
+                    if (processedSchedulesRef.current.has(sessionKey)) continue;
+
+                    // 2. Browser Storage check (persist across reloads/deletions)
+                    const storageKey = `dday-sent:${sessionKey}`;
+                    if (localStorage.getItem(storageKey)) {
+                         // Already sent today (even if deleted from DB), skip it
+                         processedSchedulesRef.current.add(sessionKey);
+                         continue;
+                    }
+
+                    // 3. Server-level duplicate check (DB existence)
+                    const exists = notifications.some(n => 
+                        n.text.includes(title) && 
+                        n.text.includes(type === "d-day" ? "D-Day" : "D-1") &&
+                        new Date(n.time).toDateString() === new Date().toDateString()
+                    );
+
+                    if (!exists) {
+                        // Mark as processed immediately
+                        processedSchedulesRef.current.add(sessionKey);
+                        
+                        try {
+                            await createNotification({
+                                user_id: user.id,
+                                sender_id: null,
+                                type: 'system',
+                                message: message,
+                                link: '/plans'
+                            });
+                            
+                            // Mark as sent in storage to prevent re-creation after deletion
+                            localStorage.setItem(storageKey, 'true');
+
+                            // Invalidate to refresh UI
+                            queryClient.invalidateQueries(['notifications', user.id]);
+                        } catch (e) {
+                            console.error("Failed to create D-Day notification:", e);
+                            processedSchedulesRef.current.delete(sessionKey);
+                        }
+                    } else {
+                        // Already exists in DB, ensure local state matches
+                        processedSchedulesRef.current.add(sessionKey);
+                        // Also sync storage for consistency
+                        localStorage.setItem(storageKey, 'true');
+                    }
+                }
+            }
+        };
+
+        checkDDayNotifications();
+    }, [user, aiSchedules, queryClient]); // Removed notifications.length dependency
+
+
+    const aiUpcomingSchedules = aiSchedules.filter(item => {
+        const end = item.endDate ? new Date(item.endDate) : (item.startDate ? new Date(item.startDate) : null);
+        if (!end) return false;
+        end.setHours(23, 59, 59, 999);
+        return end >= today;
+    });
+
+    const aiPastSchedules = aiSchedules.filter(item => {
+        const end = item.endDate ? new Date(item.endDate) : (item.startDate ? new Date(item.startDate) : null);
+        if (!end) return false;
+        end.setHours(23, 59, 59, 999);
+        return end < today;
+    });
+
+    // Mutations (Delete Plan)
+    const deleteMutation = useMutation({
+        mutationFn: removePlan,
+        onSuccess: () => {
+            queryClient.invalidateQueries(['plans']);
+            toast.success("플랜이 삭제되었습니다.");
+        }
+    });
+
+    const addScheduleMutation = useMutation({
+        mutationFn: addSchedule,
+        onSuccess: () => {
+            queryClient.invalidateQueries(['schedules']);
+        }
+    });
+
+    // 상세 보기 (Drawer) 핸들러
+    const handlePlaceClick = (place) => {
+        const rawData = place.place_data || {};
+        const mergedItem = {
+            ...rawData,
+            title: place.title,
+            firstimage: place.image,
+            addr1: place.description,
+            category: place.category,
+            savedPlaceId: place.id // 삭제를 위해 원본 ID 저장
+        };
+        
+        setSelectedPlace(mergedItem);
+        setDrawerNights(1);
+        setDrawerPeople(2);
+        setDrawerPlanText(mergedItem.planText || "");
+        setDrawerDiffResult(null);
+    };
+
+    const handleImprovePlace = (detail) => {
+        if (!selectedPlace) return;
+        const improved = improvePlanText({
+            title: selectedPlace.title,
+            nights: drawerNights,
+            people: drawerPeople,
+            planText: drawerPlanText,
+            stays: selectedPlace.stays ?? [],
+            foods: selectedPlace.foods ?? [],
+            theme: 'healing',
+            category: selectedPlace.category || 'walk',
+            detail
+        });
+        setDrawerDiffResult(simpleDiff(drawerPlanText, improved));
+        setDrawerPlanText(improved);
+    };
+
+    const onSaveFromDrawer = async (payload) => {
+        try {
+            // 저장된 장소를 실제 일정(Schedule)으로 변환하여 추가
+            const scheduleData = {
+                title: payload.title,
+                description: payload.subtitle || "저장된 장소로부터 생성된 일정",
+                startDate: new Date().toISOString().split('T')[0],
+                endDate: new Date().toISOString().split('T')[0],
+                people: payload.people || 2,
+                scheduleText: payload.planText || "",
+                items: payload.items || [],
+                totalCost: payload.totalCost || 0,
+                moodData: {
+                    mood: 'refresh',
+                    destination: payload.title,
+                    style: 'relaxed'
+                }
+            };
+            
+            await addScheduleMutation.mutateAsync(scheduleData);
+
+            // 핵심: '저장된 장소' -> '일정'으로 이동 (삭제 처리)
+            if (selectedPlace?.savedPlaceId) {
+                await deletePlace(selectedPlace.savedPlaceId);
+                queryClient.invalidateQueries(['savedPlaces']);
+            }
+
+            toast.success(`"${payload.title}" 일정이 추가되었습니다! [나의 여행 계획]에서 확인하세요.`);
+            setSelectedPlace(null);
+            
+            // 일정관리 탭으로 이동할지 여부는 사용자 선택이지만, 일단 마이페이지에 유지
+        } catch (e) {
+            toast.error("일정 추가 실패: " + e.message);
+        }
+    };
+    const handleDelete = (e, id) => {
+        e.stopPropagation();
+        if (window.confirm("정말 이 일정을 삭제하시겠습니까?")) deleteMutation.mutate(id);
+    };
+
+    // Handle Plan Click to show Schedule Detail View
+    const handlePlanClick = (plan) => {
+        setSelectedScheduleForDetail(plan);
+    };
+
+    // Profile State
+    const [profileName, setProfileName] = useState('');
+    const [profileDesc, setProfileDesc] = useState('');
+    const [previewImage, setPreviewImage] = useState(null);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (user) {
-            setProfileName(user.user_metadata?.full_name || user.email?.split('@')[0] || "");
+            // Prioritize metadata name -> email
+            const name = user.user_metadata?.full_name || user.email?.split('@')[0];
+            setProfileName(name);
             setProfileDesc(user.user_metadata?.bio || "");
             setPreviewImage(user.user_metadata?.avatar_url || null);
 
@@ -112,16 +430,27 @@ export default function MyPage() {
         }
     }, [user]);
 
+    // Handlers
+    const handleLogout = async () => {
+        try {
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.error("Logout failed:", error);
+        } finally {
+            signOut();
+            nav('/');
+            toast.success('로그아웃 되었습니다.');
+            setShowLogoutModal(false);
+        }
+    };
+
+
+
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            // For now, we use FileReader for instant preview as we might not have Storage buckets set up
-            // In a real app, you would upload to Supabase Storage here
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreviewImage(reader.result);
-                setProfileImage(file); // Keep file for potential future upload
-            };
+            reader.onloadend = () => setPreviewImage(reader.result);
             reader.readAsDataURL(file);
         }
     };
@@ -131,14 +460,29 @@ export default function MyPage() {
         setSaving(true);
         try {
             const avatarUrlToSave = previewImage || user.user_metadata?.avatar_url;
+
+            // 1. Update Auth Metadata
             const { data, error } = await supabase.auth.updateUser({
-                data: {
-                    full_name: profileName,
-                    bio: profileDesc,
-                    avatar_url: avatarUrlToSave
-                }
+                data: { full_name: profileName, bio: profileDesc, avatar_url: avatarUrlToSave }
             });
             if (error) throw error;
+
+            // 2. Update Public Profiles Table (Sync)
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .update({
+                    username: profileName,
+                    introduction: profileDesc,
+                    avatar_url: avatarUrlToSave,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', user.id);
+
+            if (profileError) {
+                console.error('Profile sync error:', profileError);
+                throw new Error('프로필 동기화 실패: ' + profileError.message);
+            }
+
             setUser(data.user);
             toast.success("프로필이 저장되었습니다.");
         } catch (error) {
@@ -149,540 +493,713 @@ export default function MyPage() {
         }
     };
 
-    const handleNotificationRead = async (id) => {
+    // Mocks for Stats
+    const upcomingCount = upcomingSchedules.length;
+    const pastCount = pastSchedules.length;
+
+    // Mocks for Data
+    const mockBadges = [
+        { id: 1, title: "첫 여권의 설렘", desc: "첫 해외여행을 완료했습니다.", icon: "✈️", unlocked: true },
+        { id: 2, title: "유럽 정복자", desc: "유럽 3개국 이상을 여행했습니다.", icon: "🏰", unlocked: true },
+        { id: 3, title: "단골 여행러", desc: "총 10회 이상 여행을 완료했습니다.", icon: "🏅", unlocked: false },
+    ];
+    const mockWishlist = [
+        { id: 1, title: '교토 전통 료칸', category: '숙소', rating: 4.8, cover: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e' },
+        { id: 2, title: '루브르 박물관 가이드 투어', category: '액티비티', rating: 4.9, cover: 'https://images.unsplash.com/photo-1499856871940-b625a4aa4e53' },
+    ];
+
+    const unreadCount = notifications.filter(n => !n.isRead).length;
+
+    const handleDeleteNotification = async (id) => {
         try {
-            await markNotificationAsRead(id);
-            // Invalidate query to refresh UI if needed, or optimistically update
-        } catch (e) {
-            console.error(e);
+            await deleteNotification(id);
+            queryClient.invalidateQueries(['notifications']);
+            toast.success('알림이 삭제되었습니다.');
+        } catch (error) {
+            console.error('삭제 실패:', error);
+            toast.error('삭제에 실패했습니다.');
         }
     };
 
-    const mockWishlist = [
-        { id: 1, title: '교토 전통 료칸', category: '숙소', rating: 4.8, cover: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=2070&auto=format&fit=crop' },
-        { id: 2, title: '루브르 박물관 가이드 투어', category: '액티비티', rating: 4.9, cover: 'https://images.unsplash.com/photo-1499856871940-b625a4aa4e53?q=80&w=2070&auto=format&fit=crop' },
-    ];
+    const handleClearAllNotifications = async () => {
+        if (!user) return;
+        try {
+            await deleteAllNotifications(user.id);
+            queryClient.invalidateQueries(['notifications']);
+            toast.success("모든 알림이 삭제되었습니다.");
+        } catch (error) {
+            toast.error("삭제 실패");
+        }
+    };
 
-    const mockReviews = [
-        { id: 1, title: '스위스 알프스에서의 놀라운 경험', date: '2024.12.20', rating: 5, content: '풍경이 정말 숨막히게 아름다웠고 날씨도 완벽했습니다...', thumb: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=80&w=2070&auto=format&fit=crop' },
-        { id: 2, title: '주말 부산 여행', date: '2024.11.15', rating: 4, content: '음식은 훌륭했지만 교통이 좀 막혔어요.', thumb: 'https://images.unsplash.com/photo-1551918120-9739cb430c6d?q=80&w=1800&auto=format&fit=crop' },
-    ];
+    const handleMarkAsRead = (id) => {
+        markNotificationAsRead(id).then(() => {
+             queryClient.invalidateQueries(['notifications']);
+        });
+    };
 
-    // Gamification Logic with Real Data
-    const totalXp = badges.filter(b => b.earned).reduce((acc, curr) => acc + curr.xp, 0);
-    const currentLevel = Math.max(1, Math.floor(totalXp / 100) + 1);
-    const nextLevelXp = currentLevel * 100;
-    const progressToNextLevel = totalXp % 100;
+    const handleMarkAllAsRead = async () => {
+        if (!user) return;
+        try {
+            await markAllNotificationsAsRead(user.id);
+            queryClient.invalidateQueries(['notifications']);
+            toast.success("모든 알림을 읽음 처리했습니다.");
+        } catch (error) {
+            toast.error("처리 실패");
+        }
+    };
 
-    const mockBadges = [
-        { id: 1, title: "첫 여권의 설렘", desc: "첫 해외여행을 완료했습니다.", icon: "✈️", unlocked: true, date: "2023.05.10" },
-        { id: 2, title: "유럽 정복자", desc: "유럽 3개국 이상을 여행했습니다.", icon: "🏰", unlocked: true, date: "2024.08.15" },
-        { id: 3, title: "단골 여행러", desc: "총 10회 이상 여행을 완료했습니다.", icon: "🏅", unlocked: false, progress: "8/10" },
-        { id: 4, title: "미식가", desc: "맛집 리뷰를 20개 이상 작성했습니다.", icon: "🍽️", unlocked: false, progress: "12/20" },
-        { id: 5, title: "5대륙 탐험가", desc: "5개 대륙을 모두 방문했습니다.", icon: "🌍", unlocked: false, progress: "2/5" },
-        { id: 6, title: "사진 작가", desc: "포토 스팟 50곳을 방문했습니다.", icon: "📸", unlocked: true, date: "2024.12.20" },
-        { id: 7, title: "혼행의 고수", desc: "나홀로 여행을 3회 이상 다녀왔습니다.", icon: "🎒", unlocked: false, progress: "1/3" },
-        { id: 8, title: "섬 여행가", desc: "제주도, 발리 등 섬 여행지 5곳을 정복했습니다.", icon: "🏝️", unlocked: false, progress: "3/5" },
-        { id: 9, title: "새벽을 여는 사람", desc: "일출 명소 3곳을 방문했습니다.", icon: "🌅", unlocked: true, date: "2024.01.01" },
-        { id: 10, title: "계획형 인간", desc: "여행 일정을 100% 상세하게 작성했습니다.", icon: "📝", unlocked: true, date: "2023.11.12" },
-    ];
 
-    const mockNotifications = [
-        { id: 1, type: 'like', actor: 'traveler_kim', message: '님이 회원님의 "스위스 알프스" 후기를 좋아합니다.', time: '방금 전', read: false, icon: '❤️' },
-        { id: 2, type: 'comment', actor: 'happy_day', message: '님이 댓글을 남겼습니다: "저도 여기 꼭 가보고 싶네요!"', time: '2시간 전', read: false, icon: '💬' },
-        { id: 3, type: 'badge', actor: '시스템', message: '축하합니다! "사진 작가" 뱃지를 획득하셨습니다. 🏆', time: '1일 전', read: true, icon: '🎉' },
-        { id: 4, type: 'system', actor: '관리자', message: '회원님의 여행 일정이 3일 남았습니다. 준비물은 챙기셨나요?', time: '3일 전', read: true, icon: '🔔' },
-    ];
+    // --- RENDER HELPERS ---
 
-    const renderContent = () => {
-        switch (activeTab) {
-            case 'schedules':
+    const renderMainDashboard = () => (
+        <div className="mypage-dashboard">
+            <h1 className="mypage-title">마이페이지</h1>
+
+            {/* Profile Header */}
+            <div className="profile-header-card">
+                <div className="profile-avatar">
+                    {user?.user_metadata?.avatar_url ? (
+                        <img src={user.user_metadata.avatar_url} alt="avatar" />
+                    ) : (
+                        <div className="avatar-placeholder">{user?.email?.[0]?.toUpperCase() || 'U'}</div>
+                    )}
+                </div>
+                <div className="profile-info">
+                    <h2 className="user-name">{user?.user_metadata?.full_name || user?.email || '여행러'}</h2>
+                    <p className="user-greeting">{user?.user_metadata?.bio || "안녕하세요! 여행을 기록해보세요 👋"}</p>
+                </div>
+            </div>
+
+            {/* Stats Row */}
+            <div className="stats-row">
+                <div className="stat-card blue" onClick={() => setActiveTab('upcoming')} style={{ cursor: 'pointer' }}>
+                    <div className="stat-label">📅 다가오는 여행</div>
+                    <div className="stat-value">{upcomingCount} <span className="unit">건</span></div>
+                </div>
+                <div className="stat-card pink" onClick={() => setActiveTab('past')} style={{ cursor: 'pointer' }}>
+                    <div className="stat-label">📅 지난 여행</div>
+                    <div className="stat-value">{pastCount} <span className="unit">건</span></div>
+                </div>
+            </div>
+
+            {/* Biorhythm Section */}
+            {(() => {
+                // Aggregate mood data from all schedules (past + upcoming)
+                
+                // Map mood labels to unified keys
+                const moodLabelToKey = {
+                    '번아웃': 'burnout',
+                    '번아웃 케어': 'burnout',
+                    '활력 충전': 'energy',
+                    '리프레시': 'energy',
+                    '에너지 충전': 'energy',
+                    '힐링': 'healing',
+                    '고요한 휴식': 'healing',
+                    '모험': 'adventure'
+                };
+                
+                // Extract mood data from schedules
+                const plansWithMood = allSchedules
+                    .filter(s => s.moodData?.mood)
+                    .map(s => {
+                        const moodLabel = typeof s.moodData.mood === 'string' 
+                            ? s.moodData.mood 
+                            : s.moodData.mood.label;
+                        
+                        const moodKey = moodLabelToKey[moodLabel] || 'healing'; // Default to healing
+                        
+                        return {
+                            mood: moodKey,
+                            title: s.title,
+                            date: s.startDate
+                        };
+                    });
+                
                 return (
-                    <>
-                        <div className="content-header">
-                            <div>
-                                <h1 className="page-title">나의 여행 일정</h1>
-                                <p className="page-subtitle">다가오는 여행과 지난 여행을 관리하세요.</p>
+                    <TravelBiorhythm 
+                        plans={plansWithMood}
+                        currentMood={currentMood}
+                    />
+                );
+            })()}
+
+            {/* Menu Group 1 */}
+            <div className="menu-group">
+                <div className="menu-item" onClick={() => setActiveTab('plans')}>
+                    <div className="menu-icon-wrapper" style={{ background: '#fef2f2', color: '#ef4444' }}><FaHeart /></div>
+                    <span className="menu-text">저장된 장소</span>
+                    <FaChevronRight className="menu-arrow" />
+                </div>
+                <div className="menu-item" onClick={() => setActiveTab('ai_plans')}>
+                    <div className="menu-icon-wrapper" style={{ background: '#eff6ff', color: '#3b82f6' }}><FaPlane /></div>
+                    <span className="menu-text">나의 여행 일정</span>
+                    <FaChevronRight className="menu-arrow" />
+                </div>
+                <div className="menu-item" onClick={() => setActiveTab('analysis')}>
+                    <div className="menu-icon-wrapper" style={{ background: '#f5f3ff', color: '#8b5cf6' }}><FaChartPie /></div>
+                    <span className="menu-text">나의 여행 성향</span>
+                    <FaChevronRight className="menu-arrow" />
+                </div>
+                <div className="menu-item" onClick={() => setActiveTab('reviews')}>
+                    <div className="menu-icon-wrapper" style={{ background: '#ecfdf5', color: '#10b981' }}><FaPen /></div>
+                    <span className="menu-text">나의 후기</span>
+                    <FaChevronRight className="menu-arrow" />
+                </div>
+
+            </div>
+
+            {/* Menu Group 2 */}
+            <div className="menu-group">
+                <div className="menu-item" onClick={() => setActiveTab('notifications')}>
+                    <div className="menu-icon-wrapper" style={{ background: '#fff7ed', color: '#f97316' }}><FaBell /></div>
+                    <span className="menu-text">알림</span>
+                    {unreadCount > 0 && <span className="menu-badge">{unreadCount}</span>}
+                    <FaChevronRight className="menu-arrow" />
+                </div>
+                <div className="menu-item" onClick={() => setActiveTab('settings')}>
+                    <div className="menu-icon-wrapper" style={{ background: '#f1f5f9', color: '#64748b' }}><FaCog /></div>
+                    <span className="menu-text">설정</span>
+                    <FaChevronRight className="menu-arrow" />
+                </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="mypage-footer">
+                <button className="footer-btn" onClick={() => setShowLogoutModal(true)}>
+                    로그아웃
+                </button>
+            </div>
+        </div>
+    );
+
+    const renderSubPage = () => {
+        const renderContent = () => {
+            switch (activeTab) {
+                case 'plans': return (
+                    <div className="content-grid" style={{ 
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                        gap: '12px',
+                        padding: '10px 4px 20px 4px'
+                    }}>
+                        {likedPlaces.length > 0 ? likedPlaces.map(place => (
+                            <div key={place.id} style={{ 
+                                position: 'relative',
+                                height: 'auto'
+                            }}>
+                                <div style={{ 
+                                    transform: 'scale(0.85)', 
+                                    transformOrigin: 'top left',
+                                    width: '117.6%',
+                                    marginBottom: '-15%'
+                                }}>
+                                    <RecommendationCard
+                                        title={place.title}
+                                        country={place.place_data?.addr1?.split(' ')[0] || place.country}
+                                        tag={place.tag}
+                                        desc={place.place_data?.addr1 || place.description}
+                                        image={place.image || "https://images.unsplash.com/photo-1533658280665-224492bf552f?auto=format&fit=crop&w=800&q=80"}
+                                        showMatchScore={false}
+                                        onClick={() => handlePlaceClick(place)}
+                                    />
+                                </div>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteSavedPlace(place.id); }}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '4px',
+                                        right: '4px',
+                                        background: 'rgba(255,255,255,0.92)',
+                                        border: 'none',
+                                        borderRadius: '50%',
+                                        width: '22px',
+                                        height: '22px',
+                                        cursor: 'pointer',
+                                        fontSize: '11px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                                        zIndex: 10
+                                    }}
+                                    title="삭제"
+                                >
+                                    ✕
+                                </button>
                             </div>
-                            <button className="action-btn" onClick={() => nav('/plans')}>+ 새 일정 만들기</button>
+                        )) : (
+                            <div style={{ gridColumn: '1 / -1', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                                <EmptyState 
+                                    icon="📍" 
+                                    title="저장된 장소가 없습니다" 
+                                    description="여행하고 싶은 장소를 하트로 찜해보세요."
+                                />
+                            </div>
+                        )}
+                    </div>
+                );
+                case 'ai_plans': return (
+                    <div className="ai-plans-container">
+                        <div className="ai-tabs">
+                            <button
+                                className={`ai-tab ${aiTab === 'upcoming' ? 'active' : ''}`}
+                                onClick={() => setAiTab('upcoming')}
+                            >
+                                📅 예정된 여행 ({aiUpcomingSchedules.length})
+                            </button>
+                            <button
+                                className={`ai-tab ${aiTab === 'past' ? 'active' : ''}`}
+                                onClick={() => setAiTab('past')}
+                            >
+                                ✈️ 지난 여행 ({aiPastSchedules.length})
+                            </button>
                         </div>
-                        <div className="content-grid">
-                            {myPlans.length > 0 ? myPlans.map(item => (
-                                <div key={item.id} className="feature-card" onClick={() => nav('/plans')} style={{ cursor: 'pointer' }}>
-                                    <div className="card-img-wrapper">
-                                        <img src={item.heroImage || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80"} alt={item.title} className="card-img" />
-                                        <span className="card-badge">{item.mood ? '#' + item.mood.toUpperCase() : '#TRIP'}</span>
-                                        {/* Delete Button */}
-                                        <button 
-                                            onClick={(e) => handleDelete(e, item.id)}
-                                            style={{
-                                                position: 'absolute', top: '10px', right: '10px',
-                                                background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%',
-                                                width: '28px', height: '28px', color: '#fff', cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                            }}
-                                            title="삭제"
+
+                        <div className="ai-plans-content">
+                            {aiTab === 'upcoming' && (
+                                <div className="content-grid">
+                                    {aiUpcomingSchedules.length > 0 ? aiUpcomingSchedules.map(item => (
+                                        <div key={item.id} className="feature-card ai-card" onClick={() => handlePlanClick(item)}>
+                                            <div className="card-body" style={{ width: '100%' }}>
+                                                <div className="card-header-row">
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <h3 className="card-title" style={{ marginBottom: 0 }}>{item.title}</h3>
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                                                            D-{Math.ceil((new Date(item.startDate) - new Date()) / (1000 * 60 * 60 * 24))}
+                                                        </span>
+                                                    </div>
+                                                    <span className="ai-tag">AI Plan</span>
+                                                </div>
+                                                <div className="card-meta" style={{ marginTop: '8px' }}>
+                                                    <span className="meta-item">📅 {new Date(item.startDate).toLocaleDateString()} 출발</span>
+                                                    <span className="meta-item">👥 {item.people}명</span>
+                                                </div>
+                                                <p className="card-desc">{item.description || "새로운 모험이 기다리고 있습니다!"}</p>
+                                                <div className="card-action-row">
+                                                    <button className="small-action-btn">상세보기</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <EmptyState 
+                                            icon="🏜️" 
+                                            title="예정된 일정이 없습니다" 
+                                            description="새로운 여행 계획을 세워보시는건 어떨까요?"
+                                        >
+                                            <button className="primary-btn small" onClick={() => nav('/planlab')}>+ 새 일정 만들기</button>
+                                        </EmptyState>
+                                    )}
+                                </div>
+                            )}
+
+                            {aiTab === 'past' && (
+                                <div className="content-grid">
+                                    {aiPastSchedules.length > 0 ? aiPastSchedules.map(item => (
+                                        <div key={item.id} className="feature-card ai-card past" onClick={() => handlePlanClick(item)}>
+                                            <div className="card-body" style={{ width: '100%' }}>
+                                                <div className="card-header-row">
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <h3 className="card-title" style={{ marginBottom: 0, color: '#6b7280' }}>{item.title}</h3>
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px' }}>
+                                                            종료됨
+                                                        </span>
+                                                    </div>
+                                                    <span className="ai-tag past">AI Plan</span>
+                                                </div>
+                                                <div className="card-meta" style={{ marginTop: '8px' }}>
+                                                    <span className="meta-item">📅 {new Date(item.endDate).toLocaleDateString()} 다녀옴</span>
+                                                    <span className="meta-item">👥 {item.people}명</span>
+                                                </div>
+                                                <p className="card-desc">{item.description || "기록된 추억이 없습니다."}</p>
+                                                <div className="card-action-row">
+                                                    <button className="small-action-btn">상세보기</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <EmptyState 
+                                            icon="🎬" 
+                                            title="지난 여행이 없습니다" 
+                                            description="모든 여행의 끝은 새로운 시작입니다."
+                                        />
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+                case 'upcoming': return (
+                    <div className="content-grid">
+                        {upcomingSchedules.length > 0 ? upcomingSchedules.map(item => (
+                            <div key={item.id} className="feature-card" style={{ cursor: 'pointer', position: 'relative' }} onClick={() => setSelectedScheduleForDetail(item)}>
+                                <div className="card-body" style={{ width: '100%' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                        <h3 className="card-title" style={{ margin: 0 }}>{item.title}</h3>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                                            D-{Math.ceil((new Date(item.startDate) - new Date()) / (1000 * 60 * 60 * 24))}
+                                        </span>
+                                    </div>
+                                    <div className="card-meta">
+                                        <span>📅 {new Date(item.startDate).toLocaleDateString()} 출발</span>
+                                    </div>
+                                    <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '4px' }}>{item.description || item.subtitle || "설명 없음"}</p>
+                                </div>
+                            </div>
+                        )) : (
+                            <EmptyState 
+                                icon="📅" 
+                                title="다가오는 계획이 없습니다" 
+                                description="달력에 설렘을 채워보세요!"
+                            />
+                        )}
+                    </div>
+                );
+                case 'past': return (
+                    <div className="content-grid">
+                        {pastSchedules.length > 0 ? pastSchedules.map(item => (
+                            <div key={item.id} className="feature-card" style={{ cursor: 'pointer', position: 'relative' }} onClick={() => setSelectedScheduleForDetail(item)}>
+                                <div className="card-body" style={{ width: '100%' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                        <h3 className="card-title" style={{ margin: 0, color: '#666' }}>{item.title}</h3>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px' }}>
+                                            종료됨
+                                        </span>
+                                    </div>
+                                    <div className="card-meta">
+                                        <span>📅 {new Date(item.endDate).toLocaleDateString()} 종료</span>
+                                    </div>
+                                    <p style={{ fontSize: '0.9rem', color: '#888', marginTop: '4px' }}>{item.description || item.subtitle || "설명 없음"}</p>
+                                </div>
+                            </div>
+                        )) : (
+                            <EmptyState 
+                                icon="🧳" 
+                                title="지난 기록이 없습니다" 
+                                description="여행의 추억을 간직해보세요."
+                            />
+                        )}
+                    </div>
+                );
+                case 'analysis': return (
+                    <TravelStyleAnalysis 
+                        savedPlaces={savedPlaces} 
+                        upcomingSchedules={upcomingSchedules} 
+                        pastSchedules={pastSchedules} 
+                        currentMood={currentMood}
+                    />
+                );
+                case 'reviews': return (
+                    <div className="reviews-container">
+                        {selectedReview && (
+                            <ReviewDetailModal
+                                review={selectedReview}
+                                onClose={() => setSelectedReview(null)}
+                                onLike={async (id) => {
+                                    const { liked } = await communityService.toggleLike(id, user.id);
+                                    const updateData = (prev) => prev.map(p => p.id === id ? { ...p, is_liked: liked, likes: (p.likes || 0) + (liked ? 1 : -1) } : p);
+                                    queryClient.setQueryData(['myReviews', user?.id], updateData);
+                                    setSelectedReview(prev => prev.id === id ? { ...prev, is_liked: liked, likes: (prev.likes || 0) + (liked ? 1 : -1) } : prev);
+                                }}
+                                onEdit={(post) => {
+                                    toast('수정 기능은 커뮤니티 페이지에서 이용해주세요.', { icon: 'ℹ️' });
+                                }}
+                                onDelete={(id) => {
+                                    toast.promise(
+                                        (async () => {
+                                            await communityService.deletePost(id);
+                                            queryClient.invalidateQueries(['myReviews', user?.id]);
+                                            setSelectedReview(null);
+                                        })(),
+                                        {
+                                            loading: '삭제 중...',
+                                            success: '삭제되었습니다.',
+                                            error: '삭제 실패',
+                                        }
+                                    );
+                                }}
+                                onUpdatePost={(updatedPost) => {
+                                    queryClient.setQueryData(['myReviews', user?.id], (old) => {
+                                        return old ? old.map(p => p.id === updatedPost.id ? { ...p, ...updatedPost } : p) : [];
+                                    });
+                                    setSelectedReview(prev => prev && prev.id === updatedPost.id ? { ...prev, ...updatedPost } : prev);
+                                }}
+                            />
+                        )}
+                        <div className="reviews-list">
+                            {myReviews.length > 0 ? myReviews.map(item => (
+                                <div key={item.id} className="review-card" onClick={() => setSelectedReview(item)}>
+                                    <div className="review-card-thumb">
+                                        <img src={item.thumb} alt={item.title} onError={(e) => e.target.src='https://via.placeholder.com/150'} />
+                                    </div>
+                                    <div className="review-card-content">
+                                        <div className="review-card-rating-wrapper" style={{ marginBottom: '4px' }}>
+                                            <div className="review-card-rating" style={{ display: 'flex', gap: '2px' }}>
+                                                {[...Array(5)].map((_, i) => (
+                                                    <FaStar key={i} color={i < (item.rating || 0) ? "#fbbf24" : "#e5e7eb"} size={14} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <h3 className="review-card-title" style={{ marginTop: 0 }}>{item.title}</h3>
+                                        <p className="review-card-snippet">{item.content}</p>
+                                        <div className="review-card-footer">
+                                            <span className="review-date">{item.date}</span>
+                                            <div className="review-card-stats" style={{ display: 'flex', gap: '10px' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: item.is_liked ? '#ef4444' : '#9ca3af' }}>
+                                                    {item.is_liked ? <FaHeart /> : <FaRegHeart />} {item.likes}
+                                                </span>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#9ca3af' }}>
+                                                    <FaComment /> {item.comments}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )) : (
+                                <EmptyState 
+                                    icon="✍️" 
+                                    title="작성한 후기가 없습니다" 
+                                    description="여행의 솔직한 이야기를 들려주세요."
+                                />
+                            )}
+                        </div>
+                    </div>
+                );
+                case 'wishlist': return (
+                    <div className="content-grid">
+                        {mockWishlist.map(item => (
+                            <div key={item.id} className="feature-card">
+                                <div className="card-img-wrapper">
+                                    <img src={item.cover} alt={item.title} className="card-img" />
+                                    <span className="card-badge">⭐ {item.rating}</span>
+                                </div>
+                                <div className="card-body">
+                                    <h3 className="card-title">{item.title}</h3>
+                                    <span className="card-meta">🏷️ {item.category}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                );
+                case 'notifications': return (
+
+                    <div className="notification-list-container">
+                        <div className="notification-header-actions">
+                            <span className="noti-count-label">총 {notifications.length}개</span>
+                            <div className="noti-actions">
+                                <button className="action-pill-btn" onClick={handleMarkAllAsRead}>
+                                    <FaCheckDouble /> 모두 읽음
+                                </button>
+                                <button className="action-pill-btn danger" onClick={handleClearAllNotifications}>
+                                    <FaTrash /> 전체 삭제
+                                </button>
+                            </div>
+                        </div>
+
+                        {notifications.map(noti => {
+                            let Icon = FaBell;
+                            let colorClass = 'gray';
+                            if (noti.type === 'like') { Icon = FaHeart; colorClass = 'red'; }
+                            if (noti.type === 'schedule') { Icon = FaCalendarAlt; colorClass = 'blue'; }
+                            if (noti.type === 'comment') { Icon = FaCommentDots; colorClass = 'green'; }
+                            if (noti.type === 'save') { Icon = FaHeart; colorClass = 'pink'; }
+                            if (noti.type === 'post') { Icon = FaPen; colorClass = 'blue'; } // Added post icon // Added save icon
+
+                            return (
+                                <div key={noti.id} className={`notification-card ${!noti.isRead ? 'unread' : ''}`} onClick={() => handleMarkAsRead(noti.id)}>
+                                    <div className={`noti-icon-box ${colorClass}`}>
+                                        <Icon />
+                                    </div>
+                                    <div className="noti-content-wrapper">
+                                        <p className="noti-message">{noti.text}</p>
+                                        <span className="noti-time">{noti.time}</span>
+                                    </div>
+                                    <div className="noti-right-actions">
+                                        {!noti.isRead && <div className="noti-unread-dot"></div>}
+                                        <button
+                                            className="noti-delete-btn"
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteNotification(noti.id); }}
+                                            title="알림 삭제"
                                         >
                                             ✕
                                         </button>
                                     </div>
-                                    <div className="card-body">
-                                        <h3 className="card-title">{item.title}</h3>
-                                        <div className="card-meta">
-                                            <span>📅 {new Date(item.createdAt).toLocaleDateString()}</span>
-                                            <span>👥 {item.people}명</span>
-                                            {item.totalCost > 0 && <span>💰 {Math.round(item.totalCost/10000)}만원</span>}
-                                        </div>
-                                        {/* Wellness Info */}
-                                        {item.wellness && (
-                                            <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#666', display: 'flex', gap: '8px', background: '#f8f9fa', padding: '6px 10px', borderRadius: '6px' }}>
-                                                <span>🔊 {formatNoise(item.wellness.noise)}</span>
-                                                <span style={{color: '#ddd'}}>|</span>
-                                                <span>💡 {formatLight(item.wellness.light)}</span>
-                                                <span style={{color: '#ddd'}}>|</span>
-                                                <span>👥 {item.wellness.crowd}</span>
-                                            </div>
-                                        )}
-                                    </div>
                                 </div>
-                            )) : (
-                                <div className="empty-state">
-                                    <p>아직 저장된 일정이 없습니다.</p>
-                                    <button className="primary-btn" onClick={() => nav('/')} style={{ marginTop: '1rem' }}>
-                                        여행 계획하러 가기
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </>
-                );
-            case 'style':
-                return (
-                    <>
-                        <div className="content-header">
-                            <div>
-                                <h1 className="page-title">나의 여행 바이오리듬</h1>
-                                <p className="page-subtitle">지금까지의 여행 데이터를 기반으로 분석한 당신의 스타일입니다.</p>
-                            </div>
-                        </div>
-
-                        <TravelBiorhythm plans={myPlans} />
-                    </>
-                );
-            case 'badges':
-                return (
-                    <>
-                        <div className="content-header">
-                            <div>
-                                <h1 className="page-title">나의 여행 뱃지</h1>
-                                <p className="page-subtitle">여행의 추억을 모아 업적을 달성해보세요.</p>
-                            </div>
-                            <div className="badge-stats">
-                                <span>🏆 획득한 뱃지: <strong>{mockBadges.filter(b => b.unlocked).length}</strong> / {mockBadges.length}</span>
-                            </div>
-                        </div>
-                        <div className="badge-grid">
-                            {mockBadges.map(badge => (
-                                <div key={badge.id} className={`badge-card ${badge.unlocked ? 'unlocked' : 'locked'}`}>
-                                    <div className="badge-icon-wrapper">
-                                        <span className="badge-icon">{badge.icon}</span>
-                                        {!badge.unlocked && <span className="lock-overlay">🔒</span>}
-                                    </div>
-                                    <div className="badge-info">
-                                        <h3 className="badge-title">{badge.title}</h3>
-                                        <p className="badge-desc">{badge.desc}</p>
-                                        {badge.unlocked ? (
-                                            <span className="badge-date">달성일: {badge.date}</span>
-                                        ) : (
-                                            <div className="badge-progress-container">
-                                                <span className="badge-progress-text">진행도: {badge.progress}</span>
-                                                <div className="progress-bar">
-                                                    <div
-                                                        className="progress-fill"
-                                                        style={{ width: `${(parseInt(badge.progress.split('/')[0]) / parseInt(badge.progress.split('/')[1])) * 100}%` }}
-                                                    ></div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </>
-                );
-            case 'notifications':
-                return (
-                    <>
-                        <div className="content-header">
-                            <div>
-                                <h1 className="page-title">알림 센터</h1>
-                                <p className="page-subtitle">새로운 소식과 반응을 확인하세요.</p>
-                            </div>
-                            <button className="action-btn" style={{ background: 'rgba(255,255,255,0.1)' }}>모두 읽음 처리</button>
-                        </div>
-                        <div className="notification-list">
-                            {mockNotifications.map(noti => (
-                                <div key={noti.id} className={`notification-item ${!noti.read ? 'unread' : ''}`}>
-                                    <div className="notification-icon-box">
-                                        {noti.icon}
-                                    </div>
-                                    <div className="notification-content">
-                                        <div className="notification-text">
-                                            <strong>{noti.actor}</strong>{noti.message}
-                                        </div>
-                                        <span className="notification-time">{noti.time}</span>
-                                    </div>
-                                    {!noti.read && <div className="notification-dot"></div>}
-                                </div>
-                            ))}
-                        </div>
-                    </>
-                );
-            case 'wishlist':
-                return (
-                    <>
-                        <div className="content-header">
-                            <div>
-                                <h1 className="page-title">찜 목록</h1>
-                                <p className="page-subtitle">저장한 장소와 경험들을 모아보세요.</p>
-                            </div>
-                        </div>
-                        <div className="content-grid">
-                            {mockWishlist.map(item => (
-                                <div key={item.id} className="feature-card">
-                                    <div className="card-img-wrapper">
-                                        <img src={item.cover} alt={item.title} className="card-img" />
-                                        <span className="card-badge">⭐ {item.rating}</span>
-                                    </div>
-                                    <div className="card-body">
-                                        <h3 className="card-title">{item.title}</h3>
-                                        <div className="card-meta">
-                                            <span>🏷️ {item.category}</span>
-                                        </div>
-                                        <div className="card-actions">
-                                            <button className="icon-btn">❤️</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </>
-                );
-            case 'memories':
-                return (
-                    <>
-                        <div className="content-header">
-                            <div>
-                                <h1 className="page-title">추억 되살리기</h1>
-                                <p className="page-subtitle">당신의 소중한 여행 순간들을 다시 만나보세요.</p>
-                            </div>
-                        </div>
-
-                        {/* 1. System/Hero Area (For now static, can be dynamic later) */}
-                        <div className="memories-hero">
-                            <div className="memories-content">
-                                <span style={{ background: 'rgba(255,255,255,0.2)', padding: '0.3rem 0.8rem', borderRadius: '1rem', fontSize: '0.8rem', marginBottom: '0.5rem', display: 'inline-block' }}>
-                                    ✨ My Travel History
-                                </span>
-                                <h2 className="memories-title">나의 여행, 그 특별한 순간들</h2>
-                                <p style={{ marginBottom: '1.5rem', opacity: 0.9 }}>
-                                    기록된 여행 추억: {memories.length}개
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Real Memories Data */}
-                        <div className="timeline-section">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                <h3 className="settings-title" style={{ margin: 0, border: 'none' }}>기록된 추억들</h3>
-                            </div>
-
-                            {memories.length > 0 ? memories.map(mem => (
-                                <div key={mem.id} className="timeline-card">
-                                    {mem.image_url && (
-                                        <img
-                                            src={mem.image_url}
-                                            alt={mem.title}
-                                            style={{ width: '120px', height: '120px', borderRadius: '1rem', objectFit: 'cover' }}
-                                        />
-                                    )}
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{mem.title}</h4>
-                                            <span style={{ fontSize: '0.8rem', background: 'rgba(59, 130, 246, 0.1)', padding: '2px 8px', borderRadius: '12px', color: '#3b82f6' }}>
-                                                {mem.travel_date ? new Date(mem.travel_date).toLocaleDateString() : ''}
-                                            </span>
-                                        </div>
-                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                                            {mem.description}
-                                        </p>
-                                        <span style={{ fontSize: '0.8rem', color: '#fbbf24' }}>{'★'.repeat(mem.rating)}</span>
-                                    </div>
-                                </div>
-                            )) : (
-                                <div className="empty-state">
-                                    <p>아직 기록된 추억이 없습니다.</p>
-                                </div>
-                            )}
-                        </div>
-                    </>
-                );
-            case 'reviews':
-                return (
-                    <>
-                        <div className="content-header">
-                            <div>
-                                <h1 className="page-title">내가 쓴 후기</h1>
-                                <p className="page-subtitle">커뮤니티에 공유한 나의 생생한 후기들입니다.</p>
-                            </div>
-                        </div>
-                        <div className="reviews-list">
-                            {mockReviews.map(item => (
-                                <div key={item.id} className="review-item">
-                                    <img src={item.thumb} alt={item.title} className="review-thumb" />
-                                    <div className="review-content">
-                                        <div className="review-header">
-                                            <h3 className="card-title" style={{ margin: 0 }}>{item.title}</h3>
-                                            <span className="review-rating">{'★'.repeat(item.rating)}</span>
-                                        </div>
-                                        <p className="card-meta">{item.date}</p>
-                                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{item.content}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </>
-                );
-            case 'notifications':
-                return (
-                    <>
-                        <div className="content-header">
-                            <div>
-                                <h1 className="page-title">알림</h1>
-                                <p className="page-subtitle">내 활동에 대한 새 소식을 확인하세요.</p>
-                            </div>
-                        </div>
-                        <div className="notifications-list">
-                            {notifications.length > 0 ? (
-                                notifications.map(item => (
-                                    <div key={item.id}
-                                        onClick={() => handleNotificationRead(item.id)}
-                                        className={`notification-item ${!item.is_read ? 'unread' : ''}`} style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            padding: '1rem',
-                                            background: 'rgba(255, 255, 255, 0.05)',
-                                            borderRadius: '1rem',
-                                            marginBottom: '0.8rem',
-                                            borderLeft: item.is_read ? '3px solid transparent' : '3px solid #3b82f6',
-                                            cursor: 'pointer'
-                                        }}>
-                                        <div className="notification-icon" style={{
-                                            width: '40px',
-                                            height: '40px',
-                                            borderRadius: '50%',
-                                            background: item.type === 'like' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                                            color: item.type === 'like' ? '#ef4444' : '#3b82f6',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            marginRight: '1rem',
-                                            fontSize: '1.2rem'
-                                        }}>
-                                            {item.type === 'like' ? '❤️' : '💬'}
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <p style={{ margin: 0, fontSize: '0.95rem' }}>
-                                                <span style={{ fontWeight: 'bold' }}>{item.related_user_name}</span>
-                                                {item.message}
-                                            </p>
-                                            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{new Date(item.created_at).toLocaleString()}</span>
-                                        </div>
-                                        {!item.is_read && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }}></div>}
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="empty-state">
-                                    <p>새로운 알림이 없습니다.</p>
-                                </div>
-                            )}
-                        </div>
-                    </>
-                );
-            case 'badges':
-                return (
-                    <>
-                        <div className="content-header">
-                            <div>
-                                <h1 className="page-title">나의 여행 뱃지</h1>
-                                <p className="page-subtitle">여행의 즐거움을 더해주는 특별한 업적들입니다.</p>
-                            </div>
-                            <div className="badge-summary">
-                                <span>총 획득 XP: <strong>{totalXp}</strong></span>
-                            </div>
-                        </div>
-
-                        <div className="badge-grid">
-                            {badges.map(badge => (
-                                <div key={badge.id} className={`badge-card ${badge.earned ? 'earned' : 'locked'}`}>
-                                    <div className="badge-icon-wrapper">
-                                        <span className="badge-icon">{badge.icon}</span>
-                                        {badge.earned && <span className="badge-check">✓</span>}
-                                    </div>
-                                    <h3 className="badge-title">{badge.title}</h3>
-                                    <p className="badge-desc">{badge.desc}</p>
-                                    {!badge.earned && badge.progress && (
-                                        <div className="badge-progress-container">
-                                            <div className="badge-progress-text">진행도 {badge.progress}</div>
-                                            <div className="badge-progress-bar">
-                                                <div
-                                                    className="badge-progress-fill"
-                                                    style={{ width: `${(badge.rawProgress / badge.rawGoal) * 100}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {badge.earned && <p className="badge-date">획득일: {badge.date}</p>}
-                                </div>
-                            ))}
-                        </div>
-                    </>
-                );
-            case 'settings':
-                return (
-                    <div className="settings-container">
-                        <div className="content-header">
-                            <div>
-                                <h1 className="page-title">프로필 설정</h1>
-                                <p className="page-subtitle">나의 프로필 정보를 수정하세요.</p>
-                            </div>
-                        </div>
-
-                        <div className="settings-section">
-                            <h3 className="settings-title">기본 정보</h3>
-
-                            <div className="profile-upload-area">
-                                <img
-                                    src={previewImage || "https://ui-avatars.com/api/?name=" + (user?.email || "User") + "&background=random"}
-                                    alt="Preview"
-                                    className="upload-preview"
-                                />
-                                <div>
-                                    <div className="upload-btn-wrapper">
-                                        <button className="upload-btn">사진 변경</button>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleImageChange}
-                                            className="file-input"
-                                        />
-                                    </div>
-                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                                        권장 크기: 300x300px 이상
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">이름 (닉네임)</label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    value={profileName}
-                                    onChange={(e) => setProfileName(e.target.value)}
-                                    placeholder="이름을 입력하세요"
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">소개 (Bio)</label>
-                                <textarea
-                                    className="form-textarea"
-                                    value={profileDesc}
-                                    onChange={(e) => setProfileDesc(e.target.value)}
-                                    placeholder="자신을 자유롭게 소개해주세요"
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                <button className="action-btn" onClick={handleSaveProfile} disabled={saving}>
-                                    {saving ? '저장 중...' : '저장하기'}
-                                </button>
-                            </div>
-                        </div>
+                            );
+                        })}
+                        {notifications.length === 0 && (
+                            <EmptyState 
+                                icon="✉️" 
+                                title="새로운 알림이 없습니다" 
+                                description="소식이 오면 알려드릴게요!"
+                            />
+                        )}
                     </div>
                 );
-            default:
-                return <div className="empty-state">준비 중인 기능입니다...</div>;
-        }
+                case 'settings': return (
+                    <div className="settings-section">
+                        <div className="profile-upload-area">
+                            <img src={previewImage || user?.user_metadata?.avatar_url || "https://ui-avatars.com/api/?name=" + (user?.email || "User")} alt="Preview" className="upload-preview" />
+                            <div className="upload-btn-wrapper">
+                                <label className="upload-btn" style={{ cursor: 'pointer' }}>
+                                    사진 변경
+                                    <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+                                </label>
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">이름</label>
+                            <input type="text" className="form-input" value={profileName} onChange={(e) => setProfileName(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">소개</label>
+                            <textarea className="form-textarea" value={profileDesc} onChange={(e) => setProfileDesc(e.target.value)} />
+                        </div>
+                        <button className="primary-btn" onClick={handleSaveProfile} disabled={saving}>{saving ? '저장 중...' : '저장하기'}</button>
+                    </div>
+                );
+                default: return null;
+            }
+        };
+
+        const titles = {
+            plans: '내 여행 플랜',
+            ai_plans: 'AI 여행 계획',
+            upcoming: '다가오는 여행',
+            past: '지난 여행',
+            analysis: '내 여행 성향',
+            reviews: '내가 쓴 글',
+            wishlist: '저장한 장소',
+            notifications: '알림',
+            settings: '설정'
+        };
+
+        return (
+            <div className="mypage-subpage">
+                <div className="subpage-header">
+                    <button className="back-btn" onClick={() => setActiveTab('main')}>
+                        <FaChevronLeft />
+                    </button>
+                    <h2 className="subpage-title">{titles[activeTab]}</h2>
+                    <div style={{ width: 24 }}></div> {/* Spacer */}
+                </div>
+                <div className="subpage-content">
+                    {renderContent()}
+                </div>
+            </div>
+        );
     };
 
+
+
     return (
-        <div className="mypage-container">
-            {/* Sidebar */}
-            <aside className="mypage-sidebar">
-                <div className="profile-section">
-                    <div className="profile-img-wrapper">
-                        <img
-                            src={user?.user_metadata?.avatar_url || "https://ui-avatars.com/api/?name=" + (user?.email || "User") + "&background=random"}
-                            alt="Profile"
-                            className="profile-img"
-                        />
-                    </div>
-                    <h2 className="profile-name">{user?.user_metadata?.full_name || user?.email?.split('@')[0] || "게스트"}</h2>
-                    <p className="profile-email" style={{ marginBottom: '0.5rem' }}>{user?.email || "로그인이 필요합니다"}</p>
-                    {user?.user_metadata?.bio && (
-                        <p style={{ fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic', marginBottom: '1rem' }}>
-                            "{user.user_metadata.bio}"
-                        </p>
-                    )}
-                    <div className="profile-level-container">
-                        <div className="level-badge">Lv.{currentLevel} 여행 탐험가</div>
-                        <div className="level-progress-bar">
-                            <div className="level-progress-fill" style={{ width: `${progressToNextLevel}%` }}></div>
-                        </div>
-                        <p className="level-text">{totalXp} XP / {nextLevelXp} XP</p>
-                    </div>
+        <div className="mypage-wrapper">
+            {activeTab === 'main' ? renderMainDashboard() : renderSubPage()}
+
+            {/* Logout Modal */}
+            <AnimatePresence>
+                {showLogoutModal && (
+                    <motion.div
+                        className="modal-overlay"
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onClick={() => setShowLogoutModal(false)}
+                    >
+                        <motion.div
+                            className="modal-content small"
+                            initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <h3 className="modal-title">벌써 가시려구요? 😢</h3>
+                            <p className="modal-text">가실거에요? 더 둘러보고 가세요</p>
+                            <div className="modal-actions">
+                                {/* Gray button for actual logout (Secondary action) */}
+                                <button className="modal-btn cancel" onClick={handleLogout}>로그아웃하기</button>
+                                {/* Blue button to stay (Primary action) */}
+                                <button className="modal-btn confirm" onClick={() => setShowLogoutModal(false)}>좀더 보고가기</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
 
-                </div>
-
-                <nav className="sidebar-nav">
-                    <div className={`nav-item ${activeTab === 'schedules' ? 'active' : ''}`} onClick={() => setActiveTab('schedules')}>
-                        <span className="nav-icon">📅</span> 나의 일정
-                    </div>
-                    <div className={`nav-item ${activeTab === 'style' ? 'active' : ''}`} onClick={() => setActiveTab('style')}>
-                        <span className="nav-icon">🧬</span> 여행 성향
-                    </div>
-                    <div className={`nav-item ${activeTab === 'badges' ? 'active' : ''}`} onClick={() => setActiveTab('badges')}>
-                        <span className="nav-icon">🏆</span> 나의 뱃지
-                    </div>
-                    <div className={`nav-item ${activeTab === 'wishlist' ? 'active' : ''}`} onClick={() => setActiveTab('wishlist')}>
-                        <span className="nav-icon">❤️</span> 찜 목록
-                    </div>
-                    <div className={`nav-item ${activeTab === 'memories' ? 'active' : ''}`} onClick={() => setActiveTab('memories')}>
-                        <span className="nav-icon">🎞️</span> 추억 되살리기
-                    </div>
-                    <div className="nav-item" onClick={() => nav('/reviews')}>
-                        <span className="nav-icon">✍️</span> 나의 후기
-                    </div>
-                    <div className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>
-                        <span className="nav-icon">🔔</span> 알림
-                    </div>
-                    <div className={`nav-item ${activeTab === 'badges' ? 'active' : ''}`} onClick={() => setActiveTab('badges')}>
-                        <span className="nav-icon">🏆</span> 뱃지/업적
-                    </div>
-
-                    <div className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-                        <span className="nav-icon">⚙️</span> 설정
-                    </div>
-                </nav>
-            </aside>
-
-            {/* Main Content */}
-            <main className="mypage-content">
-                {renderContent()}
-            </main>
+            {/* 저장된 장소 상세 보기 Drawer */}
+            <TripDetailDrawer
+                open={!!selectedPlace}
+                onClose={() => setSelectedPlace(null)}
+                item={selectedPlace}
+                nights={drawerNights}
+                setNights={setDrawerNights}
+                people={drawerPeople}
+                setPeople={setDrawerPeople}
+                planText={drawerPlanText}
+                setPlanText={setDrawerPlanText}
+                diffResult={drawerDiffResult}
+                onImprove={handleImprovePlace}
+                onSave={onSaveFromDrawer}
+                improveLabel="AI 자동 제안"
+                hideRegisterButton={true}
+            />
+            {/* 일정 세부일정 상세 보기 Modal */}
+            <AnimatePresence>
+                {selectedScheduleForDetail && (
+                    <motion.div
+                        className="modal-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{ zIndex: 1100 }}
+                        onClick={() => setSelectedScheduleForDetail(null)}
+                    >
+                        <motion.div
+                            className="modal-content full"
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ 
+                                width: '95%', 
+                                maxWidth: '800px', 
+                                height: '90vh', 
+                                padding: 0, 
+                                overflow: 'hidden',
+                                borderRadius: '24px 24px 0 0',
+                                position: 'absolute',
+                                bottom: 0
+                            }}
+                        >
+                            <div className="modal-header-sticky" style={{ 
+                                padding: '16px 20px', 
+                                borderBottom: '1px solid #eee',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: 'white'
+                            }}>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem' }}>여행 세부일정</h3>
+                                <button 
+                                    onClick={() => setSelectedScheduleForDetail(null)}
+                                    style={{ 
+                                        background: '#f3f4f6', 
+                                        border: 'none', 
+                                        borderRadius: '50%', 
+                                        width: '32px', 
+                                        height: '32px', 
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >✕</button>
+                            </div>
+                            <div style={{ height: 'calc(100% - 65px)', overflowY: 'auto', padding: '0 0 40px 0' }}>
+                                <ScheduleDetailView schedule={selectedScheduleForDetail} />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

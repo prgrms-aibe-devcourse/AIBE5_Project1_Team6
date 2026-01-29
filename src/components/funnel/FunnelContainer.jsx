@@ -22,42 +22,38 @@ export default function FunnelContainer() {
   
   const renderStep = () => {
     // Universal Step 0
-    if (step === 0) return <StepTransport key="stepTransport" />;
+    if (step === 0) return <StepTransport key="stepTransport" stepIndex={0} totalSteps={0} />;
 
-    // Traffic Flow
+    // Traffic Flow (Total 4 steps: Type, Budget, Companion, Theme)
     if (transport === 'Traffic') {
         switch (step) {
-            case 1: return <StepTrafficType key="stepTrafficType" />;
-            case 2: return <StepBudget key="stepBudget" />;
-            case 3: return <StepCompanion key="stepComp" />;
-            case 4: return <StepTheme key="stepTheme" />;
+            case 1: return <StepTrafficType key="stepTrafficType" stepIndex={1} totalSteps={4} />;
+            case 2: return <StepBudget key="stepBudget" stepIndex={2} totalSteps={4} />;
+            case 3: return <StepCompanion key="stepComp" stepIndex={3} totalSteps={4} />;
+            case 4: return <StepTheme key="stepTheme" stepIndex={4} totalSteps={4} />;
             case 5: return <StepLoading key="stepLoading" />;
             case 6: return <StepAuth key="stepAuth" />;
             default: return <StepTransport key="stepTransport" />;
         }
     }
 
-    // Airplane Flow (Global Travel)
+    // Airplane Flow (Total 2 steps: Budget, Companion)
     if (transport === 'Airplane') {
-        // 0: Transport
-        // 1: Budget (x10)
-        // 2: Companion
-        // 3: Loading
-        // 4: Auth
         switch (step) {
-            case 1: return <StepBudget key="stepBudget" />;
-            case 2: return <StepCompanion key="stepComp" />;
+            case 1: return <StepBudget key="stepBudget" stepIndex={1} totalSteps={2} />;
+            case 2: return <StepCompanion key="stepComp" stepIndex={2} totalSteps={2} />;
             case 3: return <StepLoading key="stepLoading" />;
             case 4: return <StepAuth key="stepAuth" />;
             default: return <StepTransport key="stepTransport" />;
         }
     }
 
-    // Default Flow (Walk)
+    // Default Flow (Walk) (Total 3 steps: Budget, Companion, Theme)
+    // REORDERED: Budget -> Companion -> Theme
     switch (step) {
-      case 1: return <StepCompanion key="stepComp" progressText="2/4" />;
-      case 2: return <StepBudget key="stepBudget" progressText="3/4" />;
-      case 3: return <StepTheme key="stepTheme" progressText="4/4" />;
+      case 1: return <StepBudget key="stepBudget" stepIndex={1} totalSteps={3} />;      // Was Companion
+      case 2: return <StepCompanion key="stepComp" stepIndex={2} totalSteps={3} />;      // Was Budget
+      case 3: return <StepTheme key="stepTheme" stepIndex={3} totalSteps={3} />;
       case 4: return <StepLoading key="stepLoading" />;
       case 5: return <StepAuth key="stepAuth" />;
       default: return <StepTransport key="stepTransport" />;
